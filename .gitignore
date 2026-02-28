@@ -1,0 +1,10 @@
+.DS_Store
+.env
+storage/logs/*.log
+storage/logs/*.json
+public/assets/uploads/images/*
+!public/assets/uploads/images/.gitkeep
+public/assets/uploads/media/*
+!public/assets/uploads/media/.gitkeep
+public/assets/uploads/tmp/*
+!public/assets/uploads/tmp/.gitkeep

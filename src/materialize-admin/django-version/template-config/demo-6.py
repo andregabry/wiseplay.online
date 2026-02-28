@@ -1,0 +1,27 @@
+TEMPLATE_CONFIG = {
+    "layout": "horizontal",
+    "theme": 'dark',
+    "my_skins" : "default",
+    "has_semi_dark" : False,
+    "rtl_mode": False,
+    "has_customizer": True,
+    "display_customizer": True,
+    "content_layout": "compact",
+    "navbar_type": "fixed",
+    "header_type": "fixed",
+    "menu_fixed": True,
+    "menu_collapsed": False,
+    "footer_fixed": False,
+    "show_dropdown_onhover": True,
+    "customizer_controls": [
+        'color',
+        'theme',
+        'skins',
+        'semiDark',
+        'layoutCollapsed',
+        'layoutNavbarOptions',
+        'headerType',
+        'contentLayout',
+        'rtl'
+    ],
+}
