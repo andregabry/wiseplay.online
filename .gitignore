@@ -8,3 +8,6 @@ public/assets/uploads/media/*
 !public/assets/uploads/media/.gitkeep
 public/assets/uploads/tmp/*
 !public/assets/uploads/tmp/.gitkeep
+
+src/materialize-admin/design-files/figma/materialize-figma-admin-dashboard-uikit-v4.fig.zip
+src/materialize-admin/
