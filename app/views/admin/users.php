@@ -72,10 +72,26 @@ $queryForPage = static function (int $pageNum, array $filters): string {
     <?php if ($items === []): ?>
       <div class="text-center text-body-secondary py-5">Nenhum usuario encontrado.</div>
     <?php else: ?>
+      <?php if ($canManageUsers): ?>
+        <div class="wp-bulk-toolbar" data-bulk-toolbar data-endpoint="/admin/users/bulk-delete">
+          <div class="form-check">
+            <input class="form-check-input js-users-select-all" type="checkbox" value="1" id="users-select-all">
+            <label class="form-check-label" for="users-select-all">Selecionar todos desta pagina</label>
+          </div>
+          <div class="wp-bulk-toolbar-copy">
+            <strong class="js-users-selected-count">0</strong>
+            <span>usuario(s) selecionado(s)</span>
+          </div>
+          <button type="button" class="btn btn-semantic-danger js-users-bulk-delete" disabled>
+            <i class="ri ri-delete-bin-line me-1"></i>Excluir selecionados
+          </button>
+        </div>
+      <?php endif; ?>
       <div class="table-responsive wp-users-table-wrap">
         <table class="table align-middle wp-users-table">
           <thead>
             <tr>
+              <?php if ($canManageUsers): ?><th class="wp-users-checkbox-col"></th><?php endif; ?>
               <th>Usuario</th>
               <th>Role</th>
               <th>Status</th>
@@ -103,6 +119,18 @@ $queryForPage = static function (int $pageNum, array $filters): string {
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT);
               ?>
               <tr>
+                <?php if ($canManageUsers): ?>
+                  <td class="wp-users-checkbox-col">
+                    <div class="form-check">
+                      <input
+                        class="form-check-input js-user-row-checkbox"
+                        type="checkbox"
+                        value="<?= $userId ?>"
+                        data-name="<?= e((string) $user['name']) ?>"
+                        aria-label="Selecionar <?= e((string) $user['name']) ?>">
+                    </div>
+                  </td>
+                <?php endif; ?>
                 <td>
                   <div class="wp-user-cell">
                     <div class="avatar avatar-lg wp-user-avatar">

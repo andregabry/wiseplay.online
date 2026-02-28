@@ -56,6 +56,7 @@ $router->post('/admin/users/create', [AdminUsersController::class, 'create']);
 $router->post('/admin/users/update', [AdminUsersController::class, 'update']);
 $router->post('/admin/users/toggle', [AdminUsersController::class, 'toggleStatus']);
 $router->post('/admin/users/delete', [AdminUsersController::class, 'delete']);
+$router->post('/admin/users/bulk-delete', [AdminUsersController::class, 'bulkDelete']);
 
 $router->get('/admin/profiles', [AdminProfilesController::class, 'index']);
 $router->post('/admin/profiles/create', [AdminProfilesController::class, 'create']);

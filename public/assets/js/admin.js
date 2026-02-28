@@ -369,6 +369,58 @@
       });
   }
 
+  function bulkDeleteByEndpoint(endpoint, ids) {
+    var normalizedIds = Array.isArray(ids) ? ids.filter(function (id) {
+      return parseInt(id, 10) > 0;
+    }) : [];
+
+    if (!normalizedIds.length) {
+      sweetError('Selecione ao menos um usuario.');
+      return;
+    }
+
+    confirmAction(
+      'Confirmar exclusao em massa',
+      'Deseja excluir ' + normalizedIds.length + ' usuario(s) selecionado(s)?',
+      'Excluir selecionados'
+    ).then(function (result) {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      var payload = normalizedIds.map(function (id) {
+        return 'ids[]=' + encodeURIComponent(String(id));
+      }).join('&') + '&_csrf=' + encodeURIComponent(csrfToken());
+
+      request(endpoint, 'POST', payload, false)
+        .done(function (response) {
+          if (!response || response.ok !== true) {
+            sweetError((response && response.message) || 'Nao foi possivel excluir os usuarios selecionados.');
+            return;
+          }
+
+          var details = response && Array.isArray(response.skipped) && response.skipped.length
+            ? '\n\nIgnorados:\n- ' + response.skipped.join('\n- ')
+            : '';
+
+          swalFire({
+            icon: 'success',
+            title: 'Exclusao concluida',
+            text: (response.message || 'Usuarios removidos.') + details
+          }).then(function () {
+            window.location.reload();
+          });
+        })
+        .fail(function (xhr) {
+          var json = xhr.responseJSON || {};
+          var detailText = Array.isArray(json.details) && json.details.length
+            ? '\n\n' + json.details.join('\n')
+            : '';
+          sweetError((json.message || 'Falha ao excluir usuarios selecionados.') + detailText);
+        });
+    });
+  }
+
   function decorateAllModals() {
     $('.modal').each(function () {
       var $modal = $(this);
@@ -508,6 +560,67 @@
       };
       reader.readAsDataURL(file);
     });
+  }
+
+  function bindAdminUsersBulkActions() {
+    var $toolbar = $('[data-bulk-toolbar]');
+    if (!$toolbar.length) {
+      return;
+    }
+
+    var $selectAll = $('.js-users-select-all');
+    var $checkboxes = $('.js-user-row-checkbox');
+    var $count = $('.js-users-selected-count');
+    var $bulkDelete = $('.js-users-bulk-delete');
+    var endpoint = String($toolbar.data('endpoint') || '');
+
+    function selectedIds() {
+      return $checkboxes.filter(':checked').map(function () {
+        return parseInt($(this).val(), 10) || 0;
+      }).get().filter(function (id) {
+        return id > 0;
+      });
+    }
+
+    function syncState() {
+      var total = $checkboxes.length;
+      var selected = $checkboxes.filter(':checked').length;
+      $count.text(String(selected));
+      $bulkDelete.prop('disabled', selected === 0);
+
+      if (selected === 0) {
+        $selectAll.prop('indeterminate', false).prop('checked', false);
+        return;
+      }
+
+      if (selected === total) {
+        $selectAll.prop('indeterminate', false).prop('checked', true);
+        return;
+      }
+
+      $selectAll.prop('checked', false).prop('indeterminate', true);
+    }
+
+    $selectAll.on('change', function () {
+      var checked = $(this).is(':checked');
+      $checkboxes.prop('checked', checked);
+      syncState();
+    });
+
+    $checkboxes.on('change', function () {
+      syncState();
+    });
+
+    $bulkDelete.on('click', function () {
+      if (endpoint === '') {
+        sweetError('Endpoint de exclusao em massa nao configurado.');
+        return;
+      }
+
+      bulkDeleteByEndpoint(endpoint, selectedIds());
+    });
+
+    syncState();
   }
 
   function refreshFormImagePreviews($form) {
@@ -2197,6 +2310,7 @@
     }
 
     bindActionsDropdowns();
+    bindAdminUsersBulkActions();
     decorateAllModals();
     applySemanticButtons();
     bindImagePreviewUX();

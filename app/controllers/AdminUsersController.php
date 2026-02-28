@@ -304,6 +304,79 @@ final class AdminUsersController extends AdminBaseController
         Response::json(['ok' => true, 'message' => 'Usuario excluido com sucesso.']);
     }
 
+    public function bulkDelete(): void
+    {
+        $this->authorize(self::MANAGE_ROLES);
+        $this->requireCsrf();
+
+        $rawIds = $_POST['ids'] ?? [];
+        if (!is_array($rawIds)) {
+            $rawIds = [$rawIds];
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map(static function ($value): int {
+            return (int) $value;
+        }, $rawIds), static function (int $value): bool {
+            return $value > 0;
+        })));
+
+        if ($ids === []) {
+            Response::json(['ok' => false, 'message' => 'Selecione ao menos um usuario.'], 422);
+        }
+
+        $model = new User();
+        $actorId = (int) (Auth::user()['id'] ?? 0);
+        $deleted = 0;
+        $skipped = [];
+
+        foreach ($ids as $id) {
+            if ($actorId > 0 && $actorId === $id) {
+                $skipped[] = 'Sua propria conta foi ignorada.';
+                continue;
+            }
+
+            $user = $model->findById($id);
+            if (!$user) {
+                $skipped[] = 'Usuario ID ' . $id . ' nao encontrado.';
+                continue;
+            }
+
+            try {
+                $model->delete($id);
+                $deleted++;
+                $this->audit('user.bulk_delete', 'user', (string) $id, [
+                    'name' => $user['name'],
+                    'email' => $user['email'],
+                ]);
+            } catch (\Throwable) {
+                $skipped[] = 'Falha ao excluir ' . (string) $user['email'] . '.';
+            }
+        }
+
+        if ($deleted === 0) {
+            Response::json([
+                'ok' => false,
+                'message' => 'Nenhum usuario foi excluido.',
+                'details' => $skipped,
+            ], 422);
+        }
+
+        $message = $deleted === 1
+            ? '1 usuario excluido com sucesso.'
+            : $deleted . ' usuarios excluidos com sucesso.';
+
+        if ($skipped !== []) {
+            $message .= ' ' . count($skipped) . ' item(ns) ignorado(s).';
+        }
+
+        Response::json([
+            'ok' => true,
+            'message' => $message,
+            'deleted_count' => $deleted,
+            'skipped' => $skipped,
+        ]);
+    }
+
     private function readPayload(): array
     {
         return [
