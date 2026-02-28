@@ -17,30 +17,35 @@ $avatarOrFallback = static function (?string $value, string $fallback): string {
     }
     return $value;
 };
+
+$stageTitle = $manageMode ? 'Gerenciar perfis:' : 'Quem esta assistindo?';
+$showCreateModalOnLoad = $manageMode && ($currentCount === 0 || $onboardingNeedsProfile || (string) ($_GET['create'] ?? '') === '1');
 ?>
 
-<main class="wp-profiles-page">
-  <a class="wp-logo profile-logo" href="/profiles">WISEPLAY</a>
+<main class="wp-profiles-page<?= $manageMode ? ' manage-mode' : '' ?>" data-profile-manage-mode="<?= $manageMode ? '1' : '0' ?>" data-profile-auto-open-create="<?= $showCreateModalOnLoad ? '1' : '0' ?>">
+  <a class="wp-logo profile-logo" href="/browse">WISEPLAY</a>
 
   <section class="wp-profiles-content">
-    <header class="wp-profiles-stage">
-      <h1>Quem est&aacute; assistindo?</h1>
-      <p>
-        <?= $manageMode ? 'Escolha, edite ou crie perfis para continuar.' : 'Selecione um perfil para entrar no WisePlay.' ?>
-      </p>
-      <div class="wp-profiles-stage-meta">
-        <span><?= e((string) ($plan['plan_name'] ?? 'Sem plano')) ?></span>
-        <small><?= $currentCount ?>/<?= max(0, $planLimit) ?> perfis</small>
-      </div>
+    <header class="wp-profiles-stage<?= $manageMode ? ' manage' : '' ?>">
+      <h1><?= e($stageTitle) ?></h1>
+      <?php if (!$manageMode): ?>
+        <p>Selecione um perfil para entrar no WisePlay.</p>
+      <?php endif; ?>
+      <?php if (!$manageMode || $onboardingNeedsProfile): ?>
+        <div class="wp-profiles-stage-meta">
+          <span><?= e((string) ($plan['plan_name'] ?? 'Sem plano')) ?></span>
+          <small><?= $currentCount ?>/<?= max(0, $planLimit) ?> perfis</small>
+        </div>
+      <?php endif; ?>
     </header>
 
     <?php if ($onboardingNeedsProfile): ?>
       <div class="wp-onboarding-note wp-profiles-note">
-        Seu primeiro acesso precisa de pelo menos um perfil selecionado.
+        Seu primeiro acesso precisa de pelo menos um perfil antes de entrar no catalogo.
       </div>
     <?php endif; ?>
 
-    <section class="wp-profile-grid wp-profile-grid-stage">
+    <section class="wp-profile-grid wp-profile-grid-stage<?= $manageMode ? ' is-manage' : '' ?>">
       <?php foreach ($profiles as $profile): ?>
         <?php
           $profileId = (int) $profile['id'];
@@ -54,144 +59,145 @@ $avatarOrFallback = static function (?string $value, string $fallback): string {
               'is_kids' => $isKids ? 1 : 0,
           ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT);
         ?>
-        <article class="wp-profile-tile <?= $active ? 'active' : '' ?>">
-          <form method="post" action="/profiles/select" class="wp-profile-form">
-            <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
-            <input type="hidden" name="profile_id" value="<?= $profileId ?>">
-            <button type="submit" class="wp-profile-btn wp-profile-stage-btn">
+        <article class="wp-profile-tile <?= $active ? 'active' : '' ?><?= $manageMode ? ' is-manage' : '' ?>">
+          <?php if ($manageMode): ?>
+            <button type="button" class="wp-profile-btn wp-profile-stage-btn js-open-profile-editor" data-profile='<?= e($payload) ?>'>
               <span class="wp-profile-avatar-frame">
                 <img src="<?= e($avatar) ?>" alt="Avatar de <?= e((string) $profile['profile_name']) ?>" onerror="this.src='<?= e($avatarFallback) ?>'">
-                <?php if ($isKids): ?><small>KIDS</small><?php endif; ?>
+                <?php if ($isKids): ?><small>Criancas</small><?php endif; ?>
+                <span class="wp-profile-edit-badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14.7 5.3 18.7 9.3M4 20l4.2-1 10-10a1.6 1.6 0 0 0 0-2.3l-1-1a1.6 1.6 0 0 0-2.3 0l-10 10L4 20Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
               </span>
               <span class="wp-profile-name"><?= e((string) ($profile['profile_name'] ?? 'Perfil')) ?></span>
             </button>
-          </form>
 
-          <?php if ($manageMode): ?>
-            <div class="wp-profile-admin-actions wp-profile-stage-actions">
-              <button type="button" class="wp-btn tiny ghost js-edit-public-profile" data-profile='<?= e($payload) ?>'>Editar</button>
-              <form method="post" action="/profiles/delete" class="js-public-delete-profile-form">
-                <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
-                <input type="hidden" name="profile_id" value="<?= $profileId ?>">
-                <button type="submit" class="wp-btn tiny ghost js-delete-public-profile" data-name="<?= e((string) ($profile['profile_name'] ?? 'perfil')) ?>">Excluir</button>
-              </form>
-            </div>
+            <form method="post" action="/profiles/delete" class="wp-hidden-delete-form js-public-delete-profile-form" id="public-delete-profile-<?= $profileId ?>">
+              <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
+              <input type="hidden" name="profile_id" value="<?= $profileId ?>">
+            </form>
+          <?php else: ?>
+            <form method="post" action="/profiles/select" class="wp-profile-form">
+              <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
+              <input type="hidden" name="profile_id" value="<?= $profileId ?>">
+              <button type="submit" class="wp-profile-btn wp-profile-stage-btn">
+                <span class="wp-profile-avatar-frame">
+                  <img src="<?= e($avatar) ?>" alt="Avatar de <?= e((string) $profile['profile_name']) ?>" onerror="this.src='<?= e($avatarFallback) ?>'">
+                  <?php if ($isKids): ?><small>Criancas</small><?php endif; ?>
+                </span>
+                <span class="wp-profile-name"><?= e((string) ($profile['profile_name'] ?? 'Perfil')) ?></span>
+              </button>
+            </form>
           <?php endif; ?>
         </article>
       <?php endforeach; ?>
 
-      <article class="wp-profile-tile wp-profile-tile-add <?= $canCreateProfile ? '' : 'disabled' ?>">
-        <a
-          href="<?= $canCreateProfile ? '/profiles?manage=1#create-profile-studio' : '#' ?>"
-          class="wp-profile-btn wp-profile-add-card js-public-create-profile"
-          data-limit-reached="<?= $canCreateProfile ? '0' : '1' ?>"
-          data-limit-value="<?= max(0, $planLimit) ?>">
-          <span class="wp-profile-add-circle">
-            <span class="wp-profile-add-plus">+</span>
-          </span>
-          <span class="wp-profile-name">Adicionar perfil</span>
-        </a>
+      <article class="wp-profile-tile wp-profile-tile-add <?= $canCreateProfile ? '' : 'disabled' ?><?= $manageMode ? ' is-manage' : '' ?>">
+        <?php if ($manageMode): ?>
+          <button
+            type="button"
+            class="wp-profile-btn wp-profile-add-card js-open-profile-create"
+            data-limit-reached="<?= $canCreateProfile ? '0' : '1' ?>"
+            data-limit-value="<?= max(0, $planLimit) ?>">
+            <span class="wp-profile-add-circle">
+              <span class="wp-profile-add-plus">+</span>
+            </span>
+            <span class="wp-profile-name">Adicionar perfil</span>
+          </button>
+        <?php else: ?>
+          <a
+            href="<?= $canCreateProfile ? '/profiles?manage=1#new-profile' : '#' ?>"
+            class="wp-profile-btn wp-profile-add-card js-public-create-profile"
+            data-limit-reached="<?= $canCreateProfile ? '0' : '1' ?>"
+            data-limit-value="<?= max(0, $planLimit) ?>">
+            <span class="wp-profile-add-circle">
+              <span class="wp-profile-add-plus">+</span>
+            </span>
+            <span class="wp-profile-name">Adicionar perfil</span>
+          </a>
+        <?php endif; ?>
       </article>
     </section>
 
-    <div class="wp-profiles-bottom-actions">
+    <div class="wp-profiles-bottom-actions<?= $manageMode ? ' manage' : '' ?>">
       <?php if ($manageMode): ?>
-        <a href="/profiles" class="wp-profiles-manage-btn">Concluir gerenciamento</a>
+        <a href="/profiles" class="wp-profiles-manage-btn is-solid">Concluido</a>
       <?php else: ?>
         <a href="/profiles?manage=1" class="wp-profiles-manage-btn">Gerenciar perfis</a>
       <?php endif; ?>
     </div>
-
-    <?php if ($manageMode): ?>
-      <section class="wp-profile-manage-grid">
-        <div class="wp-manage-card" id="create-profile-studio">
-          <h2>Criar perfil</h2>
-          <p>Novo perfil adulto ou kids. Limite do plano: <?= max(0, $planLimit) ?>.</p>
-
-          <form method="post" action="/profiles/create" enctype="multipart/form-data" id="public-profile-create-form">
-            <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
-            <input type="hidden" name="avatar_path" id="public-create-avatar" value="<?= e($avatarFallback) ?>">
-
-            <label class="wp-form-label">Nome do perfil</label>
-            <input class="wp-form-input" name="profile_name" required minlength="2">
-
-            <label class="wp-form-label">Tipo</label>
-            <select class="wp-form-input" name="is_kids">
-              <option value="0">Adulto</option>
-              <option value="1">Kids</option>
-            </select>
-
-            <label class="wp-form-label">Upload avatar (opcional)</label>
-            <input class="wp-form-input" type="file" name="avatar_file" accept="image/png,image/jpeg,image/webp">
-
-            <label class="wp-form-label">Avatares da biblioteca</label>
-            <div class="wp-avatar-library">
-              <?php foreach ($avatarOptions as $avatarOption): ?>
-                <button type="button" class="wp-avatar-option js-avatar-option" data-target="#public-create-avatar" data-preview="#public-create-avatar-preview" data-value="<?= e((string) $avatarOption) ?>">
-                  <img src="<?= e((string) $avatarOption) ?>" alt="avatar" loading="lazy">
-                </button>
-              <?php endforeach; ?>
-            </div>
-
-            <div class="wp-avatar-preview-row">
-              <span>Selecionado:</span>
-              <img id="public-create-avatar-preview" src="<?= e($avatarFallback) ?>" alt="avatar selecionado">
-            </div>
-
-            <button
-              type="submit"
-              class="wp-btn danger js-public-create-profile"
-              data-limit-reached="<?= $canCreateProfile ? '0' : '1' ?>"
-              data-limit-value="<?= max(0, $planLimit) ?>">
-              Criar perfil
-            </button>
-          </form>
-        </div>
-
-        <div class="wp-manage-card" id="edit-profile-studio">
-          <h2>Editar perfil</h2>
-          <p>Selecione um perfil acima para editar nome, tipo e avatar.</p>
-
-          <form method="post" action="/profiles/update" enctype="multipart/form-data" id="public-profile-edit-form">
-            <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
-            <input type="hidden" name="profile_id" id="public-edit-profile-id" value="">
-            <input type="hidden" name="avatar_path" id="public-edit-avatar" value="<?= e($avatarFallback) ?>">
-
-            <label class="wp-form-label">Nome do perfil</label>
-            <input class="wp-form-input" name="profile_name" id="public-edit-profile-name" required minlength="2" placeholder="Escolha um perfil para editar">
-
-            <label class="wp-form-label">Tipo</label>
-            <select class="wp-form-input" name="is_kids" id="public-edit-is-kids">
-              <option value="0">Adulto</option>
-              <option value="1">Kids</option>
-            </select>
-
-            <label class="wp-form-label">Upload avatar (opcional)</label>
-            <input class="wp-form-input" type="file" name="avatar_file" accept="image/png,image/jpeg,image/webp">
-
-            <label class="wp-form-label">Avatares da biblioteca</label>
-            <div class="wp-avatar-library">
-              <?php foreach ($avatarOptions as $avatarOption): ?>
-                <button type="button" class="wp-avatar-option js-avatar-option" data-target="#public-edit-avatar" data-preview="#public-edit-avatar-preview" data-value="<?= e((string) $avatarOption) ?>">
-                  <img src="<?= e((string) $avatarOption) ?>" alt="avatar" loading="lazy">
-                </button>
-              <?php endforeach; ?>
-            </div>
-
-            <div class="wp-avatar-preview-row">
-              <span>Selecionado:</span>
-              <img id="public-edit-avatar-preview" src="<?= e($avatarFallback) ?>" alt="avatar selecionado">
-            </div>
-
-            <button type="submit" class="wp-btn light">Salvar alteracoes</button>
-          </form>
-        </div>
-      </section>
-    <?php endif; ?>
-
-    <form method="post" action="/logout" class="wp-profiles-logout">
-      <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
-      <button type="submit" class="wp-btn ghost">Sair da conta</button>
-    </form>
   </section>
+
+  <?php if ($manageMode): ?>
+    <div class="wp-profile-editor-modal" id="public-profile-editor-modal" hidden>
+      <div class="wp-profile-editor-backdrop js-close-profile-editor"></div>
+      <div class="wp-profile-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="public-profile-editor-title">
+        <button type="button" class="wp-profile-editor-close js-close-profile-editor" aria-label="Fechar">
+          <span>&times;</span>
+        </button>
+
+        <div class="wp-profile-editor-head">
+          <div>
+            <small class="wp-profile-editor-kicker">WisePlay</small>
+            <h2 id="public-profile-editor-title">Editar perfil</h2>
+            <p id="public-profile-editor-copy">Atualize o nome, avatar e o tipo do perfil.</p>
+          </div>
+          <div class="wp-profile-editor-preview">
+            <img id="public-profile-editor-preview" src="<?= e($avatarFallback) ?>" alt="Preview do perfil">
+          </div>
+        </div>
+
+        <form method="post" action="/profiles/update" enctype="multipart/form-data" id="public-profile-editor-form" class="wp-profile-editor-form">
+          <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
+          <input type="hidden" name="profile_id" id="public-profile-id" value="">
+          <input type="hidden" name="avatar_path" id="public-profile-avatar" value="<?= e($avatarFallback) ?>">
+
+          <div class="wp-profile-editor-grid">
+            <div>
+              <label class="wp-form-label" for="public-profile-name">Nome do perfil</label>
+              <input class="wp-form-input" id="public-profile-name" name="profile_name" required minlength="2" maxlength="40">
+            </div>
+
+            <div>
+              <label class="wp-form-label" for="public-profile-is-kids">Tipo de perfil</label>
+              <select class="wp-form-input" name="is_kids" id="public-profile-is-kids">
+                <option value="0">Adulto</option>
+                <option value="1">Criancas</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="wp-profile-editor-upload-row">
+            <div>
+              <label class="wp-form-label" for="public-profile-avatar-file">Upload avatar (opcional)</label>
+              <input class="wp-form-input" type="file" id="public-profile-avatar-file" name="avatar_file" accept="image/png,image/jpeg,image/webp">
+            </div>
+            <div class="wp-profile-editor-limit">
+              <strong><?= $currentCount ?>/<?= max(0, $planLimit) ?></strong>
+              <span>Perfis disponiveis no seu plano <?= e((string) ($plan['plan_name'] ?? 'WisePlay')) ?></span>
+            </div>
+          </div>
+
+          <div>
+            <label class="wp-form-label">Escolha um avatar</label>
+            <div class="wp-avatar-library wp-avatar-library-modal">
+              <?php foreach ($avatarOptions as $avatarOption): ?>
+                <button type="button" class="wp-avatar-option js-avatar-option" data-target="#public-profile-avatar" data-preview="#public-profile-editor-preview" data-value="<?= e((string) $avatarOption) ?>">
+                  <img src="<?= e((string) $avatarOption) ?>" alt="avatar" loading="lazy">
+                </button>
+              <?php endforeach; ?>
+            </div>
+          </div>
+
+          <div class="wp-profile-editor-actions">
+            <button type="button" class="wp-btn ghost js-close-profile-editor">Cancelar</button>
+            <button type="button" class="wp-btn ghost wp-profile-delete-trigger" id="public-profile-delete-button" hidden>Excluir perfil</button>
+            <button type="submit" class="wp-btn light" id="public-profile-submit-button">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  <?php endif; ?>
 </main>

@@ -281,6 +281,19 @@
       return;
     }
 
+    var avatarFallback = '/assets/img/avatar-library/avatar-01.svg';
+    var $modal = $('#public-profile-editor-modal');
+    var $editorForm = $('#public-profile-editor-form');
+    var $profileId = $('#public-profile-id');
+    var $profileName = $('#public-profile-name');
+    var $profileKids = $('#public-profile-is-kids');
+    var $profileAvatar = $('#public-profile-avatar');
+    var $profilePreview = $('#public-profile-editor-preview');
+    var $profileDeleteButton = $('#public-profile-delete-button');
+    var $profileSubmitButton = $('#public-profile-submit-button');
+    var $profileTitle = $('#public-profile-editor-title');
+    var $profileCopy = $('#public-profile-editor-copy');
+
     function activateAvatarOption(inputSelector, previewSelector, value) {
       var $input = $(inputSelector);
       if (!$input.length) {
@@ -294,6 +307,46 @@
       $('.js-avatar-option[data-target="' + inputSelector + '"][data-value="' + value + '"]').addClass('active');
     }
 
+    function openEditor(mode, profile) {
+      if (!$modal.length || !$editorForm.length) {
+        return;
+      }
+
+      var isEdit = mode === 'edit';
+      var safeProfile = profile || {};
+      var avatarValue = String(safeProfile.avatar_path || avatarFallback);
+
+      $editorForm.attr('action', isEdit ? '/profiles/update' : '/profiles/create');
+      $profileId.val(isEdit ? String(safeProfile.id || '') : '');
+      $profileName.val(isEdit ? String(safeProfile.profile_name || '') : '');
+      $profileKids.val(isEdit ? String(safeProfile.is_kids || 0) : '0');
+      $profileAvatar.val(avatarValue);
+      $profilePreview.attr('src', avatarValue);
+      $('#public-profile-avatar-file').val('');
+
+      $profileTitle.text(isEdit ? 'Editar perfil' : 'Novo perfil');
+      $profileCopy.text(isEdit
+        ? 'Atualize o nome, avatar e o tipo do perfil.'
+        : 'Crie um perfil adulto ou infantil para a conta.');
+      $profileSubmitButton.text(isEdit ? 'Salvar perfil' : 'Criar perfil');
+      $profileDeleteButton.prop('hidden', !isEdit).data('profileId', isEdit ? parseInt(safeProfile.id, 10) || 0 : 0).data('profileName', String(safeProfile.profile_name || 'perfil'));
+
+      activateAvatarOption('#public-profile-avatar', '#public-profile-editor-preview', avatarValue);
+      $modal.removeAttr('hidden');
+      $('body').addClass('wp-modal-open');
+      window.setTimeout(function () {
+        $profileName.trigger('focus');
+      }, 40);
+    }
+
+    function closeEditor() {
+      if (!$modal.length) {
+        return;
+      }
+      $modal.attr('hidden', 'hidden');
+      $('body').removeClass('wp-modal-open');
+    }
+
     $(document).on('click', '.js-avatar-option', function () {
       var target = String($(this).data('target') || '');
       var preview = String($(this).data('preview') || '');
@@ -304,7 +357,7 @@
       activateAvatarOption(target, preview, value);
     });
 
-    $(document).on('change', '#public-profile-create-form input[type=\"file\"][name=\"avatar_file\"], #public-profile-edit-form input[type=\"file\"][name=\"avatar_file\"]', function () {
+    $(document).on('change', '#public-profile-avatar-file', function () {
       var input = this;
       if (!input.files || !input.files.length) {
         return;
@@ -324,24 +377,19 @@
         return;
       }
 
-      var $form = $(input).closest('form');
-      var isEdit = $form.attr('id') === 'public-profile-edit-form';
-      var hiddenTarget = isEdit ? '#public-edit-avatar' : '#public-create-avatar';
-      var previewTarget = isEdit ? '#public-edit-avatar-preview' : '#public-create-avatar-preview';
-
       var reader = new FileReader();
       reader.onload = function (event) {
         var value = event && event.target && event.target.result ? String(event.target.result) : '';
         if (value === '') {
           return;
         }
-        $(hiddenTarget).val(value);
-        $(previewTarget).attr('src', value);
+        $('#public-profile-avatar').val(value);
+        $('#public-profile-editor-preview').attr('src', value);
       };
       reader.readAsDataURL(file);
     });
 
-    $(document).on('click', '.js-edit-public-profile', function () {
+    $(document).on('click', '.js-open-profile-editor', function () {
       var raw = $(this).attr('data-profile');
       if (!raw) {
         return;
@@ -354,21 +402,16 @@
         return;
       }
 
-      $('#public-edit-profile-id').val(profile.id || '');
-      $('#public-edit-profile-name').val(profile.profile_name || '');
-      $('#public-edit-is-kids').val(profile.is_kids || 0);
-
-      var avatarValue = profile.avatar_path || '/assets/img/avatar-library/avatar-01.svg';
-      activateAvatarOption('#public-edit-avatar', '#public-edit-avatar-preview', avatarValue);
-
-      $('html, body').animate({
-        scrollTop: Math.max($('#public-profile-edit-form').offset().top - 24, 0)
-      }, 220);
+      openEditor('edit', profile);
     });
 
-    $(document).on('click', '.js-public-create-profile', function (event) {
+    $(document).on('click', '.js-open-profile-create, .js-public-create-profile', function (event) {
       var reached = String($(this).data('limitReached') || '0') === '1';
       if (!reached) {
+        if ($(this).hasClass('js-open-profile-create')) {
+          event.preventDefault();
+          openEditor('create', null);
+        }
         return;
       }
 
@@ -379,6 +422,41 @@
         icon: 'warning',
         title: 'Limite de perfis atingido',
         text: 'Seu plano permite ate ' + limit + ' perfil(is).'
+      });
+    });
+
+    $(document).on('click', '.js-close-profile-editor', function () {
+      closeEditor();
+    });
+
+    $(document).on('click', '.wp-profile-editor-backdrop', function () {
+      closeEditor();
+    });
+
+    $(document).on('click', '#public-profile-delete-button', function () {
+      var profileId = parseInt($(this).data('profileId'), 10) || 0;
+      var profileName = String($(this).data('profileName') || 'perfil');
+      if (profileId <= 0) {
+        return;
+      }
+
+      var $form = $('#public-delete-profile-' + profileId);
+      if (!$form.length) {
+        return;
+      }
+
+      fireAlert({
+        icon: 'warning',
+        title: 'Excluir perfil',
+        text: 'Deseja excluir o perfil "' + profileName + '"?',
+        showCancelButton: true,
+        confirmButtonText: 'Excluir',
+        cancelButtonText: 'Cancelar'
+      }).then(function (result) {
+        if (!result.isConfirmed) {
+          return;
+        }
+        $form.trigger('submit');
       });
     });
 
@@ -405,6 +483,16 @@
         $form.trigger('submit');
       });
     });
+
+    $(document).on('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeEditor();
+      }
+    });
+
+    if (window.location.hash === '#new-profile' || String($('.wp-profiles-page').data('profileAutoOpenCreate') || '0') === '1') {
+      openEditor('create', null);
+    }
   }
 
   function bindRegisterVerificationCountdown() {
@@ -472,9 +560,90 @@
     });
   }
 
+  function bindPublicChrome() {
+    var $header = $('.js-stream-header');
+    if (!$header.length) {
+      return;
+    }
+
+    var $user = $('.js-stream-user');
+    var $trigger = $('.js-stream-user-trigger');
+    var $menu = $('.wp-stream-user-menu');
+
+    function syncHeaderState() {
+      $header.toggleClass('is-solid', $(window).scrollTop() > 24 || $menu.is(':visible'));
+    }
+
+    function closeMenu() {
+      $user.removeClass('is-open');
+      $trigger.attr('aria-expanded', 'false');
+      $menu.attr('hidden', 'hidden');
+      syncHeaderState();
+    }
+
+    function openMenu() {
+      $user.addClass('is-open');
+      $trigger.attr('aria-expanded', 'true');
+      $menu.removeAttr('hidden');
+      syncHeaderState();
+    }
+
+    $trigger.on('click', function (event) {
+      event.preventDefault();
+      if ($user.hasClass('is-open')) {
+        closeMenu();
+        return;
+      }
+      openMenu();
+    });
+
+    $(document).on('click', function (event) {
+      if (!$(event.target).closest('.js-stream-user').length) {
+        closeMenu();
+      }
+    });
+
+    $(document).on('click', '.js-browse-jump', function (event) {
+      var target = String($(this).attr('href') || '');
+      if (!target || target.charAt(0) !== '#') {
+        return;
+      }
+
+      var $target = $(target);
+      if (!$target.length) {
+        return;
+      }
+
+      event.preventDefault();
+      $('html, body').animate({
+        scrollTop: Math.max($target.offset().top - 88, 0)
+      }, 260);
+    });
+
+    $(document).on('click', '.js-public-coming-soon', function (event) {
+      var label = String($(this).data('label') || $(this).text() || 'Recurso');
+      event.preventDefault();
+      fireAlert({
+        icon: 'info',
+        title: 'Em breve',
+        text: label + ' ainda nao possui fluxo publico completo.'
+      });
+    });
+
+    $(window).on('scroll resize', syncHeaderState);
+    $(document).on('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeMenu();
+      }
+    });
+
+    syncHeaderState();
+  }
+
   $(function () {
     showFlash();
     bindProfileManagement();
+    bindPublicChrome();
     bindRegisterVerificationCountdown();
     bindOnboardingPaymentForm();
     bindRowNavigation();
