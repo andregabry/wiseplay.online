@@ -33,7 +33,7 @@ final class EmailService
         $subject = strtr($subjectTemplate, $replacements);
         $bodyText = strtr($bodyTemplate, $replacements);
 
-        $smtpEnabled = $this->isTruthy((string) $this->settings->value('smtp.enabled', '0'));
+        $smtpEnabled = $this->smtpEnabled();
         if ($smtpEnabled) {
             $smtpResult = $this->sendViaSmtp($toEmail, $subject, $bodyText);
             if (($smtpResult['ok'] ?? false) === true) {
@@ -52,13 +52,13 @@ final class EmailService
 
     private function sendViaSmtp(string $toEmail, string $subject, string $bodyText): array
     {
-        $host = trim((string) $this->settings->value('smtp.host', ''));
-        $port = (int) $this->settings->value('smtp.port', '587');
-        $username = trim((string) $this->settings->value('smtp.username', ''));
-        $password = (string) $this->settings->value('smtp.password', '');
-        $encryption = strtolower(trim((string) $this->settings->value('smtp.encryption', 'tls')));
-        $fromEmail = trim((string) $this->settings->value('smtp.from_email', 'no-reply@wiseplay.local'));
-        $fromName = trim((string) $this->settings->value('smtp.from_name', 'WisePlay'));
+        $host = trim($this->settingOrEnv('smtp.host', 'SMTP_HOST', ''));
+        $port = (int) $this->settingOrEnv('smtp.port', 'SMTP_PORT', '587');
+        $username = trim($this->settingOrEnv('smtp.username', 'SMTP_USERNAME', ''));
+        $password = $this->settingOrEnv('smtp.password', 'SMTP_PASSWORD', '');
+        $encryption = strtolower(trim($this->settingOrEnv('smtp.encryption', 'SMTP_ENCRYPTION', 'tls')));
+        $fromEmail = trim($this->settingOrEnv('smtp.from_email', 'SMTP_FROM_EMAIL', 'no-reply@wiseplay.local'));
+        $fromName = trim($this->settingOrEnv('smtp.from_name', 'SMTP_FROM_NAME', 'WisePlay'));
 
         if ($host === '' || $port <= 0 || $fromEmail === '') {
             return ['ok' => false, 'message' => 'SMTP nao configurado corretamente.'];
@@ -201,6 +201,47 @@ final class EmailService
         return ['ok' => true, 'message' => 'Email enviado via SMTP.'];
     }
 
+    private function smtpEnabled(): bool
+    {
+        $dbValue = $this->rawSetting('smtp.enabled');
+        if ($dbValue !== null && $dbValue !== '') {
+            if ($this->isTruthy($dbValue)) {
+                return true;
+            }
+
+            $isDev = strtolower((string) config('app.env', 'production')) === 'development';
+            $devForce = $this->isTruthy((string) env('SMTP_DEV_FORCE', '0'));
+            $envHost = trim((string) env('SMTP_HOST', ''));
+            if ($isDev && $devForce && $envHost !== '') {
+                return true;
+            }
+
+            return false;
+        }
+
+        return $this->isTruthy((string) env('SMTP_ENABLED', '0'));
+    }
+
+    private function settingOrEnv(string $settingKey, string $envKey, string $default): string
+    {
+        $dbValue = $this->rawSetting($settingKey);
+        if ($dbValue !== null && $dbValue !== '') {
+            return $dbValue;
+        }
+
+        return (string) env($envKey, $default);
+    }
+
+    private function rawSetting(string $key): ?string
+    {
+        $row = $this->settings->findByKey($key);
+        if (!$row) {
+            return null;
+        }
+
+        return isset($row['value_text']) ? (string) $row['value_text'] : null;
+    }
+
     private function logDelivery(string $toEmail, string $subject, string $bodyText): void
     {
         $entry = [
@@ -223,4 +264,3 @@ final class EmailService
         return in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on'], true);
     }
 }
-

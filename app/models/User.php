@@ -136,9 +136,15 @@ final class User extends BaseModel
 
     public function create(array $data): int
     {
-        $emailVerifiedAt = $data['email_verified_at'] ?? date('Y-m-d H:i:s');
-        $passwordSetAt = $data['password_set_at'] ?? date('Y-m-d H:i:s');
-        $onboardingCompletedAt = $data['onboarding_completed_at'] ?? null;
+        $emailVerifiedAt = array_key_exists('email_verified_at', $data)
+            ? $data['email_verified_at']
+            : date('Y-m-d H:i:s');
+        $passwordSetAt = array_key_exists('password_set_at', $data)
+            ? $data['password_set_at']
+            : date('Y-m-d H:i:s');
+        $onboardingCompletedAt = array_key_exists('onboarding_completed_at', $data)
+            ? $data['onboarding_completed_at']
+            : null;
 
         $sql = 'INSERT INTO users
                     (name, email, password_hash, account_avatar, role, status, email_verified_at, password_set_at, onboarding_completed_at, created_at, updated_at, last_login_at)

@@ -413,6 +413,11 @@
       return;
     }
 
+    $('#register-code').on('input', function () {
+      var digits = String($(this).val() || '').replace(/\D+/g, '').slice(0, 6);
+      $(this).val(digits);
+    });
+
     var remaining = parseInt($button.data('resendCountdown'), 10) || 0;
     if (remaining <= 0) {
       return;

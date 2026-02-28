@@ -9,14 +9,11 @@ use App\core\Response;
 use App\core\Validator;
 use App\core\View;
 use App\models\AuditLog;
-use App\models\BillingPlan;
 use App\models\EmailVerificationCode;
 use App\models\Profile;
 use App\models\Setting;
-use App\models\Subscription;
 use App\models\User;
 use App\services\EmailService;
-use App\services\PaymentGatewayManager;
 
 final class AuthController extends BaseController
 {
@@ -75,11 +72,29 @@ final class AuthController extends BaseController
             Response::redirect('/profiles');
         }
 
+        if (((string) ($_GET['restart'] ?? '')) === '1') {
+            $this->clearRegistrationSession();
+        }
+
+        $sessionEmail = (string) ($_SESSION[self::REG_EMAIL_KEY] ?? '');
+        if ($sessionEmail !== '') {
+            if ($this->isRegistrationCodeVerified()) {
+                Response::redirect('/register/password');
+            }
+
+            $latestCode = (new EmailVerificationCode())->latestActiveByEmail($sessionEmail);
+            if ($latestCode && !$this->isVerificationExpired($latestCode)) {
+                Response::redirect('/register/verify');
+            }
+        }
+
         View::render('public/register_email', [
             'title' => 'Criar Conta | WisePlay',
             'currentPath' => current_path(),
             'prefillEmail' => (string) ($_SESSION[self::REG_EMAIL_KEY] ?? ''),
             'prefillName' => (string) ($_SESSION[self::REG_NAME_KEY] ?? ''),
+            'authStep' => 'account',
+            'showDevMailHint' => $this->showDevMailHint(),
         ], 'public');
     }
 
@@ -92,6 +107,8 @@ final class AuthController extends BaseController
 
         $email = strtolower(trim((string) ($_POST['email'] ?? '')));
         $name = trim((string) ($_POST['name'] ?? ''));
+        $_SESSION[self::REG_EMAIL_KEY] = $email;
+        $_SESSION[self::REG_NAME_KEY] = $name;
 
         if (!Validator::email($email)) {
             flash('error', 'Informe um email valido para continuar.');
@@ -105,23 +122,29 @@ final class AuthController extends BaseController
         $userModel = new User();
         $existing = $userModel->findByEmail($email);
         if ($existing && ((string) ($existing['email_verified_at'] ?? '')) !== '' && ((string) ($existing['password_set_at'] ?? '')) !== '') {
+            $this->clearRegistrationSession();
             flash('error', 'Este email ja possui cadastro. Use o login.');
             Response::redirect('/login');
         }
 
-        $result = $this->dispatchVerificationCode($email, $name, false, isset($existing['id']) ? (int) $existing['id'] : null);
+        if ($this->isPasswordPendingUser($existing)) {
+            $this->restoreRegistrationSession($existing, $name !== '' ? $name : (string) ($existing['name'] ?? ''));
+            flash('success', 'Seu email ja foi validado. Continue criando sua senha.');
+            Response::redirect('/register/password');
+        }
+
+        $pendingUserId = $this->ensurePendingRegistrationUser($existing, $email, $name);
+        $result = $this->dispatchVerificationCode($email, $name, false, $pendingUserId);
         if (($result['ok'] ?? false) !== true) {
             flash('error', (string) ($result['message'] ?? 'Nao foi possivel enviar o codigo.'));
             Response::redirect('/register');
         }
-
-        $_SESSION[self::REG_EMAIL_KEY] = $email;
-        $_SESSION[self::REG_NAME_KEY] = $name;
         unset($_SESSION[self::REG_VERIFIED_AT_KEY]);
 
         $this->auditRegistrationEvent('registration.code.sent', $email, [
             'resend' => false,
             'expires_minutes' => $this->verificationCodeTtlMinutes(),
+            'user_id' => $pendingUserId,
         ]);
 
         flash('success', 'Enviamos um codigo de 6 digitos para seu email.');
@@ -134,10 +157,14 @@ final class AuthController extends BaseController
             Response::redirect('/profiles');
         }
 
-        $email = (string) ($_SESSION[self::REG_EMAIL_KEY] ?? '');
+        $email = $this->resumeRegistrationEmailFromRequest();
         if ($email === '') {
             flash('error', 'Informe seu email para iniciar o cadastro.');
             Response::redirect('/register');
+        }
+
+        if ($this->isRegistrationCodeVerified()) {
+            Response::redirect('/register/password');
         }
 
         $latest = (new EmailVerificationCode())->latestByEmail($email);
@@ -153,6 +180,8 @@ final class AuthController extends BaseController
             'email' => $email,
             'name' => (string) ($_SESSION[self::REG_NAME_KEY] ?? ''),
             'cooldownRemaining' => $cooldownRemaining,
+            'authStep' => 'verify',
+            'showDevMailHint' => $this->showDevMailHint(),
         ], 'public');
     }
 
@@ -163,7 +192,7 @@ final class AuthController extends BaseController
             Response::redirect('/profiles');
         }
 
-        $email = (string) ($_SESSION[self::REG_EMAIL_KEY] ?? '');
+        $email = $this->resumeRegistrationEmailFromRequest();
         if ($email === '') {
             flash('error', 'Sessao de cadastro expirada. Informe seu email novamente.');
             Response::redirect('/register');
@@ -213,10 +242,28 @@ final class AuthController extends BaseController
         }
 
         $codes->consume((int) $active['id']);
-        $_SESSION[self::REG_VERIFIED_AT_KEY] = date('Y-m-d H:i:s');
+        $verifiedAt = date('Y-m-d H:i:s');
+        $_SESSION[self::REG_VERIFIED_AT_KEY] = $verifiedAt;
+
+        $userId = (int) ($active['user_id'] ?? 0);
+        if ($userId > 0) {
+            $user = (new User())->findById($userId);
+            if ($user) {
+                (new User())->update($userId, [
+                    'name' => (string) ($user['name'] ?? $this->placeholderNameFromEmail($email)),
+                    'email' => (string) ($user['email'] ?? $email),
+                    'account_avatar' => (string) ($user['account_avatar'] ?? '/assets/img/avatar-library/avatar-01.svg'),
+                    'role' => (string) ($user['role'] ?? 'VIEWER'),
+                    'status' => (string) ($user['status'] ?? 'ACTIVE'),
+                    'email_verified_at' => $verifiedAt,
+                    'onboarding_completed_at' => $user['onboarding_completed_at'] ?? null,
+                ]);
+            }
+        }
 
         $this->auditRegistrationEvent('registration.code.verified', $email, [
             'attempts_used' => (int) ($active['attempts_count'] ?? 0),
+            'user_id' => $userId > 0 ? $userId : null,
         ]);
 
         flash('success', 'Email verificado. Agora defina sua senha.');
@@ -230,7 +277,7 @@ final class AuthController extends BaseController
             Response::redirect('/profiles');
         }
 
-        $email = (string) ($_SESSION[self::REG_EMAIL_KEY] ?? '');
+        $email = $this->resumeRegistrationEmailFromRequest();
         if ($email === '') {
             flash('error', 'Sessao de cadastro expirada. Informe seu email novamente.');
             Response::redirect('/register');
@@ -259,7 +306,7 @@ final class AuthController extends BaseController
             Response::redirect('/profiles');
         }
 
-        $email = (string) ($_SESSION[self::REG_EMAIL_KEY] ?? '');
+        $email = $this->resumeRegistrationEmailFromRequest();
         if ($email === '') {
             flash('error', 'Sessao de cadastro expirada. Informe seu email novamente.');
             Response::redirect('/register');
@@ -276,6 +323,7 @@ final class AuthController extends BaseController
             'email' => $email,
             'name' => (string) ($_SESSION[self::REG_NAME_KEY] ?? ''),
             'passwordMinLength' => $this->passwordMinLength(),
+            'authStep' => 'password',
         ], 'public');
     }
 
@@ -309,9 +357,6 @@ final class AuthController extends BaseController
         }
 
         $userModel = new User();
-        $planModel = new BillingPlan();
-        $subModel = new Subscription();
-        $profileModel = new Profile();
         $name = trim((string) ($_SESSION[self::REG_NAME_KEY] ?? ''));
         if ($name === '') {
             $name = 'Novo Usuario';
@@ -355,26 +400,6 @@ final class AuthController extends BaseController
                 ]);
             }
 
-            $plan = $planModel->findDefaultForRegistration();
-            if (!$plan) {
-                flash('error', 'Nenhum plano ativo disponivel para concluir cadastro.');
-                Response::redirect('/register/password');
-            }
-
-            $requiresPayment = ((int) ($plan['requires_payment_method'] ?? 0) === 1);
-            $gatewayProvider = strtolower((new PaymentGatewayManager())->gateway()->providerCode());
-            $subModel->assignOrUpdate(
-                (int) $userId,
-                (int) $plan['id'],
-                $requiresPayment ? 'PENDING' : 'ACTIVE',
-                null,
-                true,
-                $requiresPayment,
-                $requiresPayment ? 'PENDING' : 'NOT_REQUIRED',
-                $requiresPayment ? $gatewayProvider : null,
-                null
-            );
-            $profileModel->ensureDefaultAdultProfile((int) $userId);
         } catch (\Throwable) {
             flash('error', 'Nao foi possivel concluir o cadastro no momento.');
             Response::redirect('/register/password');
@@ -382,11 +407,11 @@ final class AuthController extends BaseController
 
         $this->auditRegistrationEvent('registration.password.set', $email, [
             'user_id' => (int) $userId,
-            'plan_assigned' => (string) ($plan['slug'] ?? ''),
+            'plan_assigned' => null,
         ]);
 
         $this->clearRegistrationSession();
-        flash('success', 'Cadastro concluido com sucesso. Agora faca login.');
+        flash('success', 'Cadastro concluido com sucesso. Agora faca login para escolher seu plano.');
         Response::redirect('/login');
     }
 
@@ -505,7 +530,10 @@ final class AuthController extends BaseController
             ];
         }
 
-        return ['ok' => true];
+        return [
+            'ok' => true,
+            'code_id' => $recordId,
+        ];
     }
 
     private function hashVerificationCode(string $code): string
@@ -574,6 +602,113 @@ final class AuthController extends BaseController
         }
 
         return true;
+    }
+
+    private function isVerificationExpired(array $verification): bool
+    {
+        $expiresAt = strtotime((string) ($verification['expires_at'] ?? ''));
+        return $expiresAt !== false && $expiresAt < time();
+    }
+
+    private function isPasswordPendingUser(?array $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        return ((string) ($user['email_verified_at'] ?? '')) !== ''
+            && ((string) ($user['password_set_at'] ?? '')) === '';
+    }
+
+    private function ensurePendingRegistrationUser(?array $existing, string $email, string $name): int
+    {
+        $users = new User();
+
+        if ($existing) {
+            $userId = (int) $existing['id'];
+            $resolvedName = $name !== '' ? $name : (string) ($existing['name'] ?? $this->placeholderNameFromEmail($email));
+            $users->update($userId, [
+                'name' => $resolvedName,
+                'email' => $email,
+                'account_avatar' => (string) ($existing['account_avatar'] ?? '/assets/img/avatar-library/avatar-01.svg'),
+                'role' => (string) ($existing['role'] ?? 'VIEWER'),
+                'status' => (string) ($existing['status'] ?? 'ACTIVE'),
+                'email_verified_at' => $existing['email_verified_at'] ?? null,
+                'onboarding_completed_at' => $existing['onboarding_completed_at'] ?? null,
+            ]);
+            return $userId;
+        }
+
+        return $users->create([
+            'name' => $name !== '' ? $name : $this->placeholderNameFromEmail($email),
+            'email' => $email,
+            'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
+            'account_avatar' => '/assets/img/avatar-library/avatar-01.svg',
+            'role' => 'VIEWER',
+            'status' => 'ACTIVE',
+            'email_verified_at' => null,
+            'password_set_at' => null,
+            'onboarding_completed_at' => null,
+        ]);
+    }
+
+    private function placeholderNameFromEmail(string $email): string
+    {
+        $localPart = trim((string) preg_replace('/@.*$/', '', $email));
+        if ($localPart === '') {
+            return 'Novo Usuario';
+        }
+
+        $pretty = str_replace(['.', '-', '_'], ' ', $localPart);
+        return ucwords(trim($pretty)) ?: 'Novo Usuario';
+    }
+
+    private function restoreRegistrationSession(array $user, string $fallbackName = ''): void
+    {
+        $_SESSION[self::REG_EMAIL_KEY] = (string) ($user['email'] ?? '');
+        $_SESSION[self::REG_NAME_KEY] = $fallbackName !== ''
+            ? $fallbackName
+            : (string) ($user['name'] ?? '');
+
+        if ($this->isPasswordPendingUser($user)) {
+            $_SESSION[self::REG_VERIFIED_AT_KEY] = (string) ($user['email_verified_at'] ?? date('Y-m-d H:i:s'));
+            return;
+        }
+
+        unset($_SESSION[self::REG_VERIFIED_AT_KEY]);
+    }
+
+    private function resumeRegistrationEmailFromRequest(): string
+    {
+        $email = (string) ($_SESSION[self::REG_EMAIL_KEY] ?? '');
+        if ($email !== '') {
+            return $email;
+        }
+
+        $requestedEmail = strtolower(trim((string) ($_GET['email'] ?? '')));
+        if (!Validator::email($requestedEmail)) {
+            return '';
+        }
+
+        $user = (new User())->findByEmail($requestedEmail);
+        if (!$user) {
+            return '';
+        }
+
+        if (((string) ($user['email_verified_at'] ?? '')) !== '' && ((string) ($user['password_set_at'] ?? '')) !== '') {
+            return '';
+        }
+
+        $this->restoreRegistrationSession($user);
+        return (string) ($user['email'] ?? '');
+    }
+
+    private function showDevMailHint(): bool
+    {
+        $smtpEnabled = strtolower(trim((string) (new Setting())->value('smtp.enabled', '0')));
+        $devLogEnabled = strtolower(trim((string) (new Setting())->value('email.dev_log_delivery', '1')));
+        return !in_array($smtpEnabled, ['1', 'true', 'yes', 'on'], true)
+            && in_array($devLogEnabled, ['1', 'true', 'yes', 'on'], true);
     }
 
     private function clearRegistrationSession(): void

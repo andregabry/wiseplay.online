@@ -47,19 +47,18 @@ VALUES
 ('auth', 'auth.verification_resend_cooldown_seconds', '60', 0, NOW(), NOW()),
 ('auth', 'auth.password_min_length', '8', 0, NOW(), NOW()),
 ('auth', 'auth.verification_session_ttl_minutes', '30', 0, NOW(), NOW()),
-('smtp', 'smtp.enabled', '0', 0, NOW(), NOW()),
-('smtp', 'smtp.host', '', 0, NOW(), NOW()),
-('smtp', 'smtp.port', '587', 0, NOW(), NOW()),
+('smtp', 'smtp.enabled', '1', 0, NOW(), NOW()),
+('smtp', 'smtp.host', 'mailpit', 0, NOW(), NOW()),
+('smtp', 'smtp.port', '1025', 0, NOW(), NOW()),
 ('smtp', 'smtp.username', '', 0, NOW(), NOW()),
 ('smtp', 'smtp.password', '', 1, NOW(), NOW()),
-('smtp', 'smtp.encryption', 'tls', 0, NOW(), NOW()),
+('smtp', 'smtp.encryption', 'none', 0, NOW(), NOW()),
 ('smtp', 'smtp.from_email', 'no-reply@wiseplay.local', 0, NOW(), NOW()),
 ('smtp', 'smtp.from_name', 'WisePlay', 0, NOW(), NOW()),
 ('email', 'email.verification_subject', 'WisePlay - Codigo de verificacao', 0, NOW(), NOW()),
 ('email', 'email.verification_template', 'Ola {{name}},\\n\\nSeu codigo de verificacao WisePlay: {{code}}\\nEste codigo expira em {{expires_minutes}} minutos.\\n\\nSe voce nao solicitou este cadastro, ignore este email.', 0, NOW(), NOW()),
-('email', 'email.dev_log_delivery', '1', 0, NOW(), NOW())
+('email', 'email.dev_log_delivery', '0', 0, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
   value_text = VALUES(value_text),
   is_secret = VALUES(is_secret),
   updated_at = VALUES(updated_at);
-

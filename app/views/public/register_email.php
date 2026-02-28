@@ -4,8 +4,14 @@
     <a class="wp-logo login-logo" href="/login">WISEPLAY</a>
 
     <div class="wp-login-card">
+      <?php include BASE_PATH . '/app/views/partials/public_auth_steps.php'; ?>
       <h1>Criar conta</h1>
-      <p>Digite seu email para receber um codigo de verificacao.</p>
+      <p>Comece com seu email. Vamos validar a conta antes de liberar o primeiro acesso.</p>
+
+      <div class="wp-auth-meta-card">
+        <strong>Etapa 1 de 3</strong>
+        <span>Voce recebe um codigo de 6 digitos e pode retomar o fluxo depois sem perder o cadastro.</span>
+      </div>
 
       <form method="post" action="/register/send-code" class="wp-login-form">
         <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
@@ -22,7 +28,12 @@
       <div class="wp-login-help">
         <small>Ja possui conta? <a href="/login">Entrar</a></small>
       </div>
+
+      <?php if (!empty($showDevMailHint)): ?>
+        <div class="wp-auth-inline-hint">
+          Ambiente local sem SMTP ativo. O codigo tambem fica registrado em <code>storage/logs/mail.log</code>.
+        </div>
+      <?php endif; ?>
     </div>
   </section>
 </main>
-

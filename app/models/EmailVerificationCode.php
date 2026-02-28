@@ -86,5 +86,5 @@ final class EmailVerificationCode extends BaseModel
         );
         $stmt->execute([':id' => $id]);
     }
-}
 
+}
