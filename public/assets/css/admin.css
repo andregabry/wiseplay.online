@@ -43,6 +43,72 @@
   box-shadow: 0 8px 26px rgba(74, 77, 97, 0.08);
 }
 
+.wp-users-table-wrap {
+  overflow: visible;
+}
+
+.wp-users-table {
+  min-width: 980px;
+}
+
+.wp-users-table thead th {
+  white-space: nowrap;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8699;
+  border-bottom-width: 1px;
+}
+
+.wp-users-table tbody tr {
+  position: static;
+}
+
+.wp-users-table tbody td {
+  position: static;
+}
+
+.wp-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 240px;
+}
+
+.wp-user-avatar {
+  flex: 0 0 auto;
+}
+
+.wp-user-cell-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.wp-user-cell-copy strong {
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.wp-user-cell-copy span,
+.wp-user-table-meta small {
+  color: #8a8699;
+  font-size: 0.8rem;
+}
+
+.wp-user-table-meta {
+  display: grid;
+  gap: 2px;
+}
+
+.wp-user-table-meta strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.wp-actions-cell {
+  width: 72px;
+}
+
 .user-meta-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -158,6 +224,7 @@ html {
   margin: 0;
   display: block;
   z-index: 2000;
+  min-width: 12rem;
 }
 
 @media (max-width: 991px) {
@@ -178,6 +245,10 @@ html {
 
   .user-meta-grid {
     grid-template-columns: 1fr;
+  }
+
+  .wp-users-table {
+    min-width: 860px;
   }
 }
 

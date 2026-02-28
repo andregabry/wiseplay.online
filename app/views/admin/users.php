@@ -67,75 +67,98 @@ $queryForPage = static function (int $pageNum, array $filters): string {
   </div>
 </div>
 
-<div class="row g-4">
-  <?php if ($items === []): ?>
-    <div class="col-12">
-      <div class="card"><div class="card-body text-center text-body-secondary">Nenhum usuario encontrado.</div></div>
-    </div>
-  <?php endif; ?>
-
-  <?php foreach ($items as $user): ?>
-    <?php
-      $userId = (int) $user['id'];
-      $isActive = ((string) $user['status'] === 'ACTIVE');
-      $avatar = $avatarOrFallback((string) ($user['account_avatar'] ?? ''), $avatarFallback);
-      $payload = json_encode([
-          'id' => $userId,
-          'name' => (string) $user['name'],
-          'email' => (string) $user['email'],
-          'account_avatar' => (string) ($user['account_avatar'] ?? ''),
-          'role' => (string) $user['role'],
-          'status' => (string) $user['status'],
-          'plan_id' => (int) ($user['subscription_plan_id'] ?? 0),
-      ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT);
-    ?>
-    <div class="col-xl-4 col-md-6">
-      <div class="card user-card h-100">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between mb-3">
-            <div class="avatar avatar-lg">
-              <img src="<?= e($avatar) ?>" alt="avatar conta" class="rounded-circle" onerror="this.src='<?= e($avatarFallback) ?>'">
-            </div>
-            <?php if ($canManageUsers): ?>
-            <div class="dropdown wp-actions-dropdown">
-              <button type="button" class="btn btn-sm btn-icon js-actions-toggle" aria-haspopup="true" aria-expanded="false"><i class="ri ri-more-2-fill"></i></button>
-              <div class="dropdown-menu dropdown-menu-end wp-actions-menu" role="menu">
-                <a href="#" class="dropdown-item js-view-user" data-user='<?= e($payload) ?>'><i class="ri ri-eye-line me-2"></i>Detalhes</a>
-                <a href="#" class="dropdown-item js-edit-user" data-user='<?= e($payload) ?>'><i class="ri ri-pencil-line me-2"></i>Editar</a>
-                <a href="#" class="dropdown-item js-toggle-user" data-id="<?= $userId ?>" data-next="<?= $isActive ? 'DISABLED' : 'ACTIVE' ?>" data-name="<?= e((string) $user['name']) ?>">
-                  <i class="ri ri-repeat-line me-2"></i><?= $isActive ? 'Desativar' : 'Ativar' ?>
-                </a>
-                <a href="#" class="dropdown-item text-danger js-delete-user" data-id="<?= $userId ?>" data-name="<?= e((string) $user['name']) ?>">
-                  <i class="ri ri-delete-bin-line me-2"></i>Excluir
-                </a>
-              </div>
-            </div>
-            <?php endif; ?>
-          </div>
-          <h6 class="mb-1"><?= e((string) $user['name']) ?></h6>
-          <p class="text-body-secondary mb-2"><?= e((string) $user['email']) ?></p>
-          <div class="d-flex flex-wrap gap-2 mb-3">
-            <span class="badge bg-label-info"><?= e((string) $user['role']) ?></span>
-            <span class="badge <?= $isActive ? 'bg-label-success' : 'bg-label-warning' ?>"><?= $isActive ? 'ACTIVE' : 'DISABLED' ?></span>
-          </div>
-          <div class="user-meta-grid">
-            <div>
-              <small class="text-body-secondary">Plano</small>
-              <strong><?= e((string) ($user['subscription_plan'] ?: 'Sem plano')) ?></strong>
-            </div>
-            <div>
-              <small class="text-body-secondary">Perfis criados</small>
-              <strong><?= (int) ($user['profiles_count'] ?? 0) ?></strong>
-            </div>
-          </div>
-          <div class="mt-3 text-body-secondary small">
-            <div>Criado: <?= e((string) date('d/m/Y', strtotime((string) $user['created_at']))) ?></div>
-            <div>Ultimo login: <?= e((string) ($user['last_login_at'] ? date('d/m/Y H:i', strtotime((string) $user['last_login_at'])) : 'Nunca')) ?></div>
-          </div>
-        </div>
+<div class="card">
+  <div class="card-body">
+    <?php if ($items === []): ?>
+      <div class="text-center text-body-secondary py-5">Nenhum usuario encontrado.</div>
+    <?php else: ?>
+      <div class="table-responsive wp-users-table-wrap">
+        <table class="table align-middle wp-users-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Plano</th>
+              <th>Perfis</th>
+              <th>Criado em</th>
+              <th>Ultimo login</th>
+              <?php if ($canManageUsers): ?><th class="text-end">Acoes</th><?php endif; ?>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($items as $user): ?>
+              <?php
+                $userId = (int) $user['id'];
+                $isActive = ((string) $user['status'] === 'ACTIVE');
+                $avatar = $avatarOrFallback((string) ($user['account_avatar'] ?? ''), $avatarFallback);
+                $payload = json_encode([
+                    'id' => $userId,
+                    'name' => (string) $user['name'],
+                    'email' => (string) $user['email'],
+                    'account_avatar' => (string) ($user['account_avatar'] ?? ''),
+                    'role' => (string) $user['role'],
+                    'status' => (string) $user['status'],
+                    'plan_id' => (int) ($user['subscription_plan_id'] ?? 0),
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT);
+              ?>
+              <tr>
+                <td>
+                  <div class="wp-user-cell">
+                    <div class="avatar avatar-lg wp-user-avatar">
+                      <img src="<?= e($avatar) ?>" alt="avatar conta" class="rounded-circle" onerror="this.src='<?= e($avatarFallback) ?>'">
+                    </div>
+                    <div class="wp-user-cell-copy">
+                      <strong><?= e((string) $user['name']) ?></strong>
+                      <span><?= e((string) $user['email']) ?></span>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge bg-label-info"><?= e((string) $user['role']) ?></span></td>
+                <td><span class="badge <?= $isActive ? 'bg-label-success' : 'bg-label-warning' ?>"><?= $isActive ? 'ACTIVE' : 'DISABLED' ?></span></td>
+                <td>
+                  <div class="wp-user-table-meta">
+                    <strong><?= e((string) ($user['subscription_plan'] ?: 'Sem plano')) ?></strong>
+                    <small><?= e((string) ($user['subscription_status'] ?: 'Sem assinatura')) ?></small>
+                  </div>
+                </td>
+                <td><span class="badge bg-label-primary"><?= (int) ($user['profiles_count'] ?? 0) ?></span></td>
+                <td>
+                  <div class="wp-user-table-meta">
+                    <strong><?= e((string) date('d/m/Y', strtotime((string) $user['created_at']))) ?></strong>
+                    <small><?= e((string) date('H:i', strtotime((string) $user['created_at']))) ?></small>
+                  </div>
+                </td>
+                <td>
+                  <div class="wp-user-table-meta">
+                    <strong><?= e((string) ($user['last_login_at'] ? date('d/m/Y', strtotime((string) $user['last_login_at'])) : 'Nunca')) ?></strong>
+                    <small><?= e((string) ($user['last_login_at'] ? date('H:i', strtotime((string) $user['last_login_at'])) : 'Sem acesso')) ?></small>
+                  </div>
+                </td>
+                <?php if ($canManageUsers): ?>
+                  <td class="text-end wp-actions-cell">
+                    <div class="dropdown wp-actions-dropdown">
+                      <button type="button" class="btn btn-sm btn-icon js-actions-toggle" aria-haspopup="true" aria-expanded="false"><i class="ri ri-more-2-fill"></i></button>
+                      <div class="dropdown-menu dropdown-menu-end wp-actions-menu" role="menu">
+                        <a href="#" class="dropdown-item js-view-user" data-user='<?= e($payload) ?>'><i class="ri ri-eye-line me-2"></i>Detalhes</a>
+                        <a href="#" class="dropdown-item js-edit-user" data-user='<?= e($payload) ?>'><i class="ri ri-pencil-line me-2"></i>Editar</a>
+                        <a href="#" class="dropdown-item js-toggle-user" data-id="<?= $userId ?>" data-next="<?= $isActive ? 'DISABLED' : 'ACTIVE' ?>" data-name="<?= e((string) $user['name']) ?>">
+                          <i class="ri ri-repeat-line me-2"></i><?= $isActive ? 'Desativar' : 'Ativar' ?>
+                        </a>
+                        <a href="#" class="dropdown-item text-danger js-delete-user" data-id="<?= $userId ?>" data-name="<?= e((string) $user['name']) ?>">
+                          <i class="ri ri-delete-bin-line me-2"></i>Excluir
+                        </a>
+                      </div>
+                    </div>
+                  </td>
+                <?php endif; ?>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
       </div>
-    </div>
-  <?php endforeach; ?>
+    <?php endif; ?>
+  </div>
 </div>
 
 <?php if ((int) $pagination['lastPage'] > 1): ?>
