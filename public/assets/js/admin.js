@@ -563,28 +563,20 @@
   }
 
   function bindAdminUsersBulkActions() {
-    var $toolbar = $('[data-bulk-toolbar]');
-    if (!$toolbar.length) {
+    var $module = $('[data-users-module]');
+    if (!$module.length) {
       return;
     }
 
-    var $selectAll = $('.js-users-select-all');
-    var $checkboxes = $('.js-user-row-checkbox');
-    var $count = $('.js-users-selected-count');
-    var $bulkDelete = $('.js-users-bulk-delete');
-    var endpoint = String($toolbar.data('endpoint') || '');
-
-    function selectedIds() {
-      return $checkboxes.filter(':checked').map(function () {
-        return parseInt($(this).val(), 10) || 0;
-      }).get().filter(function (id) {
-        return id > 0;
-      });
-    }
-
-    function syncState() {
+    function syncState($scope) {
+      var $localScope = $scope && $scope.length ? $scope : $module;
+      var $selectAll = $localScope.find('.js-users-select-all').first();
+      var $checkboxes = $localScope.find('.js-user-row-checkbox');
+      var $count = $localScope.find('.js-users-selected-count').first();
+      var $bulkDelete = $localScope.find('.js-users-bulk-delete').first();
       var total = $checkboxes.length;
       var selected = $checkboxes.filter(':checked').length;
+
       $count.text(String(selected));
       $bulkDelete.prop('disabled', selected === 0);
 
@@ -601,26 +593,37 @@
       $selectAll.prop('checked', false).prop('indeterminate', true);
     }
 
-    $selectAll.on('change', function () {
+    function selectedIds($scope) {
+      return $scope.find('.js-user-row-checkbox:checked').map(function () {
+        return parseInt($(this).val(), 10) || 0;
+      }).get().filter(function (id) {
+        return id > 0;
+      });
+    }
+
+    $(document).on('change', '[data-users-module] .js-users-select-all', function () {
+      var $scope = $(this).closest('[data-users-module]');
       var checked = $(this).is(':checked');
-      $checkboxes.prop('checked', checked);
-      syncState();
+      $scope.find('.js-user-row-checkbox').prop('checked', checked);
+      syncState($scope);
     });
 
-    $checkboxes.on('change', function () {
-      syncState();
+    $(document).on('change', '[data-users-module] .js-user-row-checkbox', function () {
+      syncState($(this).closest('[data-users-module]'));
     });
 
-    $bulkDelete.on('click', function () {
+    $(document).on('click', '[data-users-module] .js-users-bulk-delete', function () {
+      var $scope = $(this).closest('[data-users-module]');
+      var endpoint = String($scope.find('[data-bulk-toolbar]').data('endpoint') || '');
       if (endpoint === '') {
         sweetError('Endpoint de exclusao em massa nao configurado.');
         return;
       }
 
-      bulkDeleteByEndpoint(endpoint, selectedIds());
+      bulkDeleteByEndpoint(endpoint, selectedIds($scope));
     });
 
-    syncState();
+    syncState($module);
   }
 
   function refreshFormImagePreviews($form) {

@@ -26,7 +26,7 @@ $queryForPage = static function (int $pageNum, array $filters): string {
 };
 ?>
 
-<div class="card mb-4">
+<div class="card" data-users-module>
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
       <div>
@@ -40,7 +40,7 @@ $queryForPage = static function (int $pageNum, array $filters): string {
       <?php endif; ?>
     </div>
 
-    <form method="get" action="/admin/users" class="row g-3">
+    <form method="get" action="/admin/users" class="row g-3 mb-4">
       <div class="col-md-5">
         <input class="form-control" type="text" name="q" value="<?= e((string) $filters['q']) ?>" placeholder="Buscar por nome ou email">
       </div>
@@ -64,11 +64,7 @@ $queryForPage = static function (int $pageNum, array $filters): string {
         <button class="btn btn-outline-primary" type="submit">Filtrar</button>
       </div>
     </form>
-  </div>
-</div>
 
-<div class="card">
-  <div class="card-body">
     <?php if ($items === []): ?>
       <div class="text-center text-body-secondary py-5">Nenhum usuario encontrado.</div>
     <?php else: ?>
