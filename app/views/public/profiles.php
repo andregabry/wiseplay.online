@@ -17,80 +17,94 @@ $avatarOrFallback = static function (?string $value, string $fallback): string {
     }
     return $value;
 };
-
-$manageUrl = $manageMode ? '/profiles' : '/profiles?manage=1';
-$manageLabel = $manageMode ? 'Concluir gerenciamento' : 'Gerenciar perfis';
 ?>
 
 <main class="wp-profiles-page">
   <a class="wp-logo profile-logo" href="/profiles">WISEPLAY</a>
 
   <section class="wp-profiles-content">
-    <div class="wp-profiles-top">
-      <h1>Quem esta assistindo?</h1>
-      <div class="wp-profiles-top-actions">
-        <div class="wp-plan-pill">
-          <span><?= e((string) ($plan['plan_name'] ?? 'Sem plano')) ?></span>
-          <small><?= $currentCount ?>/<?= max(0, $planLimit) ?> perfis</small>
-        </div>
-        <a href="<?= e($manageUrl) ?>" class="wp-btn ghost"><?= e($manageLabel) ?></a>
+    <header class="wp-profiles-stage">
+      <h1>Quem est&aacute; assistindo?</h1>
+      <p>
+        <?= $manageMode ? 'Escolha, edite ou crie perfis para continuar.' : 'Selecione um perfil para entrar no WisePlay.' ?>
+      </p>
+      <div class="wp-profiles-stage-meta">
+        <span><?= e((string) ($plan['plan_name'] ?? 'Sem plano')) ?></span>
+        <small><?= $currentCount ?>/<?= max(0, $planLimit) ?> perfis</small>
       </div>
-    </div>
+    </header>
 
     <?php if ($onboardingNeedsProfile): ?>
-      <div class="wp-onboarding-note">
-        Finalize seu primeiro acesso criando/selecionando ao menos um perfil.
+      <div class="wp-onboarding-note wp-profiles-note">
+        Seu primeiro acesso precisa de pelo menos um perfil selecionado.
       </div>
     <?php endif; ?>
 
-    <?php if ($profiles === []): ?>
-      <div class="wp-empty-card">
-        <p>Nenhum perfil encontrado para este usuario.</p>
-      </div>
-    <?php else: ?>
-      <div class="wp-profile-grid">
-        <?php foreach ($profiles as $profile): ?>
-          <?php
-            $profileId = (int) $profile['id'];
-            $active = $selectedProfileId === $profileId;
-            $isKids = ((int) ($profile['is_kids'] ?? 0) === 1);
-            $avatar = $avatarOrFallback((string) ($profile['avatar_path'] ?? ''), $avatarFallback);
-            $payload = json_encode([
-                'id' => $profileId,
-                'profile_name' => (string) ($profile['profile_name'] ?? ''),
-                'avatar_path' => $avatar,
-                'is_kids' => $isKids ? 1 : 0,
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT);
-          ?>
-          <article class="wp-profile-item <?= $active ? 'active' : '' ?>">
-            <form method="post" action="/profiles/select" class="wp-profile-form">
-              <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
-              <input type="hidden" name="profile_id" value="<?= $profileId ?>">
-              <button type="submit" class="wp-profile-btn">
+    <section class="wp-profile-grid wp-profile-grid-stage">
+      <?php foreach ($profiles as $profile): ?>
+        <?php
+          $profileId = (int) $profile['id'];
+          $active = $selectedProfileId === $profileId;
+          $isKids = ((int) ($profile['is_kids'] ?? 0) === 1);
+          $avatar = $avatarOrFallback((string) ($profile['avatar_path'] ?? ''), $avatarFallback);
+          $payload = json_encode([
+              'id' => $profileId,
+              'profile_name' => (string) ($profile['profile_name'] ?? ''),
+              'avatar_path' => $avatar,
+              'is_kids' => $isKids ? 1 : 0,
+          ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT);
+        ?>
+        <article class="wp-profile-tile <?= $active ? 'active' : '' ?>">
+          <form method="post" action="/profiles/select" class="wp-profile-form">
+            <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
+            <input type="hidden" name="profile_id" value="<?= $profileId ?>">
+            <button type="submit" class="wp-profile-btn wp-profile-stage-btn">
+              <span class="wp-profile-avatar-frame">
                 <img src="<?= e($avatar) ?>" alt="Avatar de <?= e((string) $profile['profile_name']) ?>" onerror="this.src='<?= e($avatarFallback) ?>'">
-                <span><?= e((string) $profile['profile_name']) ?></span>
                 <?php if ($isKids): ?><small>KIDS</small><?php endif; ?>
-              </button>
-            </form>
+              </span>
+              <span class="wp-profile-name"><?= e((string) ($profile['profile_name'] ?? 'Perfil')) ?></span>
+            </button>
+          </form>
 
-            <?php if ($manageMode): ?>
-              <div class="wp-profile-admin-actions">
-                <button type="button" class="wp-btn tiny ghost js-edit-public-profile" data-profile='<?= e($payload) ?>'>Editar</button>
-                <form method="post" action="/profiles/delete" class="js-public-delete-profile-form">
-                  <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
-                  <input type="hidden" name="profile_id" value="<?= $profileId ?>">
-                  <button type="submit" class="wp-btn tiny ghost js-delete-public-profile" data-name="<?= e((string) $profile['profile_name']) ?>">Excluir</button>
-                </form>
-              </div>
-            <?php endif; ?>
-          </article>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
+          <?php if ($manageMode): ?>
+            <div class="wp-profile-admin-actions wp-profile-stage-actions">
+              <button type="button" class="wp-btn tiny ghost js-edit-public-profile" data-profile='<?= e($payload) ?>'>Editar</button>
+              <form method="post" action="/profiles/delete" class="js-public-delete-profile-form">
+                <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
+                <input type="hidden" name="profile_id" value="<?= $profileId ?>">
+                <button type="submit" class="wp-btn tiny ghost js-delete-public-profile" data-name="<?= e((string) ($profile['profile_name'] ?? 'perfil')) ?>">Excluir</button>
+              </form>
+            </div>
+          <?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+
+      <article class="wp-profile-tile wp-profile-tile-add <?= $canCreateProfile ? '' : 'disabled' ?>">
+        <a
+          href="<?= $canCreateProfile ? '/profiles?manage=1#create-profile-studio' : '#' ?>"
+          class="wp-profile-btn wp-profile-add-card js-public-create-profile"
+          data-limit-reached="<?= $canCreateProfile ? '0' : '1' ?>"
+          data-limit-value="<?= max(0, $planLimit) ?>">
+          <span class="wp-profile-add-circle">
+            <span class="wp-profile-add-plus">+</span>
+          </span>
+          <span class="wp-profile-name">Adicionar perfil</span>
+        </a>
+      </article>
+    </section>
+
+    <div class="wp-profiles-bottom-actions">
+      <?php if ($manageMode): ?>
+        <a href="/profiles" class="wp-profiles-manage-btn">Concluir gerenciamento</a>
+      <?php else: ?>
+        <a href="/profiles?manage=1" class="wp-profiles-manage-btn">Gerenciar perfis</a>
+      <?php endif; ?>
+    </div>
 
     <?php if ($manageMode): ?>
       <section class="wp-profile-manage-grid">
-        <div class="wp-manage-card">
+        <div class="wp-manage-card" id="create-profile-studio">
           <h2>Criar perfil</h2>
           <p>Novo perfil adulto ou kids. Limite do plano: <?= max(0, $planLimit) ?>.</p>
 
@@ -134,9 +148,9 @@ $manageLabel = $manageMode ? 'Concluir gerenciamento' : 'Gerenciar perfis';
           </form>
         </div>
 
-        <div class="wp-manage-card">
+        <div class="wp-manage-card" id="edit-profile-studio">
           <h2>Editar perfil</h2>
-          <p>Selecione um perfil existente para editar nome, tipo e avatar.</p>
+          <p>Selecione um perfil acima para editar nome, tipo e avatar.</p>
 
           <form method="post" action="/profiles/update" enctype="multipart/form-data" id="public-profile-edit-form">
             <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">

@@ -505,33 +505,64 @@ a {
 
 .wp-profiles-page {
   min-height: 100vh;
-  padding: 48px 20px 28px;
-  display: grid;
-  place-items: center;
+  position: relative;
+  padding: 42px 24px 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 32%),
+    #111;
 }
 
 .profile-logo {
   position: absolute;
   top: 18px;
-  left: 22px;
+  left: 28px;
 }
 
 .wp-profiles-content {
-  width: min(980px, 100%);
+  width: min(1240px, 100%);
 }
 
-.wp-profiles-top {
-  margin-bottom: 18px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+.wp-profiles-stage {
+  text-align: center;
+  margin-bottom: 36px;
 }
 
-.wp-profiles-top h1 {
+.wp-profiles-stage h1 {
   margin: 0;
-  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  font-size: clamp(2.8rem, 5vw, 5rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: #f4f4f4;
+}
+
+.wp-profiles-stage p {
+  margin: 12px 0 0;
+  color: #a8a8ad;
+  font-size: 1rem;
+}
+
+.wp-profiles-stage-meta {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.wp-profiles-stage-meta span {
+  font-weight: 700;
+  color: #f0f0f0;
+}
+
+.wp-profiles-stage-meta small {
+  color: #a8a8ad;
+  font-size: 0.82rem;
 }
 
 .wp-onboarding-note {
@@ -544,47 +575,21 @@ a {
   font-size: 0.82rem;
 }
 
-.wp-profiles-top-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.wp-profiles-note {
+  max-width: 620px;
+  margin: 0 auto 20px;
 }
 
-.wp-plan-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--wp-border);
-  border-radius: 999px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.wp-plan-pill span {
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.wp-plan-pill small {
-  font-size: 0.73rem;
-  color: var(--wp-muted);
-}
-
-.wp-profile-grid {
+.wp-profile-grid-stage {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 220px));
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: 38px;
 }
 
-.wp-profile-item {
-  border: 1px solid transparent;
-  border-radius: 14px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.wp-profile-item.active {
-  border-color: rgba(255, 255, 255, 0.4);
+.wp-profile-tile {
+  text-align: center;
 }
 
 .wp-profile-form,
@@ -592,69 +597,152 @@ a {
   margin: 0;
 }
 
-.wp-profile-btn {
+.wp-profile-stage-btn,
+.wp-profile-add-card {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+  border: 0;
+  background: transparent;
   color: #fff;
-  padding: 14px;
+  padding: 0;
   display: grid;
-  place-items: center;
-  gap: 8px;
+  gap: 18px;
+  justify-items: center;
   cursor: pointer;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
-.wp-profile-btn img {
-  width: 96px;
-  height: 96px;
-  border-radius: 10px;
+.wp-profile-avatar-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1a1a1d;
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, filter 0.2s ease;
+}
+
+.wp-profile-avatar-frame img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  display: block;
 }
 
-.wp-profile-btn span {
-  font-weight: 700;
-}
-
-.wp-profile-btn small {
+.wp-profile-avatar-frame small {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
   font-size: 0.72rem;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 999px;
   color: #111;
   background: #ffd447;
   font-weight: 800;
 }
 
-.wp-profile-form.active .wp-profile-btn,
-.wp-profile-btn:hover {
-  border-color: rgba(255, 255, 255, 0.52) !important;
+.wp-profile-name {
+  color: #7d7d82;
+  font-size: 1rem;
+  line-height: 1.2;
+  transition: color 0.2s ease;
+}
+
+.wp-profile-tile:hover .wp-profile-stage-btn,
+.wp-profile-tile:hover .wp-profile-add-card,
+.wp-profile-tile.active .wp-profile-stage-btn {
   transform: translateY(-2px);
 }
 
+.wp-profile-tile:hover .wp-profile-avatar-frame,
+.wp-profile-tile.active .wp-profile-avatar-frame {
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.72);
+}
+
+.wp-profile-tile:hover .wp-profile-name,
+.wp-profile-tile.active .wp-profile-name {
+  color: #fff;
+}
+
+.wp-profile-tile-add.disabled .wp-profile-add-card {
+  opacity: 0.56;
+}
+
+.wp-profile-add-circle {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #8b8b8f;
+  max-width: 160px;
+  margin-top: 22px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.wp-profile-tile:hover .wp-profile-add-circle {
+  background: #b0b0b5;
+}
+
+.wp-profile-add-plus {
+  color: #111;
+  font-size: clamp(4rem, 7vw, 6rem);
+  line-height: 1;
+  font-weight: 500;
+  transform: translateY(-4px);
+}
+
 .wp-profile-admin-actions {
-  margin-top: 8px;
+  margin-top: 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
-.wp-profile-admin-actions .wp-btn {
-  width: 100%;
+.wp-profile-stage-actions .wp-btn {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #d1d1d7;
+}
+
+.wp-profiles-bottom-actions {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 26px;
+}
+
+.wp-profiles-manage-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 240px;
+  min-height: 58px;
+  padding: 14px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #a7a7ad;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.wp-profiles-manage-btn:hover {
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .wp-profile-manage-grid {
-  margin-top: 24px;
+  margin-top: 8px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
+  gap: 18px;
 }
 
 .wp-manage-card {
   border: 1px solid var(--wp-border);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 18px;
 }
 
 .wp-manage-card h2 {
@@ -1264,9 +1352,18 @@ a {
     grid-auto-columns: minmax(160px, 160px);
   }
 
-  .wp-profiles-top {
-    flex-direction: column;
-    align-items: flex-start;
+  .wp-profiles-stage h1 {
+    font-size: 2.5rem;
+  }
+
+  .wp-profile-grid-stage {
+    grid-template-columns: repeat(auto-fit, minmax(148px, 180px));
+    gap: 22px;
+  }
+
+  .wp-profile-add-circle {
+    max-width: 124px;
+    margin-top: 12px;
   }
 
   .wp-payment-grid {
