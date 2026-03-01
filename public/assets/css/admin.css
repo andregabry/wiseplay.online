@@ -307,11 +307,41 @@ body[data-admin-page].swal2-shown {
 .content-wrapper .card {
   position: relative;
   overflow: visible;
-  border-left: 6px solid var(--wp-admin-accent);
+  border-left: 0;
 }
 
-.content-wrapper .card::after {
-  content: none;
+.content-wrapper .card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  border-top-left-radius: var(--wp-admin-card-radius);
+  border-bottom-left-radius: var(--wp-admin-card-radius);
+  border-top-right-radius: 2px;
+  border-bottom-right-radius: 2px;
+  background: #26c6f9;
+  animation: wp-card-accent-shift 6s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes wp-card-accent-shift {
+  0% {
+    background: #26c6f9;
+  }
+  25% {
+    background: #ff4d49;
+  }
+  50% {
+    background: #28c76f;
+  }
+  75% {
+    background: #fdb528;
+  }
+  100% {
+    background: #26c6f9;
+  }
 }
 
 .btn-semantic-primary {
@@ -963,7 +993,7 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   display: flex;
   align-items: stretch;
   gap: 10px;
-  padding: 6px 8px;
+  padding: 6px 8px 6px 16px;
   border-top: 1px solid rgba(115, 103, 240, 0.08);
   border-radius: 14px;
   transition: background-color 0.18s ease, box-shadow 0.18s ease;
@@ -975,6 +1005,19 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 
 .wp-admin-notification-item:hover {
   background: color-mix(in srgb, var(--wp-admin-accent-soft) 52%, transparent);
+}
+
+.wp-admin-notification-item:not(.is-read)::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 999px;
+  background: var(--wp-admin-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wp-admin-accent-soft) 56%, transparent);
 }
 
 .wp-admin-notification-item.is-read .fw-medium,
