@@ -286,10 +286,22 @@ html {
 }
 
 body[data-admin-page] {
+  --wp-admin-surface: var(--bs-paper-bg);
+  --wp-admin-surface-soft: color-mix(in srgb, var(--bs-paper-bg) 86%, var(--bs-body-bg));
+  --wp-admin-surface-strong: color-mix(in srgb, var(--bs-paper-bg) 92%, var(--bs-body-bg));
+  --wp-admin-text: var(--bs-heading-color);
+  --wp-admin-text-muted: var(--bs-secondary-color);
+  --wp-admin-border: var(--bs-border-color);
+  --wp-admin-border-soft: var(--bs-border-color-translucent);
+  --wp-admin-menu-text: var(--bs-menu-color);
+  --wp-admin-menu-hover: var(--bs-menu-hover-color);
+  --wp-admin-menu-hover-bg: var(--bs-menu-hover-bg);
+  --wp-admin-menu-icon: var(--bs-menu-item-icon-color);
   background:
     radial-gradient(circle at 5% 10%, rgba(115, 103, 240, 0.08), transparent 33%),
     radial-gradient(circle at 95% 18%, rgba(0, 186, 207, 0.07), transparent 38%),
-    #f5f6fb;
+    var(--bs-body-bg);
+  color: var(--bs-body-color);
 }
 
 body[data-admin-page].swal2-shown {
@@ -305,16 +317,16 @@ body[data-admin-page].swal2-shown {
   content: "";
   position: absolute;
   left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 6px;
-  background: linear-gradient(180deg, var(--wp-admin-accent), color-mix(in srgb, var(--wp-admin-accent) 70%, #ffffff));
-  opacity: 0.95;
-  border-top-left-radius: calc(var(--wp-admin-card-radius) - 4px);
-  border-bottom-left-radius: calc(var(--wp-admin-card-radius) - 4px);
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  background: var(--wp-admin-accent);
+  opacity: 0.92;
+  border-top-left-radius: calc(var(--wp-admin-card-radius) - 10px);
+  border-bottom-left-radius: calc(var(--wp-admin-card-radius) - 10px);
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
-  box-shadow: 0 0 16px var(--wp-admin-page-glow);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--wp-admin-accent) 16%, transparent);
 }
 
 .btn-semantic-primary {
@@ -790,8 +802,9 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--wp-admin-accent-soft), rgba(255, 255, 255, 0.95));
+  background: transparent;
   color: var(--wp-admin-accent);
+  box-shadow: none;
 }
 
 .layout-menu .menu-inner {
@@ -806,13 +819,17 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   border-radius: 16px;
   min-height: 48px;
   padding-inline: 16px;
-  color: #5f667d;
+  color: var(--wp-admin-menu-text);
   transition: all 0.18s ease;
 }
 
+.layout-menu .menu-link .menu-icon {
+  color: var(--wp-admin-menu-icon);
+}
+
 .layout-menu .menu-link:hover {
-  background: rgba(255, 255, 255, 0.62);
-  color: #373d57;
+  background: var(--wp-admin-menu-hover-bg);
+  color: var(--wp-admin-menu-hover);
   transform: translateX(2px);
 }
 
@@ -846,14 +863,14 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   padding: 0 16px;
   margin-left: 0;
   border-radius: 18px;
-  border: 1px solid rgba(115, 103, 240, 0.08);
-  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--wp-admin-border-soft);
+  background: color-mix(in srgb, var(--wp-admin-surface) 88%, transparent);
   box-shadow: none;
 }
 
 .wp-admin-topbar-search i {
   font-size: 1.15rem;
-  color: #6d7692;
+  color: var(--wp-admin-text-muted);
 }
 
 .wp-admin-topbar-search .form-control {
@@ -861,11 +878,11 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   background: transparent;
   box-shadow: none;
   padding: 13px 0;
-  color: #4a5168;
+  color: var(--wp-admin-text);
 }
 
 .wp-admin-topbar-search .form-control::placeholder {
-  color: #9aa0b5;
+  color: var(--wp-admin-text-muted);
 }
 
 .wp-admin-topbar-actions {
@@ -879,7 +896,7 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #626a86;
+  color: var(--wp-admin-text);
   transition: all 0.18s ease;
   font-size: 1.28rem;
 }
@@ -909,22 +926,25 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 }
 
 .wp-admin-topbar-accent {
-  background: linear-gradient(135deg, var(--wp-admin-accent-soft), rgba(255, 255, 255, 0.95));
+  background: transparent;
   color: var(--wp-admin-accent);
+  box-shadow: none;
 }
 
 .wp-admin-topbar .dropdown-user .dropdown-menu {
   margin-top: 14px;
-  border: 0;
+  border: 1px solid var(--wp-admin-border-soft);
   border-radius: 18px;
+  background: var(--wp-admin-surface);
   box-shadow: 0 18px 38px rgba(39, 47, 77, 0.16);
 }
 
 .wp-admin-topbar-menu {
   min-width: 220px;
   margin-top: 12px;
-  border: 0;
+  border: 1px solid var(--wp-admin-border-soft);
   border-radius: 18px;
+  background: var(--wp-admin-surface);
   box-shadow: 0 18px 38px rgba(39, 47, 77, 0.16);
   padding-top: 8px;
   padding-bottom: 8px;
@@ -939,7 +959,7 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #8a8699;
+  color: var(--wp-admin-text-muted);
 }
 
 .wp-admin-notification-item {
@@ -968,7 +988,7 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 }
 
 .wp-admin-favorite-row a {
-  color: #4a5168;
+  color: var(--wp-admin-text);
 }
 
 .wp-admin-page-intro {
@@ -976,7 +996,7 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   border: 0;
   border-radius: var(--wp-admin-card-radius);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.62)),
+    linear-gradient(135deg, color-mix(in srgb, var(--wp-admin-surface) 95%, transparent), color-mix(in srgb, var(--wp-admin-surface-soft) 88%, transparent)),
     radial-gradient(circle at 88% 14%, var(--wp-admin-page-glow), transparent 30%);
   box-shadow: 0 14px 28px rgba(45, 49, 72, 0.05);
 }
@@ -1011,14 +1031,14 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   margin: 0;
   font-size: 2em;
   line-height: 1.05;
-  color: #363b52;
+  color: var(--wp-admin-text);
   font-weight: 700;
 }
 
 .wp-admin-page-intro-text p {
   margin: 6px 0 0;
   max-width: 780px;
-  color: rgba(76, 85, 108, 0.66);
+  color: color-mix(in srgb, var(--wp-admin-text-muted) 86%, transparent);
   font-size: 0.92rem;
   line-height: 1.45;
 }

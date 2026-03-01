@@ -629,6 +629,8 @@
   function bindAdminChrome() {
     var FAVORITES_KEY = 'wiseplay-admin-favorites';
     var LANGUAGE_KEY = 'wiseplay-admin-language';
+    var TEMPLATE_NAME = String(document.documentElement.getAttribute('data-template') || 'wiseplay-admin');
+    var customizerSyncTimer = null;
 
     function getStoredFavorites() {
       try {
@@ -703,6 +705,37 @@
         .addClass(currentTheme === 'dark' ? 'ri-moon-clear-line' : 'ri-sun-line');
     }
 
+    function customizerSetting(key) {
+      try {
+        return window.localStorage.getItem('templateCustomizer-' + TEMPLATE_NAME + '--' + key);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function syncCustomizerState() {
+      syncThemeIcon();
+
+      var $menu = $('#layout-menu');
+      if ($menu.length) {
+        var currentTheme = String(document.documentElement.getAttribute('data-bs-theme') || 'light').toLowerCase();
+        var semiDark = customizerSetting('SemiDark') === 'true' || document.documentElement.getAttribute('data-semidark-menu') === 'true';
+
+        if (semiDark && currentTheme !== 'dark') {
+          $menu.attr('data-bs-theme', 'dark');
+        } else {
+          $menu.removeAttr('data-bs-theme');
+        }
+      }
+    }
+
+    function scheduleCustomizerSync() {
+      if (customizerSyncTimer) {
+        window.clearTimeout(customizerSyncTimer);
+      }
+      customizerSyncTimer = window.setTimeout(syncCustomizerState, 40);
+    }
+
     function ensureCustomizer() {
       if (window.templateCustomizer && typeof window.templateCustomizer.update === 'function') {
         window.templateCustomizer.update();
@@ -760,7 +793,7 @@
         document.documentElement.setAttribute('data-bs-theme', nextTheme);
       }
       document.documentElement.setAttribute('data-bs-theme', nextTheme);
-      syncThemeIcon();
+      scheduleCustomizerSync();
     });
 
     $(document).on('click', '.js-admin-lang-option', function (event) {
@@ -800,8 +833,22 @@
       renderFavorites();
     });
 
+    $(document).on('click change', '#template-customizer input, #template-customizer .custom-option, .template-customizer-reset-btn, .template-customizer-open-btn, .template-customizer-close-btn', function () {
+      scheduleCustomizerSync();
+    });
+
+    if (window.MutationObserver) {
+      var rootObserver = new MutationObserver(function () {
+        scheduleCustomizerSync();
+      });
+      rootObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-bs-theme', 'class', 'data-skin', 'data-semidark-menu', 'dir']
+      });
+    }
+
     applyAdminLanguage(window.localStorage.getItem(LANGUAGE_KEY) || document.documentElement.getAttribute('lang') || 'en-US');
-    syncThemeIcon();
+    syncCustomizerState();
     renderFavorites();
     ensureCustomizer();
   }
