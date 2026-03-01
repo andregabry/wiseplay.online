@@ -676,16 +676,6 @@ body[data-admin-page] #layout-menu {
   box-shadow: none;
 }
 
-body[data-admin-page] #layout-menu::before {
-  content: "";
-  position: absolute;
-  inset: 12px auto 12px 0;
-  width: 6px;
-  border-radius: 0 999px 999px 0;
-  background: linear-gradient(180deg, var(--wp-admin-accent), color-mix(in srgb, var(--wp-admin-accent) 65%, #ffffff));
-  box-shadow: 0 0 18px var(--wp-admin-page-glow);
-}
-
 body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.up {
   background: rgba(115, 103, 240, 0.12);
   color: #6a5cf4;
@@ -831,15 +821,6 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 .wp-admin-page-intro .card-body {
   position: relative;
   padding: 22px 24px 22px 30px;
-}
-
-.wp-admin-page-intro-accent {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 14px;
-  border-radius: var(--wp-admin-card-radius) 18px 18px var(--wp-admin-card-radius);
-  background: linear-gradient(180deg, var(--wp-admin-accent), color-mix(in srgb, var(--wp-admin-accent) 72%, #ffffff));
-  box-shadow: 0 0 26px var(--wp-admin-page-glow);
 }
 
 .wp-admin-page-intro-main {
