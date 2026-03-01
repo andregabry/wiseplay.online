@@ -17,7 +17,7 @@ $menu = [
       <span class="app-brand-text demo menu-text fw-semibold ms-2">WisePlay</span>
     </a>
     <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large wp-admin-sidebar-toggle" aria-label="Toggle sidebar">
-      <i class="ri ri-menu-3-line icon-base"></i>
+      <i class="ri ri-menu-3-line"></i>
     </a>
   </div>
 
