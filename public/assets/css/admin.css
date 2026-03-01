@@ -803,10 +803,9 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 }
 
 .layout-menu .app-brand {
-  position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 20px 20px 14px;
 }
@@ -816,6 +815,7 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   min-width: 0;
   display: flex;
   align-items: center;
+  padding-right: 6px;
 }
 
 .wp-admin-sidebar-toggle {
@@ -823,7 +823,7 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   width: 40px;
   height: 40px;
   min-height: 40px;
-  margin: 0;
+  margin: 0 0 0 auto;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -1206,20 +1206,19 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   }
 
   .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .app-brand {
-    justify-content: center;
-    padding: 20px 0 14px;
+    grid-template-columns: 1fr 40px;
+    gap: 8px;
+    padding: 20px 12px 14px;
   }
 
   .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .app-brand-link {
     justify-content: center;
-    flex: 0 0 auto;
+    padding-right: 0;
   }
 
   .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .wp-admin-sidebar-toggle {
-    position: absolute;
-    top: 18px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: static;
+    transform: none;
   }
 
   .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .menu-inner {
@@ -1227,11 +1226,11 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   }
 
   .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .menu-inner > .menu-item > .menu-link {
-    width: 48px;
-    min-width: 48px;
+    width: 100%;
+    min-width: 0;
     min-height: 48px;
-    margin-inline: auto;
-    padding: 0;
+    margin-inline: 0;
+    padding-inline: 0;
     justify-content: center;
   }
 
