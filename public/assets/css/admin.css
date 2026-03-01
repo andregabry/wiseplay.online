@@ -307,40 +307,29 @@ body[data-admin-page].swal2-shown {
 .content-wrapper .card {
   position: relative;
   overflow: visible;
-  border-left: 0;
+  border-left: 6px solid #26c6f9;
+  animation: wp-card-accent-border 6s linear infinite;
 }
 
 .content-wrapper .card::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  border-top-left-radius: var(--wp-admin-card-radius);
-  border-bottom-left-radius: var(--wp-admin-card-radius);
-  border-top-right-radius: 2px;
-  border-bottom-right-radius: 2px;
-  background: #26c6f9;
-  animation: wp-card-accent-shift 6s linear infinite;
-  pointer-events: none;
+  content: none;
 }
 
-@keyframes wp-card-accent-shift {
+@keyframes wp-card-accent-border {
   0% {
-    background: #26c6f9;
+    border-left-color: #26c6f9;
   }
   25% {
-    background: #ff4d49;
+    border-left-color: #ff4d49;
   }
   50% {
-    background: #28c76f;
+    border-left-color: #28c76f;
   }
   75% {
-    background: #fdb528;
+    border-left-color: #fdb528;
   }
   100% {
-    background: #26c6f9;
+    border-left-color: #26c6f9;
   }
 }
 
