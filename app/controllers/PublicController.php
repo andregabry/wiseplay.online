@@ -20,8 +20,8 @@ use App\models\Title;
 use App\models\WatchHistory;
 use App\services\MediaSourceResolver;
 use App\services\OnboardingService;
+use App\services\AvatarLibraryService;
 use App\services\PaymentGatewayManager;
-use App\services\UploadService;
 
 final class PublicController extends BaseController
 {
@@ -364,10 +364,10 @@ final class PublicController extends BaseController
             $manageMode = true;
         }
 
-        $avatarOptions = [];
-        for ($i = 1; $i <= 12; $i++) {
-            $avatarOptions[] = '/assets/img/avatar-library/avatar-' . str_pad((string) $i, 2, '0', STR_PAD_LEFT) . '.svg';
-        }
+        $avatarLibrary = new AvatarLibraryService();
+        $avatarOptions = $avatarLibrary->profileAvatarOptions();
+        $avatarSections = $avatarLibrary->profileAvatarSections();
+        $avatarFallback = $avatarLibrary->defaultProfileAvatar();
 
         View::render('public/profiles', [
             'title' => 'Perfis | WisePlay',
@@ -380,6 +380,8 @@ final class PublicController extends BaseController
             'currentCount' => $currentCount,
             'canCreateProfile' => ($planLimit > 0 && $currentCount < $planLimit),
             'avatarOptions' => $avatarOptions,
+            'avatarSections' => $avatarSections,
+            'avatarFallback' => $avatarFallback,
             'onboardingNeedsProfile' => ((string) ($context['step'] ?? '') === OnboardingService::STEP_PROFILES),
         ], 'public');
     }
@@ -443,17 +445,8 @@ final class PublicController extends BaseController
             Response::redirect('/profiles?manage=1');
         }
 
-        if (isset($_FILES['avatar_file']) && is_array($_FILES['avatar_file']) && (int) ($_FILES['avatar_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-            $upload = (new UploadService())->storeImage($_FILES['avatar_file'], 'profile_public');
-            if (($upload['ok'] ?? false) !== true) {
-                flash('error', (string) ($upload['message'] ?? 'Falha no upload do avatar.'));
-                Response::redirect('/profiles?manage=1');
-            }
-            $avatarPath = (string) ($upload['path'] ?? '');
-        }
-
         if ($avatarPath === '') {
-            $avatarPath = '/assets/img/avatar-library/avatar-01.svg';
+            $avatarPath = (new AvatarLibraryService())->defaultProfileAvatar();
         }
 
         try {
@@ -511,17 +504,8 @@ final class PublicController extends BaseController
             Response::redirect('/profiles?manage=1');
         }
 
-        if (isset($_FILES['avatar_file']) && is_array($_FILES['avatar_file']) && (int) ($_FILES['avatar_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-            $upload = (new UploadService())->storeImage($_FILES['avatar_file'], 'profile_public');
-            if (($upload['ok'] ?? false) !== true) {
-                flash('error', (string) ($upload['message'] ?? 'Falha no upload do avatar.'));
-                Response::redirect('/profiles?manage=1');
-            }
-            $avatarPath = (string) ($upload['path'] ?? '');
-        }
-
         if ($avatarPath === '') {
-            $avatarPath = (string) ($profile['avatar_path'] ?: '/assets/img/avatar-library/avatar-01.svg');
+            $avatarPath = (string) ($profile['avatar_path'] ?: (new AvatarLibraryService())->defaultProfileAvatar());
         }
 
         try {

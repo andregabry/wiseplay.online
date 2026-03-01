@@ -779,12 +779,13 @@ a {
 }
 
 .wp-avatar-option {
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
   padding: 0;
   background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
   overflow: hidden;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .wp-avatar-option img {
@@ -797,6 +798,11 @@ a {
 .wp-avatar-option.active {
   border-color: #fff;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.28);
+}
+
+.wp-avatar-option:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .wp-avatar-preview-row {
@@ -1563,17 +1569,10 @@ body.wp-modal-open {
   gap: 16px;
 }
 
-.wp-profile-editor-upload-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 16px;
-  align-items: end;
-}
-
 .wp-profile-editor-limit {
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.045);
   padding: 14px;
   display: grid;
   gap: 4px;
@@ -1587,6 +1586,38 @@ body.wp-modal-open {
   color: var(--wp-muted);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.wp-avatar-library-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.wp-avatar-sections {
+  max-height: 46vh;
+  overflow: auto;
+  padding-right: 6px;
+  display: grid;
+  gap: 18px;
+}
+
+.wp-avatar-section {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(6, 7, 11, 0.72);
+  padding: 14px;
+}
+
+.wp-avatar-section-head {
+  margin-bottom: 12px;
+}
+
+.wp-avatar-section-head h3 {
+  margin: 0;
+  color: #f4f6fb;
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .wp-avatar-library-modal {
@@ -2035,9 +2066,6 @@ body.wp-modal-open {
     font-size: 1.6rem;
   }
 
-  .wp-profile-editor-upload-row {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 760px) {

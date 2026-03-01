@@ -5,7 +5,7 @@ $selectedProfileId = (int) ($selectedProfileId ?? (int) ($profile['id'] ?? 0));
 $current = current_path();
 $browseTargetPrefix = $current === '/browse' ? '' : '/browse';
 $isKids = ((int) ($profile['is_kids'] ?? 0) === 1);
-$avatarFallback = '/assets/img/avatar-library/avatar-01.svg';
+$avatarFallback = (new \App\services\AvatarLibraryService())->defaultProfileAvatar();
 $profileAvatar = trim((string) ($profile['avatar_path'] ?? ''));
 if ($profileAvatar === '' || str_ends_with($profileAvatar, '.gitkeep')) {
     $profileAvatar = $avatarFallback;

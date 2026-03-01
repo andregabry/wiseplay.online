@@ -281,7 +281,8 @@
       return;
     }
 
-    var avatarFallback = '/assets/img/avatar-library/avatar-01.svg';
+    var $page = $('.wp-profiles-page').first();
+    var avatarFallback = String($page.data('avatarFallback') || '/assets/img/placeholders/image-placeholder.svg');
     var $modal = $('#public-profile-editor-modal');
     var $editorForm = $('#public-profile-editor-form');
     var $profileId = $('#public-profile-id');
@@ -322,8 +323,6 @@
       $profileKids.val(isEdit ? String(safeProfile.is_kids || 0) : '0');
       $profileAvatar.val(avatarValue);
       $profilePreview.attr('src', avatarValue);
-      $('#public-profile-avatar-file').val('');
-
       $profileTitle.text(isEdit ? 'Editar perfil' : 'Novo perfil');
       $profileCopy.text(isEdit
         ? 'Atualize o nome, avatar e o tipo do perfil.'
@@ -355,38 +354,6 @@
         return;
       }
       activateAvatarOption(target, preview, value);
-    });
-
-    $(document).on('change', '#public-profile-avatar-file', function () {
-      var input = this;
-      if (!input.files || !input.files.length) {
-        return;
-      }
-
-      var file = input.files[0];
-      var allowed = ['image/jpeg', 'image/png', 'image/webp'];
-      var maxBytes = 4 * 1024 * 1024;
-      if (allowed.indexOf(file.type) === -1) {
-        fireAlert({ icon: 'error', title: 'Erro', text: 'Imagem deve ser JPG, PNG ou WEBP.' });
-        input.value = '';
-        return;
-      }
-      if (file.size <= 0 || file.size > maxBytes) {
-        fireAlert({ icon: 'error', title: 'Erro', text: 'Imagem excede limite de 4MB.' });
-        input.value = '';
-        return;
-      }
-
-      var reader = new FileReader();
-      reader.onload = function (event) {
-        var value = event && event.target && event.target.result ? String(event.target.result) : '';
-        if (value === '') {
-          return;
-        }
-        $('#public-profile-avatar').val(value);
-        $('#public-profile-editor-preview').attr('src', value);
-      };
-      reader.readAsDataURL(file);
     });
 
     $(document).on('click', '.js-open-profile-editor', function () {

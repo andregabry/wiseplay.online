@@ -7,9 +7,10 @@ $planLimit = (int) ($planLimit ?? 0);
 $currentCount = (int) ($currentCount ?? count($profiles));
 $canCreateProfile = $canCreateProfile ?? false;
 $avatarOptions = $avatarOptions ?? [];
+$avatarSections = $avatarSections ?? [];
 $onboardingNeedsProfile = $onboardingNeedsProfile ?? false;
 
-$avatarFallback = '/assets/img/avatar-library/avatar-01.svg';
+$avatarFallback = (string) ($avatarFallback ?? '/assets/img/placeholders/image-placeholder.svg');
 $avatarOrFallback = static function (?string $value, string $fallback): string {
     $value = trim((string) $value);
     if ($value === '' || str_ends_with($value, '.gitkeep')) {
@@ -22,7 +23,7 @@ $stageTitle = $manageMode ? 'Gerenciar perfis:' : 'Quem esta assistindo?';
 $showCreateModalOnLoad = $manageMode && ($currentCount === 0 || $onboardingNeedsProfile || (string) ($_GET['create'] ?? '') === '1');
 ?>
 
-<main class="wp-profiles-page<?= $manageMode ? ' manage-mode' : '' ?>" data-profile-manage-mode="<?= $manageMode ? '1' : '0' ?>" data-profile-auto-open-create="<?= $showCreateModalOnLoad ? '1' : '0' ?>">
+<main class="wp-profiles-page<?= $manageMode ? ' manage-mode' : '' ?>" data-profile-manage-mode="<?= $manageMode ? '1' : '0' ?>" data-profile-auto-open-create="<?= $showCreateModalOnLoad ? '1' : '0' ?>" data-avatar-fallback="<?= e($avatarFallback) ?>">
   <a class="wp-logo profile-logo" href="/browse">WISEPLAY</a>
 
   <section class="wp-profiles-content">
@@ -149,7 +150,7 @@ $showCreateModalOnLoad = $manageMode && ($currentCount === 0 || $onboardingNeeds
           </div>
         </div>
 
-        <form method="post" action="/profiles/update" enctype="multipart/form-data" id="public-profile-editor-form" class="wp-profile-editor-form">
+        <form method="post" action="/profiles/update" id="public-profile-editor-form" class="wp-profile-editor-form">
           <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
           <input type="hidden" name="profile_id" id="public-profile-id" value="">
           <input type="hidden" name="avatar_path" id="public-profile-avatar" value="<?= e($avatarFallback) ?>">
@@ -169,24 +170,32 @@ $showCreateModalOnLoad = $manageMode && ($currentCount === 0 || $onboardingNeeds
             </div>
           </div>
 
-          <div class="wp-profile-editor-upload-row">
-            <div>
-              <label class="wp-form-label" for="public-profile-avatar-file">Upload avatar (opcional)</label>
-              <input class="wp-form-input" type="file" id="public-profile-avatar-file" name="avatar_file" accept="image/png,image/jpeg,image/webp">
-            </div>
-            <div class="wp-profile-editor-limit">
-              <strong><?= $currentCount ?>/<?= max(0, $planLimit) ?></strong>
-              <span>Perfis disponiveis no seu plano <?= e((string) ($plan['plan_name'] ?? 'WisePlay')) ?></span>
-            </div>
+          <div class="wp-profile-editor-limit">
+            <strong><?= $currentCount ?>/<?= max(0, $planLimit) ?></strong>
+            <span>Perfis disponiveis no seu plano <?= e((string) ($plan['plan_name'] ?? 'WisePlay')) ?></span>
           </div>
 
-          <div>
+          <div class="wp-avatar-library-shell">
             <label class="wp-form-label">Escolha um avatar</label>
-            <div class="wp-avatar-library wp-avatar-library-modal">
-              <?php foreach ($avatarOptions as $avatarOption): ?>
-                <button type="button" class="wp-avatar-option js-avatar-option" data-target="#public-profile-avatar" data-preview="#public-profile-editor-preview" data-value="<?= e((string) $avatarOption) ?>">
-                  <img src="<?= e((string) $avatarOption) ?>" alt="avatar" loading="lazy">
-                </button>
+            <div class="wp-avatar-sections">
+              <?php foreach ($avatarSections as $section): ?>
+                <section class="wp-avatar-section">
+                  <header class="wp-avatar-section-head">
+                    <h3><?= e((string) ($section['label'] ?? 'Avatares')) ?></h3>
+                  </header>
+                  <div class="wp-avatar-library wp-avatar-library-modal">
+                    <?php foreach (($section['items'] ?? []) as $avatarItem): ?>
+                      <button
+                        type="button"
+                        class="wp-avatar-option js-avatar-option"
+                        data-target="#public-profile-avatar"
+                        data-preview="#public-profile-editor-preview"
+                        data-value="<?= e((string) ($avatarItem['path'] ?? '')) ?>">
+                        <img src="<?= e((string) ($avatarItem['path'] ?? '')) ?>" alt="<?= e((string) ($avatarItem['name'] ?? 'Avatar')) ?>" loading="lazy">
+                      </button>
+                    <?php endforeach; ?>
+                  </div>
+                </section>
               <?php endforeach; ?>
             </div>
           </div>
