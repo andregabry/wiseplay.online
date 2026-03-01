@@ -803,7 +803,38 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 }
 
 .layout-menu .app-brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 20px 20px 14px;
+}
+
+.layout-menu .app-brand-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.wp-admin-sidebar-toggle {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.wp-admin-sidebar-toggle .icon-base {
+  font-size: 1.5rem;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
 }
 
 .wp-admin-brand-mark {
@@ -832,6 +863,8 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   border-radius: 16px;
   min-height: 48px;
   width: 100%;
+  display: flex;
+  align-items: center;
   box-sizing: border-box;
   padding-inline: 18px;
   color: var(--bs-menu-color);
@@ -1164,6 +1197,51 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 
   .wp-admin-topbar-search {
     max-width: none;
+  }
+}
+
+@media (min-width: 1200px) {
+  .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu {
+    overflow: visible;
+  }
+
+  .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .app-brand {
+    justify-content: center;
+    padding: 20px 0 14px;
+  }
+
+  .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .app-brand-link {
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+
+  .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .wp-admin-sidebar-toggle {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .menu-inner {
+    padding-inline: 10px;
+  }
+
+  .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .menu-inner > .menu-item > .menu-link {
+    width: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    margin-inline: auto;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .layout-menu-collapsed:not(.layout-menu-hover, .layout-menu-offcanvas, .layout-menu-fixed-offcanvas) .layout-menu .menu-inner > .menu-item > .menu-link .menu-icon {
+    margin: 0 !important;
+    inline-size: 1.375rem;
+    block-size: 1.375rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
