@@ -721,6 +721,12 @@
         var currentTheme = String(document.documentElement.getAttribute('data-bs-theme') || 'light').toLowerCase();
         var semiDark = customizerSetting('SemiDark') === 'true' || document.documentElement.getAttribute('data-semidark-menu') === 'true';
 
+        if (semiDark) {
+          document.documentElement.setAttribute('data-semidark-menu', 'true');
+        } else {
+          document.documentElement.removeAttribute('data-semidark-menu');
+        }
+
         if (semiDark && currentTheme !== 'dark') {
           $menu.attr('data-bs-theme', 'dark');
         } else {

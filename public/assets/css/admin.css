@@ -293,10 +293,6 @@ body[data-admin-page] {
   --wp-admin-text-muted: var(--bs-secondary-color);
   --wp-admin-border: var(--bs-border-color);
   --wp-admin-border-soft: var(--bs-border-color-translucent);
-  --wp-admin-menu-text: var(--bs-menu-color);
-  --wp-admin-menu-hover: var(--bs-menu-hover-color);
-  --wp-admin-menu-hover-bg: var(--bs-menu-hover-bg);
-  --wp-admin-menu-icon: var(--bs-menu-item-icon-color);
   background:
     radial-gradient(circle at 5% 10%, rgba(115, 103, 240, 0.08), transparent 33%),
     radial-gradient(circle at 95% 18%, rgba(0, 186, 207, 0.07), transparent 38%),
@@ -317,16 +313,16 @@ body[data-admin-page].swal2-shown {
   content: "";
   position: absolute;
   left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 4px;
+  top: 0;
+  bottom: 0;
+  width: 5px;
   background: var(--wp-admin-accent);
-  opacity: 0.92;
-  border-top-left-radius: calc(var(--wp-admin-card-radius) - 10px);
-  border-bottom-left-radius: calc(var(--wp-admin-card-radius) - 10px);
-  border-top-right-radius: 999px;
-  border-bottom-right-radius: 999px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--wp-admin-accent) 16%, transparent);
+  opacity: 1;
+  border-top-left-radius: var(--wp-admin-card-radius);
+  border-bottom-left-radius: var(--wp-admin-card-radius);
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+  pointer-events: none;
 }
 
 .btn-semantic-primary {
@@ -781,6 +777,12 @@ body[data-admin-page] #layout-menu {
   box-shadow: none;
 }
 
+html[data-bs-theme="dark"] body[data-admin-page] #layout-menu,
+html[data-semidark-menu="true"] body[data-admin-page] #layout-menu[data-bs-theme="dark"] {
+  background: color-mix(in srgb, var(--bs-menu-bg) 94%, transparent);
+  box-shadow: var(--bs-menu-box-shadow);
+}
+
 body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.up {
   background: rgba(115, 103, 240, 0.12);
   color: #6a5cf4;
@@ -819,17 +821,17 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
   border-radius: 16px;
   min-height: 48px;
   padding-inline: 16px;
-  color: var(--wp-admin-menu-text);
+  color: var(--bs-menu-color);
   transition: all 0.18s ease;
 }
 
 .layout-menu .menu-link .menu-icon {
-  color: var(--wp-admin-menu-icon);
+  color: var(--bs-menu-item-icon-color);
 }
 
 .layout-menu .menu-link:hover {
-  background: var(--wp-admin-menu-hover-bg);
-  color: var(--wp-admin-menu-hover);
+  background: var(--bs-menu-hover-bg);
+  color: var(--bs-menu-hover-color);
   transform: translateX(2px);
 }
 
