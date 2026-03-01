@@ -5,21 +5,46 @@ if ($avatar === '' || str_ends_with($avatar, '.gitkeep')) {
 }
 ?>
 <nav class="layout-navbar container-xxl navbar-detached navbar navbar-expand-xl align-items-center bg-navbar-theme wp-admin-topbar">
-  <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
-    <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
-      <i class="icon-base ri ri-menu-line icon-22px"></i>
+  <div class="layout-menu-toggle navbar-nav align-items-xl-center me-2 me-xl-0">
+    <a class="nav-item nav-link px-0" href="javascript:void(0)" aria-label="Alternar menu">
+      <i class="icon-base ri ri-menu-fold-line icon-22px"></i>
     </a>
   </div>
 
-  <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
-    <div class="navbar-nav align-items-center">
-      <div class="nav-item d-flex align-items-center">
-        <h4 class="fw-semibold wp-admin-page-title"><?= e($pageTitle ?? 'Admin') ?></h4>
-      </div>
-    </div>
-    <ul class="navbar-nav flex-row align-items-center">
+  <div class="wp-admin-topbar-search flex-grow-1">
+    <i class="ri ri-search-line"></i>
+    <input type="search" class="form-control js-admin-topbar-search" placeholder="Search [CTRL + K]" aria-label="Buscar no admin">
+  </div>
+
+  <div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
+    <ul class="navbar-nav flex-row align-items-center wp-admin-topbar-actions">
+      <li class="nav-item">
+        <a class="nav-link wp-admin-topbar-icon js-admin-navbar-action" href="javascript:void(0)" data-action="translate" aria-label="Idiomas">
+          <i class="ri ri-translate-2"></i>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link wp-admin-topbar-icon js-admin-theme-toggle" href="javascript:void(0)" aria-label="Tema">
+          <i class="ri ri-sun-line"></i>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link wp-admin-topbar-icon js-admin-navbar-action" href="javascript:void(0)" data-action="favorite" aria-label="Favoritos">
+          <i class="ri ri-star-line"></i>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link wp-admin-topbar-icon js-admin-navbar-action" href="javascript:void(0)" data-action="notifications" aria-label="Notificacoes">
+          <i class="ri ri-notification-3-line"></i>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link wp-admin-topbar-icon wp-admin-topbar-accent js-admin-open-customizer" href="javascript:void(0)" aria-label="Personalizar layout">
+          <i class="ri ri-settings-5-line"></i>
+        </a>
+      </li>
       <li class="nav-item navbar-dropdown dropdown-user dropdown">
-        <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);" data-bs-toggle="dropdown">
+        <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);" data-bs-toggle="dropdown" aria-label="Abrir menu do usuario">
           <div class="avatar avatar-online">
             <img src="<?= e($avatar) ?>" alt="avatar" class="rounded-circle" onerror="this.src='/assets/img/avatar-library/avatar-01.svg'">
           </div>
@@ -27,21 +52,26 @@ if ($avatar === '' || str_ends_with($avatar, '.gitkeep')) {
         <ul class="dropdown-menu dropdown-menu-end">
           <li>
             <div class="dropdown-item">
-              <div class="d-flex flex-column">
+              <div class="d-flex align-items-center gap-2">
+                <div class="avatar avatar-sm">
+                  <img src="<?= e($avatar) ?>" alt="avatar" class="rounded-circle" onerror="this.src='/assets/img/avatar-library/avatar-01.svg'">
+                </div>
+                <div class="d-flex flex-column">
                 <h6 class="mb-0"><?= e((string) ($adminUser['name'] ?? 'Admin')) ?></h6>
                 <small class="text-body-secondary"><?= e((string) ($adminUser['role'] ?? 'ADMIN')) ?></small>
+                </div>
               </div>
             </div>
           </li>
           <li><div class="dropdown-divider"></div></li>
           <li>
             <a class="dropdown-item" href="/admin/me">
-              <i class="ri ri-user-settings-line me-2"></i>My Profile
+              <i class="ri ri-user-settings-line me-2"></i>Meu perfil
             </a>
           </li>
           <li>
             <a class="dropdown-item" href="/admin/settings">
-              <i class="ri ri-settings-4-line me-2"></i>Settings
+              <i class="ri ri-settings-4-line me-2"></i>Configuracoes
             </a>
           </li>
           <li><div class="dropdown-divider"></div></li>

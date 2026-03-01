@@ -626,6 +626,91 @@
     syncState($module);
   }
 
+  function bindAdminChrome() {
+    $(document).on('keydown', function (event) {
+      if ((event.ctrlKey || event.metaKey) && String(event.key || '').toLowerCase() === 'k') {
+        event.preventDefault();
+        $('.js-admin-topbar-search').first().trigger('focus');
+      }
+    });
+
+    $(document).on('keydown', '.js-admin-topbar-search', function (event) {
+      if (event.key !== 'Enter') {
+        return;
+      }
+
+      event.preventDefault();
+      var value = $.trim($(this).val());
+      var $targets = $('[name="q"], [name="plan_q"], [name="sub_q"]').filter(':enabled:visible');
+      var $target = $targets.first();
+      if (!$target.length) {
+        sweetError('Nao existe filtro de busca disponivel nesta pagina.');
+        return;
+      }
+
+      $target.val(value);
+      var $form = $target.closest('form');
+      if ($form.length) {
+        $form.trigger('submit');
+      }
+    });
+
+    $(document).on('click', '.js-admin-open-customizer', function (event) {
+      event.preventDefault();
+      var $trigger = $('.template-customizer-open-btn').first();
+      if (!$trigger.length) {
+        sweetError('Painel de personalizacao do tema indisponivel nesta pagina.');
+        return;
+      }
+      $trigger.trigger('click');
+    });
+
+    $(document).on('click', '.js-admin-theme-toggle', function (event) {
+      event.preventDefault();
+      var currentTheme = String(document.documentElement.getAttribute('data-bs-theme') || 'light').toLowerCase();
+      var nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+      if (window.templateCustomizer && typeof window.templateCustomizer.setTheme === 'function') {
+        window.templateCustomizer.setTheme(nextTheme);
+      } else {
+        document.documentElement.setAttribute('data-bs-theme', nextTheme);
+      }
+
+      $(this).find('i')
+        .removeClass('ri-sun-line ri-moon-clear-line')
+        .addClass(nextTheme === 'dark' ? 'ri-moon-clear-line' : 'ri-sun-line');
+    });
+
+    $(document).on('click', '.js-admin-navbar-action', function (event) {
+      event.preventDefault();
+      var action = String($(this).data('action') || '');
+      var copy = {
+        translate: {
+          title: 'Idiomas',
+          text: 'O seletor de idiomas do tema pode ser ligado no proximo passo, sem afetar o layout atual.'
+        },
+        favorite: {
+          title: 'Favoritos',
+          text: 'Espaco reservado para atalhos rapidos do admin.'
+        },
+        notifications: {
+          title: 'Notificacoes',
+          text: 'Painel de notificacoes ainda nao foi conectado aos eventos do sistema.'
+        }
+      };
+
+      if (!copy[action]) {
+        return;
+      }
+
+      swalFire({
+        icon: 'info',
+        title: copy[action].title,
+        text: copy[action].text
+      });
+    });
+  }
+
   function refreshFormImagePreviews($form) {
     if (!$form || !$form.length) {
       return;
@@ -2313,6 +2398,7 @@
     }
 
     bindActionsDropdowns();
+    bindAdminChrome();
     bindAdminUsersBulkActions();
     decorateAllModals();
     applySemanticButtons();

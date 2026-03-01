@@ -13,7 +13,7 @@ $menu = [
 <aside id="layout-menu" class="layout-menu menu-vertical menu">
   <div class="app-brand demo">
     <a href="/admin" class="app-brand-link">
-      <span class="app-brand-logo demo"><i class="ri ri-tv-2-line text-primary icon-28px"></i></span>
+      <span class="app-brand-logo demo wp-admin-brand-mark"><i class="ri ri-tv-2-line icon-28px"></i></span>
       <span class="app-brand-text demo menu-text fw-semibold ms-2">WisePlay</span>
     </a>
     <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">

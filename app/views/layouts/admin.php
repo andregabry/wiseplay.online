@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
   <link rel="stylesheet" href="/assets/css/admin.css">
   <script src="/assets/materialize-admin/vendor/js/helpers.js"></script>
+  <script src="/assets/materialize-admin/vendor/js/template-customizer.js"></script>
   <script src="/assets/materialize-admin/js/config.js"></script>
 </head>
 <body data-admin-page="<?= e($adminPage ?? '') ?>">
@@ -45,6 +46,7 @@
 
         <div class="content-wrapper">
           <div class="container-xxl flex-grow-1 container-p-y">
+            <?php include BASE_PATH . '/app/views/partials/admin_page_intro.php'; ?>
             <?= $content ?>
           </div>
 
