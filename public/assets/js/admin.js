@@ -1958,6 +1958,55 @@
   }
 
   function bindMediaModule() {
+    $(document).on('click', '.js-media-tree-title-toggle', function (event) {
+      event.preventDefault();
+      var $node = $(this).closest('.wp-media-tree-node-title');
+      var $children = $node.children('.wp-media-tree-children');
+      var isOpen = $node.hasClass('is-open');
+      var $siblings = $node.siblings('.wp-media-tree-node-title');
+
+      $siblings.removeClass('is-open');
+      $siblings.children('.wp-media-tree-children').stop(true, true).slideUp(180);
+      $siblings.find('.wp-media-tree-node-season').removeClass('is-open');
+      $siblings.find('.wp-media-tree-node-season > .wp-media-tree-children').hide();
+      $siblings.find('.js-media-tree-title-toggle').attr('aria-expanded', 'false');
+      $siblings.find('.js-media-tree-season-toggle').attr('aria-expanded', 'false');
+
+      if (isOpen) {
+        $node.removeClass('is-open');
+        $children.stop(true, true).slideUp(180);
+        $(this).attr('aria-expanded', 'false');
+        return;
+      }
+
+      $node.addClass('is-open');
+      $children.stop(true, true).slideDown(180);
+      $(this).attr('aria-expanded', 'true');
+    });
+
+    $(document).on('click', '.js-media-tree-season-toggle', function (event) {
+      event.preventDefault();
+      var $node = $(this).closest('.wp-media-tree-node-season');
+      var $children = $node.children('.wp-media-tree-children');
+      var isOpen = $node.hasClass('is-open');
+      var $siblings = $node.siblings('.wp-media-tree-node-season');
+
+      $siblings.removeClass('is-open');
+      $siblings.children('.wp-media-tree-children').stop(true, true).slideUp(160);
+      $siblings.find('.js-media-tree-season-toggle').attr('aria-expanded', 'false');
+
+      if (isOpen) {
+        $node.removeClass('is-open');
+        $children.stop(true, true).slideUp(160);
+        $(this).attr('aria-expanded', 'false');
+        return;
+      }
+
+      $node.addClass('is-open');
+      $children.stop(true, true).slideDown(160);
+      $(this).attr('aria-expanded', 'true');
+    });
+
     $(document).on('change', '.js-media-title, .js-media-season, .js-media-episode, #m-c-source-type, #m-e-source-type', function () {
       syncMediaFields($(this).closest('form'));
     });
