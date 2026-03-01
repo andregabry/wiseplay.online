@@ -70,30 +70,160 @@ window.templateName = document.documentElement.getAttribute('data-template');
  */
 
 if (typeof TemplateCustomizer !== 'undefined') {
-  window.templateCustomizer = new TemplateCustomizer({
-    displayCustomizer: true,
-    lang: localStorage.getItem('templateCustomizer-' + templateName + '--Lang') || 'en', // Set default language here
-    // defaultPrimaryColor: '#D11BB4',
-    // defaultSkin: 1,
-    // defaultTheme: 'system',
-    // defaultSemiDark: true,
-    // defaultContentLayout: 'wide',
-    // defaultHeaderType: 'static',
-    // defaultMenuCollapsed: true,
-    // defaultNavbarType: 'static',
-    // defaultTextDir: 'rtl',
-    // defaultFooterFixed: false,
-    // defaultShowDropdownOnHover: false,
-    controls: [
-      'color',
-      'theme',
-      'skins',
-      'semiDark',
-      'layoutCollapsed',
-      'layoutNavbarOptions',
-      'headerType',
-      'contentLayout',
-      'rtl'
-    ]
-  });
+  var CUSTOMIZER_STORAGE_PREFIX = 'templateCustomizer-' + templateName + '--';
+  var ADMIN_LANGUAGE_KEY = 'wiseplay-admin-language';
+
+  TemplateCustomizer.LANGUAGES.pt = {
+    panel_header: 'Personalizar tema',
+    panel_sub_header: 'Personalize e visualize em tempo real',
+    theming_header: 'Tema',
+    color_label: 'Cor primaria',
+    theme_label: 'Tema',
+    skin_label: 'Estilo',
+    semiDark_label: 'Semi Dark',
+    layout_header: 'Layout',
+    layout_label: 'Menu (Navigation)',
+    layout_header_label: 'Header types',
+    style_switch_light: 'Claro',
+    style_switch_dark: 'Escuro',
+    content_label: 'Conteudo',
+    layout_static: 'Estatico',
+    layout_offcanvas: 'Offcanvas',
+    layout_fixed: 'Fixo',
+    layout_fixed_offcanvas: 'Fixo offcanvas',
+    layout_dd_open_label: 'Abrir dropdown ao passar o mouse',
+    layout_navbar_label: 'Navbar type',
+    layout_footer_label: 'Footer fixo',
+    misc_header: 'Opcoes',
+    direction_label: 'Direcao'
+  };
+
+  function resolveCustomizerLanguage() {
+    var storedAdminLanguage = localStorage.getItem(ADMIN_LANGUAGE_KEY) || document.documentElement.getAttribute('lang') || 'en-US';
+    return String(storedAdminLanguage).toLowerCase().startsWith('pt') ? 'pt' : 'en';
+  }
+
+  function translatedOptions(options, translations) {
+    return options.map(function (item) {
+      return Object.assign({}, item, {
+        title: translations[item.name] || item.title
+      });
+    });
+  }
+
+  function buildCustomizerOptions(lang) {
+    if (lang !== 'pt') {
+      return {
+        availableColors: TemplateCustomizer.COLORS,
+        availableSkins: TemplateCustomizer.SKINS,
+        availableThemes: TemplateCustomizer.THEMES,
+        availableContentLayouts: TemplateCustomizer.CONTENT,
+        availableHeaderTypes: TemplateCustomizer.HEADER_TYPES,
+        availableMenuCollapsed: TemplateCustomizer.LAYOUTS,
+        availableNavbarOptions: TemplateCustomizer.NAVBAR_OPTIONS,
+        availableDirections: TemplateCustomizer.DIRECTIONS
+      };
+    }
+
+    return {
+      availableColors: translatedOptions(TemplateCustomizer.COLORS, {
+        primary: 'Primaria',
+        secondary: 'Secundaria',
+        success: 'Sucesso',
+        info: 'Informacao',
+        warning: 'Aviso',
+        danger: 'Perigo'
+      }),
+      availableSkins: translatedOptions(TemplateCustomizer.SKINS, {
+        default: 'Default',
+        bordered: 'Bordered'
+      }),
+      availableThemes: translatedOptions(TemplateCustomizer.THEMES, {
+        light: 'Claro',
+        dark: 'Escuro',
+        system: 'Sistema'
+      }),
+      availableContentLayouts: translatedOptions(TemplateCustomizer.CONTENT, {
+        compact: 'Compacto',
+        wide: 'Amplo'
+      }),
+      availableHeaderTypes: translatedOptions(TemplateCustomizer.HEADER_TYPES, {
+        fixed: 'Fixo',
+        static: 'Estatico'
+      }),
+      availableMenuCollapsed: translatedOptions(TemplateCustomizer.LAYOUTS, {
+        expanded: 'Expandido',
+        collapsed: 'Colapsado'
+      }),
+      availableNavbarOptions: translatedOptions(TemplateCustomizer.NAVBAR_OPTIONS, {
+        sticky: 'Fixa',
+        static: 'Estatica',
+        hidden: 'Oculta'
+      }),
+      availableDirections: translatedOptions(TemplateCustomizer.DIRECTIONS, {
+        ltr: 'Esquerda para direita',
+        rtl: 'Direita para esquerda'
+      })
+    };
+  }
+
+  window.WisePlayAdminCustomizer = {
+    boot: function () {
+      var lang = resolveCustomizerLanguage();
+      var optionSet = buildCustomizerOptions(lang);
+
+      localStorage.setItem(CUSTOMIZER_STORAGE_PREFIX + 'Lang', lang);
+      if (lang === 'pt') {
+        localStorage.removeItem(CUSTOMIZER_STORAGE_PREFIX + 'LangAr');
+      }
+
+      if (window.templateCustomizer && typeof window.templateCustomizer.destroy === 'function') {
+        window.templateCustomizer.destroy();
+      }
+      document.querySelectorAll('.template-customizer').forEach(function (node) {
+        node.parentNode && node.parentNode.removeChild(node);
+      });
+
+      window.templateCustomizer = new TemplateCustomizer({
+        displayCustomizer: true,
+        lang: lang,
+        availableColors: optionSet.availableColors,
+        availableSkins: optionSet.availableSkins,
+        availableThemes: optionSet.availableThemes,
+        availableContentLayouts: optionSet.availableContentLayouts,
+        availableHeaderTypes: optionSet.availableHeaderTypes,
+        availableMenuCollapsed: optionSet.availableMenuCollapsed,
+        availableNavbarOptions: optionSet.availableNavbarOptions,
+        availableDirections: optionSet.availableDirections,
+        // defaultPrimaryColor: '#D11BB4',
+        // defaultSkin: 1,
+        // defaultTheme: 'system',
+        // defaultSemiDark: true,
+        // defaultContentLayout: 'wide',
+        // defaultHeaderType: 'static',
+        // defaultMenuCollapsed: true,
+        // defaultNavbarType: 'static',
+        // defaultTextDir: 'rtl',
+        // defaultFooterFixed: false,
+        // defaultShowDropdownOnHover: false,
+        controls: [
+          'color',
+          'theme',
+          'skins',
+          'semiDark',
+          'layoutCollapsed',
+          'layoutNavbarOptions',
+          'headerType',
+          'contentLayout',
+          'rtl'
+        ]
+      });
+
+      if (window.templateCustomizer && typeof window.templateCustomizer.setLang === 'function') {
+        window.templateCustomizer.setLang(lang, true, true);
+      }
+    }
+  };
+
+  window.WisePlayAdminCustomizer.boot();
 }

@@ -754,13 +754,20 @@
 
     function applyAdminLanguage(lang) {
       var normalized = lang === 'pt-BR' ? 'pt-BR' : 'en-US';
+      var customizerLanguage = normalized === 'pt-BR' ? 'pt' : 'en';
       document.documentElement.setAttribute('lang', normalized);
       window.localStorage.setItem(LANGUAGE_KEY, normalized);
+      window.localStorage.setItem('templateCustomizer-' + TEMPLATE_NAME + '--Lang', customizerLanguage);
       $('.js-admin-topbar-search')
         .attr('placeholder', normalized === 'pt-BR' ? 'Buscar [CTRL + K]' : 'Search [CTRL + K]')
         .attr('aria-label', normalized === 'pt-BR' ? 'Buscar no admin' : 'Search admin');
       $('.js-admin-lang-option').removeClass('active');
       $('.js-admin-lang-option[data-lang="' + normalized + '"]').addClass('active');
+
+      if (window.WisePlayAdminCustomizer && typeof window.WisePlayAdminCustomizer.boot === 'function') {
+        window.WisePlayAdminCustomizer.boot();
+        scheduleCustomizerSync();
+      }
     }
 
     function syncThemeIcon() {
