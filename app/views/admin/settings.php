@@ -30,9 +30,12 @@ $mask = static function (string $value): string {
 
 <div class="card mb-4">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <div>
-      <h5 class="mb-0">Configuracoes gerais</h5>
-      <small class="text-body-secondary">Lista de configuracoes em tabela com acoes por linha.</small>
+    <div class="wp-card-heading">
+      <span class="wp-card-heading-icon"><i class="ri ri-settings-4-line"></i></span>
+      <div class="wp-card-heading-copy">
+        <h5 class="mb-0">Configuracoes gerais</h5>
+        <small class="text-body-secondary">Lista de configuracoes em tabela com acoes por linha.</small>
+      </div>
     </div>
     <?php if ($canManageSettings): ?>
       <button class="btn btn-primary btn-sm js-open-modal" data-target="#setting-create-modal"><i class="ri ri-add-circle-line me-1"></i>Adicionar setting</button>
@@ -92,7 +95,14 @@ $mask = static function (string $value): string {
 </div>
 
 <div class="card mb-4">
-  <div class="card-header"><h5 class="mb-0">OneDrive Personal</h5></div>
+  <div class="card-header">
+    <div class="wp-card-heading">
+      <span class="wp-card-heading-icon"><i class="ri ri-cloud-line"></i></span>
+      <div class="wp-card-heading-copy">
+        <h5 class="mb-0">OneDrive Personal</h5>
+      </div>
+    </div>
+  </div>
   <div class="card-body">
         <div class="form-errors text-danger small mb-2" data-form-errors="onedrive-save"></div>
         <form id="onedrive-save-form" class="js-ajax-form" data-endpoint="/admin/settings/onedrive/save" data-errors-key="onedrive-save">

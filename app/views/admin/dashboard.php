@@ -8,9 +8,9 @@ $canManageOneDrive = $canManageOneDrive ?? false;
   <div class="col-xl-2 col-md-4 col-6">
     <div class="card stat-card dashboard-kpi">
       <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <span class="stat-label">Usuarios</span>
+        <div class="d-flex align-items-center gap-2 mb-2">
           <span class="kpi-icon bg-label-primary"><i class="ri ri-user-line"></i></span>
+          <span class="stat-label">Usuarios</span>
         </div>
         <h4 class="stat-value"><?= (int) ($stats['users_total'] ?? 0) ?></h4>
         <small class="text-body-secondary d-block">Ativos: <?= (int) ($stats['users_active'] ?? 0) ?></small>
@@ -21,9 +21,9 @@ $canManageOneDrive = $canManageOneDrive ?? false;
   <div class="col-xl-2 col-md-4 col-6">
     <div class="card stat-card dashboard-kpi">
       <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <span class="stat-label">Perfis</span>
+        <div class="d-flex align-items-center gap-2 mb-2">
           <span class="kpi-icon bg-label-warning"><i class="ri ri-team-line"></i></span>
+          <span class="stat-label">Perfis</span>
         </div>
         <h4 class="stat-value"><?= (int) ($stats['profiles_total'] ?? 0) ?></h4>
         <small class="text-body-secondary d-block">Todos os tipos</small>
@@ -34,9 +34,9 @@ $canManageOneDrive = $canManageOneDrive ?? false;
   <div class="col-xl-2 col-md-4 col-6">
     <div class="card stat-card dashboard-kpi">
       <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <span class="stat-label">Titulos</span>
+        <div class="d-flex align-items-center gap-2 mb-2">
           <span class="kpi-icon bg-label-info"><i class="ri ri-movie-2-line"></i></span>
+          <span class="stat-label">Titulos</span>
         </div>
         <h4 class="stat-value"><?= (int) ($stats['titles_published'] ?? 0) ?></h4>
         <small class="text-body-secondary d-block">Publicados</small>
@@ -47,9 +47,9 @@ $canManageOneDrive = $canManageOneDrive ?? false;
   <div class="col-xl-2 col-md-4 col-6">
     <div class="card stat-card dashboard-kpi">
       <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <span class="stat-label">Midias</span>
+        <div class="d-flex align-items-center gap-2 mb-2">
           <span class="kpi-icon bg-label-success"><i class="ri ri-film-line"></i></span>
+          <span class="stat-label">Midias</span>
         </div>
         <h4 class="stat-value"><?= (int) ($stats['media_published'] ?? 0) ?></h4>
         <small class="text-body-secondary d-block">Publicadas</small>
@@ -60,9 +60,9 @@ $canManageOneDrive = $canManageOneDrive ?? false;
   <div class="col-xl-2 col-md-4 col-6">
     <div class="card stat-card dashboard-kpi">
       <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <span class="stat-label">Assinaturas</span>
+        <div class="d-flex align-items-center gap-2 mb-2">
           <span class="kpi-icon bg-label-secondary"><i class="ri ri-bank-card-line"></i></span>
+          <span class="stat-label">Assinaturas</span>
         </div>
         <h4 class="stat-value"><?= (int) ($stats['subscriptions_active'] ?? 0) ?></h4>
         <small class="text-body-secondary d-block">Ativas/trial</small>
@@ -73,9 +73,9 @@ $canManageOneDrive = $canManageOneDrive ?? false;
   <div class="col-xl-2 col-md-4 col-6">
     <div class="card stat-card dashboard-kpi">
       <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <span class="stat-label">Auditoria</span>
+        <div class="d-flex align-items-center gap-2 mb-2">
           <span class="kpi-icon bg-label-danger"><i class="ri ri-shield-check-line"></i></span>
+          <span class="stat-label">Auditoria</span>
         </div>
         <h4 class="stat-value"><?= count($recentAudits) ?></h4>
         <small class="text-body-secondary d-block">Eventos recentes</small>
@@ -90,9 +90,12 @@ $canManageOneDrive = $canManageOneDrive ?? false;
     <div class="card wp-onedrive-quota-widget" data-onedrive-quota-widget>
       <div class="card-body">
         <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
-          <div>
-            <h5 class="mb-1">OneDrive Storage</h5>
-            <p class="text-body-secondary mb-0">Quota atual da conta conectada no Microsoft Graph.</p>
+          <div class="wp-card-heading">
+            <span class="wp-card-heading-icon"><i class="ri ri-cloud-line"></i></span>
+            <div class="wp-card-heading-copy">
+              <h5 class="mb-1">OneDrive Storage</h5>
+              <p class="text-body-secondary mb-0">Quota atual da conta conectada no Microsoft Graph.</p>
+            </div>
           </div>
           <div class="d-flex align-items-center gap-2">
             <span class="badge <?= e((string) ($oneDriveQuota['state_badge_class'] ?? 'bg-label-secondary')) ?>" data-quota-field="state_badge">
@@ -150,7 +153,12 @@ $canManageOneDrive = $canManageOneDrive ?? false;
 
 <div class="card mt-4">
   <div class="card-header d-flex align-items-center justify-content-between">
-    <h5 class="mb-0">Auditoria recente</h5>
+    <div class="wp-card-heading">
+      <span class="wp-card-heading-icon"><i class="ri ri-shield-check-line"></i></span>
+      <div class="wp-card-heading-copy">
+        <h5 class="mb-0">Auditoria recente</h5>
+      </div>
+    </div>
     <span class="badge bg-label-primary">Live</span>
   </div>
   <div class="table-responsive text-nowrap">

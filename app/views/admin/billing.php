@@ -17,9 +17,12 @@ $paymentProvider = (string) ($paymentProvider ?? 'MOCK');
 <div class="card mb-4">
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
-      <div>
-        <h5 class="mb-1">Billing Plans</h5>
-        <p class="text-body-secondary mb-0">Configure planos, ciclos e limites de consumo.</p>
+      <div class="wp-card-heading">
+        <span class="wp-card-heading-icon"><i class="ri ri-bank-card-line"></i></span>
+        <div class="wp-card-heading-copy">
+          <h5 class="mb-1">Billing Plans</h5>
+          <p class="text-body-secondary mb-0">Configure planos, ciclos e limites de consumo.</p>
+        </div>
       </div>
       <?php if ($canManageBilling): ?>
       <button class="btn btn-primary js-open-modal" data-target="#plan-create-modal"><i class="ri ri-add-circle-line me-1"></i>Novo plano</button>
@@ -98,7 +101,12 @@ $paymentProvider = (string) ($paymentProvider ?? 'MOCK');
 
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">Subscriptions</h5>
+    <div class="wp-card-heading">
+      <span class="wp-card-heading-icon"><i class="ri ri-user-settings-line"></i></span>
+      <div class="wp-card-heading-copy">
+        <h5 class="mb-0">Subscriptions</h5>
+      </div>
+    </div>
     <?php if ($canManageBilling): ?>
       <button class="btn btn-outline-primary btn-sm js-open-modal" data-target="#subscription-assign-modal"><i class="ri ri-user-settings-line me-1"></i>Atribuir/alterar</button>
     <?php endif; ?>

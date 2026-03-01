@@ -29,9 +29,12 @@ $queryForPage = static function (int $pageNum, array $filters): string {
 <div class="card" data-users-module>
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
-      <div>
-        <h5 class="mb-1">Users Management</h5>
-        <p class="text-body-secondary mb-0">Contas, avatar de conta, plano, status e perfis criados.</p>
+      <div class="wp-card-heading">
+        <span class="wp-card-heading-icon"><i class="ri ri-user-line"></i></span>
+        <div class="wp-card-heading-copy">
+          <h5 class="mb-1">Users Management</h5>
+          <p class="text-body-secondary mb-0">Contas, avatar de conta, plano, status e perfis criados.</p>
+        </div>
       </div>
       <?php if ($canManageUsers): ?>
         <button class="btn btn-primary js-open-modal" data-target="#user-create-modal">

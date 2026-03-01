@@ -29,9 +29,12 @@ $queryForPage = static function (int $pageNum, array $filters): string {
 <div class="card mb-4">
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
-      <div>
-        <h5 class="mb-1">Profiles Management</h5>
-        <p class="text-body-secondary mb-0">Perfis criados no app publico (adulto/kids) com visao global para suporte.</p>
+      <div class="wp-card-heading">
+        <span class="wp-card-heading-icon"><i class="ri ri-team-line"></i></span>
+        <div class="wp-card-heading-copy">
+          <h5 class="mb-1">Profiles Management</h5>
+          <p class="text-body-secondary mb-0">Perfis criados no app publico (adulto/kids) com visao global para suporte.</p>
+        </div>
       </div>
       <?php if ($canCreateProfiles): ?>
         <button class="btn btn-primary js-open-modal" data-target="#profile-create-modal"><i class="ri ri-add-circle-line me-1"></i>Novo perfil (maintenance)</button>
