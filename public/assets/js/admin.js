@@ -629,6 +629,7 @@
   function bindAdminChrome() {
     var FAVORITES_KEY = 'wiseplay-admin-favorites';
     var LANGUAGE_KEY = 'wiseplay-admin-language';
+    var NOTIFICATIONS_KEY = 'wiseplay-admin-notifications';
     var TEMPLATE_NAME = String(document.documentElement.getAttribute('data-template') || 'wiseplay-admin');
     var customizerSyncTimer = null;
 
@@ -685,6 +686,70 @@
       }).join('');
 
       $list.html(html);
+    }
+
+    function getNotificationState() {
+      try {
+        var parsed = JSON.parse(window.localStorage.getItem(NOTIFICATIONS_KEY) || '{}');
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function saveNotificationState(state) {
+      window.localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(state || {}));
+    }
+
+    function syncNotificationsUI() {
+      var state = getNotificationState();
+      var unread = 0;
+      var visible = 0;
+
+      $('.js-admin-notification-item').each(function () {
+        var $item = $(this);
+        var key = String($item.data('notificationKey') || '');
+        var itemState = state[key] || {};
+        var removed = itemState.removed === true;
+        var read = itemState.read === true;
+
+        $item.toggleClass('d-none', removed);
+        $item.toggleClass('is-read', read);
+
+        if (!removed) {
+          visible += 1;
+          if (!read) {
+            unread += 1;
+          }
+        }
+      });
+
+      var $badge = $('.js-admin-notification-badge');
+      if ($badge.length) {
+        if (unread > 0) {
+          $badge.text(unread > 9 ? '9+' : String(unread)).removeClass('d-none');
+        } else {
+          $badge.addClass('d-none');
+        }
+      }
+
+      var $list = $('.js-admin-notifications-list');
+      if ($list.length) {
+        $list.find('.js-admin-notifications-empty').remove();
+        if (visible === 0) {
+          $list.append('<div class="dropdown-item-text text-body-secondary small js-admin-notifications-empty">No recent notifications.</div>');
+        }
+      }
+    }
+
+    function updateNotification(key, patch) {
+      if (!key) {
+        return;
+      }
+      var state = getNotificationState();
+      state[key] = $.extend({}, state[key] || {}, patch || {});
+      saveNotificationState(state);
+      syncNotificationsUI();
     }
 
     function applyAdminLanguage(lang) {
@@ -839,6 +904,40 @@
       renderFavorites();
     });
 
+    $(document).on('click', '.js-admin-notification-open', function (event) {
+      event.preventDefault();
+      var $item = $(this).closest('.js-admin-notification-item');
+      var key = String($item.data('notificationKey') || '');
+      updateNotification(key, { read: true });
+
+      swalFire({
+        icon: 'info',
+        title: String($item.data('action') || 'Notification'),
+        html:
+          '<div class="text-start">' +
+            '<p><strong>Actor:</strong> ' + $('<div>').text(String($item.data('actor') || 'System')).html() + '</p>' +
+            '<p><strong>Entity:</strong> ' + $('<div>').text(String($item.data('entityType') || '-')).html() + '</p>' +
+            '<p><strong>ID:</strong> ' + $('<div>').text(String($item.data('entityId') || '-')).html() + '</p>' +
+            '<p><strong>Date:</strong> ' + $('<div>').text(String($item.data('createdAt') || '-')).html() + '</p>' +
+          '</div>',
+        confirmButtonText: 'Close'
+      });
+    });
+
+    $(document).on('click', '.js-admin-notification-read', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      var $item = $(this).closest('.js-admin-notification-item');
+      updateNotification(String($item.data('notificationKey') || ''), { read: true });
+    });
+
+    $(document).on('click', '.js-admin-notification-remove', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      var $item = $(this).closest('.js-admin-notification-item');
+      updateNotification(String($item.data('notificationKey') || ''), { removed: true, read: true });
+    });
+
     $(document).on('click change', '#template-customizer input, #template-customizer .custom-option, .template-customizer-reset-btn, .template-customizer-open-btn, .template-customizer-close-btn', function () {
       scheduleCustomizerSync();
     });
@@ -856,6 +955,7 @@
     applyAdminLanguage(window.localStorage.getItem(LANGUAGE_KEY) || document.documentElement.getAttribute('lang') || 'en-US');
     syncCustomizerState();
     renderFavorites();
+    syncNotificationsUI();
     ensureCustomizer();
   }
 

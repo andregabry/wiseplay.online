@@ -307,22 +307,11 @@ body[data-admin-page].swal2-shown {
 .content-wrapper .card {
   position: relative;
   overflow: visible;
+  border-left: 6px solid var(--wp-admin-accent);
 }
 
 .content-wrapper .card::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 5px;
-  background: var(--wp-admin-accent);
-  opacity: 1;
-  border-top-left-radius: var(--wp-admin-card-radius);
-  border-bottom-left-radius: var(--wp-admin-card-radius);
-  border-top-right-radius: 3px;
-  border-bottom-right-radius: 3px;
-  pointer-events: none;
+  content: none;
 }
 
 .btn-semantic-primary {
@@ -775,6 +764,7 @@ body[data-admin-page] #layout-menu {
   background: transparent;
   backdrop-filter: none;
   box-shadow: none;
+  overflow: hidden;
 }
 
 html[data-bs-theme="dark"] body[data-admin-page] #layout-menu,
@@ -794,7 +784,7 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 }
 
 .layout-menu .app-brand {
-  padding: 20px 18px 14px;
+  padding: 20px 20px 14px;
 }
 
 .wp-admin-brand-mark {
@@ -810,17 +800,21 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 }
 
 .layout-menu .menu-inner {
-  padding: 8px 12px 18px;
+  padding: 10px 14px 20px;
+  overflow-x: hidden;
 }
 
 .layout-menu .menu-item {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  max-width: 100%;
 }
 
 .layout-menu .menu-link {
   border-radius: 16px;
   min-height: 48px;
-  padding-inline: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding-inline: 18px;
   color: var(--bs-menu-color);
   transition: all 0.18s ease;
 }
@@ -965,13 +959,70 @@ body[data-admin-page="dashboard"] .dashboard-kpi .kpi-chip.down {
 }
 
 .wp-admin-notification-item {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 6px 8px;
   border-top: 1px solid rgba(115, 103, 240, 0.08);
+  border-radius: 14px;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .wp-admin-notification-item:first-of-type {
   border-top: 0;
+}
+
+.wp-admin-notification-item:hover {
+  background: color-mix(in srgb, var(--wp-admin-accent-soft) 52%, transparent);
+}
+
+.wp-admin-notification-item.is-read .fw-medium,
+.wp-admin-notification-item.is-read .small {
+  opacity: 0.72;
+}
+
+.wp-admin-notification-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 6px 8px;
+  color: inherit;
+}
+
+.wp-admin-notification-main:hover,
+.wp-admin-notification-main:focus {
+  color: inherit;
+}
+
+.wp-admin-notification-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.wp-admin-notification-item:hover .wp-admin-notification-actions,
+.wp-admin-notification-item:focus-within .wp-admin-notification-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wp-admin-notification-actions .btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--wp-admin-text-muted);
+}
+
+.wp-admin-notification-actions .btn:hover {
+  color: var(--wp-admin-accent);
+  background: var(--wp-admin-accent-soft);
 }
 
 .wp-admin-favorites-list .dropdown-item,

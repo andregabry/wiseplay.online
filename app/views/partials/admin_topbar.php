@@ -47,24 +47,51 @@ $notificationCount = count($notifications);
         <a class="nav-link wp-admin-topbar-icon dropdown-toggle hide-arrow position-relative" href="javascript:void(0)" data-bs-toggle="dropdown" aria-label="Notificacoes">
           <i class="ri ri-notification-3-line"></i>
           <?php if ($notificationCount > 0): ?>
-            <span class="badge rounded-pill bg-danger wp-admin-topbar-badge"><?= $notificationCount > 9 ? '9+' : $notificationCount ?></span>
+            <span class="badge rounded-pill bg-danger wp-admin-topbar-badge js-admin-notification-badge"><?= $notificationCount > 9 ? '9+' : $notificationCount ?></span>
           <?php endif; ?>
         </a>
         <div class="dropdown-menu dropdown-menu-end wp-admin-topbar-menu wp-admin-topbar-menu-wide">
           <div class="dropdown-header">Recent activity</div>
-          <?php if ($notifications === []): ?>
-            <div class="dropdown-item-text text-body-secondary small">No recent notifications.</div>
-          <?php else: ?>
-            <?php foreach ($notifications as $notification): ?>
-              <div class="dropdown-item-text wp-admin-notification-item">
-                <div class="fw-medium"><?= e((string) ($notification['action'] ?? 'event')) ?></div>
-                <div class="small text-body-secondary">
-                  <?= e((string) ($notification['actor_name'] ?? 'System')) ?> • <?= e((string) ($notification['entity_type'] ?? '-')) ?>
+          <div class="js-admin-notifications-list">
+            <?php if ($notifications === []): ?>
+              <div class="dropdown-item-text text-body-secondary small js-admin-notifications-empty">No recent notifications.</div>
+            <?php else: ?>
+              <?php foreach ($notifications as $notification): ?>
+                <?php
+                $action = (string) ($notification['action'] ?? 'event');
+                $actor = (string) ($notification['actor_name'] ?? 'System');
+                $entityType = (string) ($notification['entity_type'] ?? '-');
+                $entityId = (string) ($notification['entity_id'] ?? '');
+                $createdAt = (string) ($notification['created_at'] ?? '');
+                $notificationKey = sha1(implode('|', [$action, $actor, $entityType, $entityId, $createdAt]));
+                ?>
+                <div
+                  class="dropdown-item-text wp-admin-notification-item js-admin-notification-item"
+                  data-notification-key="<?= e($notificationKey) ?>"
+                  data-action="<?= e($action) ?>"
+                  data-actor="<?= e($actor) ?>"
+                  data-entity-type="<?= e($entityType) ?>"
+                  data-entity-id="<?= e($entityId) ?>"
+                  data-created-at="<?= e($createdAt) ?>">
+                  <button type="button" class="wp-admin-notification-main js-admin-notification-open">
+                    <div class="fw-medium"><?= e($action) ?></div>
+                    <div class="small text-body-secondary">
+                      <?= e($actor) ?> • <?= e($entityType) ?>
+                    </div>
+                    <div class="small text-body-secondary"><?= e($createdAt) ?></div>
+                  </button>
+                  <div class="wp-admin-notification-actions">
+                    <button type="button" class="btn btn-sm btn-icon js-admin-notification-read" aria-label="Mark as read">
+                      <i class="ri ri-check-line"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-icon js-admin-notification-remove" aria-label="Remove alert">
+                      <i class="ri ri-close-line"></i>
+                    </button>
+                  </div>
                 </div>
-                <div class="small text-body-secondary"><?= e((string) ($notification['created_at'] ?? '')) ?></div>
-              </div>
-            <?php endforeach; ?>
-          <?php endif; ?>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
         </div>
       </li>
       <li class="nav-item">
