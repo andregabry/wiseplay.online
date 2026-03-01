@@ -304,33 +304,17 @@ body[data-admin-page].swal2-shown {
 .content-wrapper .card::after {
   content: "";
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 10px;
-  height: 4px;
-  background: linear-gradient(90deg, #7367f0, #00bacf, #28c76f, #ff9f43, #7367f0);
-  background-size: 300% 100%;
-  animation: wp-led-border 8s linear infinite;
-  opacity: 0.8;
-  border-bottom-left-radius: calc(var(--wp-admin-card-radius) - 10px);
-  border-bottom-right-radius: calc(var(--wp-admin-card-radius) - 10px);
-  border-top-left-radius: 999px;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 6px;
+  background: linear-gradient(180deg, var(--wp-admin-accent), color-mix(in srgb, var(--wp-admin-accent) 70%, #ffffff));
+  opacity: 0.95;
+  border-top-left-radius: calc(var(--wp-admin-card-radius) - 4px);
+  border-bottom-left-radius: calc(var(--wp-admin-card-radius) - 4px);
   border-top-right-radius: 999px;
-}
-
-@keyframes wp-led-border {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 300% 50%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .content-wrapper .card::after {
-    animation: none;
-  }
+  border-bottom-right-radius: 999px;
+  box-shadow: 0 0 16px var(--wp-admin-page-glow);
 }
 
 .btn-semantic-primary {
