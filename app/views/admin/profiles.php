@@ -66,11 +66,7 @@ $queryForPage = static function (int $pageNum, array $filters): string {
       </div>
       <div class="col-md-2 d-grid"><button class="btn btn-outline-primary" type="submit">Filtrar</button></div>
     </form>
-  </div>
-</div>
-
-<div class="card">
-  <div class="table-responsive text-nowrap">
+    <div class="table-responsive text-nowrap mt-4 pt-3 border-top">
     <table class="table">
       <thead>
         <tr>
@@ -129,9 +125,10 @@ $queryForPage = static function (int $pageNum, array $filters): string {
             </td>
             <?php endif; ?>
           </tr>
-        <?php endforeach; ?>
+      <?php endforeach; ?>
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 

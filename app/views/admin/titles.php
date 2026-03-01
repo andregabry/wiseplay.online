@@ -53,11 +53,7 @@ $queryForPage = static function (int $pageNum, array $filters): string {
       <div class="col-md-2"><input class="form-control" name="genre" value="<?= e((string) $filters['genre']) ?>" list="title-genre-list" placeholder="Genero"></div>
       <div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
     </form>
-  </div>
-</div>
-
-<div class="card">
-  <div class="table-responsive text-nowrap">
+    <div class="table-responsive text-nowrap mt-4 pt-3 border-top">
     <table class="table">
       <thead>
         <tr>
@@ -123,6 +119,7 @@ $queryForPage = static function (int $pageNum, array $filters): string {
       <?php endforeach; ?>
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 

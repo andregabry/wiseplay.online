@@ -593,6 +593,112 @@ body[data-admin-page].swal2-shown {
   color: #444050;
 }
 
+.wp-media-tree .accordion-item,
+.wp-media-season-accordion .accordion-item {
+  border: 1px solid rgba(115, 103, 240, 0.1);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.wp-media-tree .accordion-item + .accordion-item,
+.wp-media-season-accordion .accordion-item + .accordion-item {
+  margin-top: 12px;
+}
+
+.wp-media-tree .accordion-button,
+.wp-media-season-accordion .accordion-button {
+  gap: 12px;
+  padding: 16px 18px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.wp-media-tree .accordion-button::after,
+.wp-media-season-accordion .accordion-button::after {
+  display: none;
+}
+
+.wp-media-collapse-trigger:not(.collapsed),
+.wp-media-collapse-trigger-season:not(.collapsed) {
+  background: var(--wp-admin-accent-soft);
+}
+
+.wp-media-collapse-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--wp-admin-accent);
+  box-shadow: inset 0 0 0 1px var(--wp-admin-accent-strong);
+  transition: transform 0.18s ease;
+}
+
+.wp-media-collapse-trigger:not(.collapsed) .wp-media-collapse-icon,
+.wp-media-collapse-trigger-season:not(.collapsed) .wp-media-collapse-icon {
+  transform: rotate(90deg);
+}
+
+.wp-media-title-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.wp-media-title-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.wp-media-title-main strong {
+  color: #343952;
+}
+
+.wp-media-title-meta {
+  color: #8a8699;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.wp-media-season-accordion {
+  margin-top: 4px;
+}
+
+.wp-media-season-accordion .accordion-body {
+  padding: 14px 16px 16px;
+}
+
+.wp-media-items-table th {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8699;
+}
+
+@media (max-width: 767px) {
+  .wp-media-title-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .wp-media-title-main {
+    flex-wrap: wrap;
+  }
+
+  .wp-media-title-meta {
+    white-space: normal;
+  }
+}
+
 .swal2-popup.wp-swal {
   border-radius: 14px;
 }

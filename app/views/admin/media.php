@@ -25,6 +25,74 @@ $queryForPage = static function (int $pageNum, array $filters): string {
         'page' => $pageNum,
     ]);
 };
+
+$groupedMedia = [];
+foreach ($items as $item) {
+    $titleId = (int) ($item['title_id'] ?? 0);
+    if (!isset($groupedMedia[$titleId])) {
+        $groupedMedia[$titleId] = [
+            'title_id' => $titleId,
+            'title_name' => (string) ($item['title_name'] ?? 'Untitled'),
+            'title_type' => strtoupper((string) ($item['title_type'] ?? 'MOVIE')),
+            'items_count' => 0,
+            'published_count' => 0,
+            'groups' => [],
+        ];
+    }
+
+    $groupedMedia[$titleId]['items_count']++;
+    if ((int) ($item['is_published'] ?? 0) === 1) {
+        $groupedMedia[$titleId]['published_count']++;
+    }
+
+    $titleType = $groupedMedia[$titleId]['title_type'];
+    $seasonNumber = max(0, (int) ($item['season_number'] ?? 0));
+    $groupKey = $titleType === 'MOVIE' ? 'movie' : (string) $seasonNumber;
+    if (!isset($groupedMedia[$titleId]['groups'][$groupKey])) {
+        if ($titleType === 'COURSE') {
+            $groupLabel = $seasonNumber > 0 ? 'Modulo ' . str_pad((string) $seasonNumber, 2, '0', STR_PAD_LEFT) : 'Sem modulo';
+        } elseif ($titleType === 'SERIES') {
+            $groupLabel = $seasonNumber > 0 ? 'Temporada ' . str_pad((string) $seasonNumber, 2, '0', STR_PAD_LEFT) : 'Sem temporada';
+        } else {
+            $groupLabel = 'Movie media';
+        }
+
+        $groupedMedia[$titleId]['groups'][$groupKey] = [
+            'key' => $groupKey,
+            'season_number' => $seasonNumber,
+            'label' => $groupLabel,
+            'items' => [],
+        ];
+    }
+
+    $groupedMedia[$titleId]['groups'][$groupKey]['items'][] = $item;
+}
+
+foreach ($groupedMedia as &$titleGroup) {
+    uasort($titleGroup['groups'], static function (array $left, array $right): int {
+        return ($left['season_number'] ?? 0) <=> ($right['season_number'] ?? 0);
+    });
+
+    foreach ($titleGroup['groups'] as &$seasonGroup) {
+        usort($seasonGroup['items'], static function (array $left, array $right): int {
+            $leftSeason = max(0, (int) ($left['season_number'] ?? 0));
+            $rightSeason = max(0, (int) ($right['season_number'] ?? 0));
+            if ($leftSeason !== $rightSeason) {
+                return $leftSeason <=> $rightSeason;
+            }
+
+            $leftEpisode = max(0, (int) ($left['episode_number'] ?? 0));
+            $rightEpisode = max(0, (int) ($right['episode_number'] ?? 0));
+            if ($leftEpisode !== $rightEpisode) {
+                return $leftEpisode <=> $rightEpisode;
+            }
+
+            return strcmp((string) ($left['item_label'] ?? ''), (string) ($right['item_label'] ?? ''));
+        });
+    }
+    unset($seasonGroup);
+}
+unset($titleGroup);
 ?>
 
 <div class="card mb-4">
@@ -49,93 +117,151 @@ $queryForPage = static function (int $pageNum, array $filters): string {
       <div class="col-md-1"><select class="form-select" name="is_published"><option value="">Pub?</option><option value="1" <?= ((string) $filters['is_published'] === '1') ? 'selected' : '' ?>>Sim</option><option value="0" <?= ((string) $filters['is_published'] === '0') ? 'selected' : '' ?>>Nao</option></select></div>
       <div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
     </form>
-  </div>
-</div>
-
-<div class="card">
-  <div class="table-responsive text-nowrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Titulo</th>
-          <th>Sequencia</th>
-          <th>Fonte</th>
-          <th>Upload</th>
-          <th>Publicado</th>
-          <?php if ($canManageMedia): ?><th>Acoes</th><?php endif; ?>
-        </tr>
-      </thead>
-      <tbody>
+    <div class="mt-4 pt-3 border-top">
       <?php if ($items === []): ?>
-        <tr><td colspan="<?= $canManageMedia ? '7' : '6' ?>" class="text-center text-body-secondary">Nenhuma midia encontrada.</td></tr>
-      <?php endif; ?>
-      <?php foreach ($items as $item): ?>
-        <?php
-          $payload = json_encode([
-              'id' => (int) $item['id'],
-              'title_id' => (int) $item['title_id'],
-              'season_number' => (int) ($item['season_number'] ?? 0),
-              'episode_number' => (int) ($item['episode_number'] ?? 0),
-              'item_label' => (string) $item['item_label'],
-              'duration_minutes' => (int) ($item['duration_minutes'] ?? 0),
-              'source_type' => (string) $item['source_type'],
-              'source_path' => (string) ($item['source_path'] ?? ''),
-              'external_id' => (string) ($item['external_id'] ?? ''),
-              'stream_ref' => (string) ($item['stream_ref'] ?? ''),
-              'stream_url' => (string) ($item['stream_url'] ?? ''),
-              'download_url' => (string) ($item['download_url'] ?? ''),
-              'drive_id' => (string) ($item['drive_id'] ?? ''),
-              'parent_item_id' => (string) ($item['parent_item_id'] ?? ''),
-              'mime_type' => (string) ($item['mime_type'] ?? ''),
-              'file_size_bytes' => (int) ($item['file_size_bytes'] ?? 0),
-              'upload_status' => (string) ($item['upload_status'] ?? 'READY'),
-              'subtitles' => (string) ($item['subtitles'] ?? ''),
-              'subtitles_json' => (string) ($item['subtitles_json'] ?? ''),
-              'audio_lang' => (string) ($item['audio_lang'] ?? ''),
-              'is_published' => (int) ($item['is_published'] ?? 1),
-              'thumbnail_url' => (string) ($item['thumbnail_url'] ?? ''),
-              'poster_url' => (string) ($item['poster_url'] ?? ''),
-              'backdrop_url' => (string) ($item['backdrop_url'] ?? ''),
-              'last_source_sync_at' => (string) ($item['last_source_sync_at'] ?? ''),
-          ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT);
-          $sequence = ((int) ($item['season_number'] ?? 0) > 0 || (int) ($item['episode_number'] ?? 0) > 0)
-              ? ('S' . (int) ($item['season_number'] ?? 0) . ' / E' . (int) ($item['episode_number'] ?? 0))
-              : '-';
-          $status = strtoupper((string) ($item['upload_status'] ?? 'READY'));
-          $uploadBadge = $status === 'READY' ? 'bg-label-success' : (($status === 'FAILED') ? 'bg-label-danger' : (($status === 'UPLOADING') ? 'bg-label-warning' : 'bg-label-secondary'));
-        ?>
-        <tr>
-          <td>
-            <div class="fw-medium"><?= e((string) $item['item_label']) ?></div>
-            <small class="text-body-secondary"><?= e((string) ($item['audio_lang'] ?? '-')) ?><?= (int) ($item['duration_minutes'] ?? 0) > 0 ? ' • ' . (int) $item['duration_minutes'] . ' min' : '' ?></small>
-          </td>
-          <td><?= e((string) $item['title_name']) ?></td>
-          <td><?= e($sequence) ?></td>
-          <td>
-            <span class="badge bg-label-info"><?= e((string) $item['source_type']) ?></span>
-            <?php if (((string) ($item['source_type'] ?? '')) === 'ONEDRIVE' && (string) ($item['external_id'] ?? '') !== ''): ?>
-              <div><small class="text-body-secondary">ID: <?= e((string) $item['external_id']) ?></small></div>
-            <?php endif; ?>
-          </td>
-          <td><span class="badge <?= $uploadBadge ?>"><?= e($status) ?></span></td>
-          <td><span class="badge <?= ((int) $item['is_published'] === 1) ? 'bg-label-success' : 'bg-label-warning' ?>"><?= ((int) $item['is_published'] === 1) ? 'Sim' : 'Nao' ?></span></td>
-          <?php if ($canManageMedia): ?>
-          <td>
-            <div class="dropdown wp-actions-dropdown">
-              <button type="button" class="btn btn-sm btn-icon js-actions-toggle" aria-haspopup="true" aria-expanded="false"><i class="ri ri-more-2-fill"></i></button>
-              <div class="dropdown-menu dropdown-menu-end wp-actions-menu" role="menu">
-                <a href="#" class="dropdown-item js-edit-media" data-media='<?= e($payload) ?>'><i class="ri ri-pencil-line me-2"></i>Editar</a>
-                <a href="#" class="dropdown-item js-replace-media-source" data-media='<?= e($payload) ?>'><i class="ri ri-upload-cloud-2-line me-2"></i>Substituir video</a>
-                <a href="#" class="dropdown-item text-danger js-delete-media" data-id="<?= (int) $item['id'] ?>" data-name="<?= e((string) $item['item_label']) ?>"><i class="ri ri-delete-bin-line me-2"></i>Excluir</a>
+        <div class="text-center text-body-secondary py-5">Nenhuma midia encontrada.</div>
+      <?php else: ?>
+        <div class="accordion wp-media-tree" id="media-title-accordion">
+          <?php $titlePosition = 0; ?>
+          <?php foreach ($groupedMedia as $titleGroup): ?>
+            <?php
+              $titlePosition++;
+              $titleCollapseId = 'media-title-collapse-' . (int) $titleGroup['title_id'];
+              $titleHeadingId = 'media-title-heading-' . (int) $titleGroup['title_id'];
+            ?>
+            <div class="accordion-item wp-media-title-group">
+              <h2 class="accordion-header" id="<?= e($titleHeadingId) ?>">
+                <button class="accordion-button <?= $titlePosition === 1 ? '' : 'collapsed' ?> wp-media-collapse-trigger" type="button" data-bs-toggle="collapse" data-bs-target="#<?= e($titleCollapseId) ?>" aria-expanded="<?= $titlePosition === 1 ? 'true' : 'false' ?>" aria-controls="<?= e($titleCollapseId) ?>">
+                  <span class="wp-media-collapse-icon"><i class="ri ri-arrow-right-s-line"></i></span>
+                  <span class="wp-media-title-summary">
+                    <span class="wp-media-title-main">
+                      <strong><?= e((string) $titleGroup['title_name']) ?></strong>
+                      <span class="badge bg-label-info"><?= e((string) $titleGroup['title_type']) ?></span>
+                    </span>
+                    <span class="wp-media-title-meta"><?= (int) $titleGroup['items_count'] ?> item(ns) • <?= (int) $titleGroup['published_count'] ?> publicado(s)</span>
+                  </span>
+                </button>
+              </h2>
+              <div id="<?= e($titleCollapseId) ?>" class="accordion-collapse collapse <?= $titlePosition === 1 ? 'show' : '' ?>" aria-labelledby="<?= e($titleHeadingId) ?>" data-bs-parent="#media-title-accordion">
+                <div class="accordion-body">
+                  <div class="accordion wp-media-season-accordion" id="media-season-accordion-<?= (int) $titleGroup['title_id'] ?>">
+                    <?php $seasonPosition = 0; ?>
+                    <?php foreach ($titleGroup['groups'] as $seasonGroup): ?>
+                      <?php
+                        $seasonPosition++;
+                        $seasonKey = preg_replace('/[^a-z0-9_-]+/i', '-', (string) $seasonGroup['key']);
+                        $seasonCollapseId = 'media-season-collapse-' . (int) $titleGroup['title_id'] . '-' . $seasonKey;
+                        $seasonHeadingId = 'media-season-heading-' . (int) $titleGroup['title_id'] . '-' . $seasonKey;
+                      ?>
+                      <div class="accordion-item wp-media-season-group">
+                        <h3 class="accordion-header" id="<?= e($seasonHeadingId) ?>">
+                          <button class="accordion-button <?= $seasonPosition === 1 ? '' : 'collapsed' ?> wp-media-collapse-trigger wp-media-collapse-trigger-season" type="button" data-bs-toggle="collapse" data-bs-target="#<?= e($seasonCollapseId) ?>" aria-expanded="<?= $seasonPosition === 1 ? 'true' : 'false' ?>" aria-controls="<?= e($seasonCollapseId) ?>">
+                            <span class="wp-media-collapse-icon"><i class="ri ri-arrow-right-s-line"></i></span>
+                            <span class="wp-media-title-summary">
+                              <span class="wp-media-title-main"><strong><?= e((string) $seasonGroup['label']) ?></strong></span>
+                              <span class="wp-media-title-meta"><?= count($seasonGroup['items']) ?> media item(ns)</span>
+                            </span>
+                          </button>
+                        </h3>
+                        <div id="<?= e($seasonCollapseId) ?>" class="accordion-collapse collapse <?= $seasonPosition === 1 ? 'show' : '' ?>" aria-labelledby="<?= e($seasonHeadingId) ?>" data-bs-parent="#media-season-accordion-<?= (int) $titleGroup['title_id'] ?>">
+                          <div class="accordion-body">
+                            <div class="table-responsive">
+                              <table class="table align-middle mb-0 wp-media-items-table">
+                                <thead>
+                                  <tr>
+                                    <th>Episode/Lesson</th>
+                                    <th>Source</th>
+                                    <th>Upload</th>
+                                    <th>Published</th>
+                                    <?php if ($canManageMedia): ?><th class="text-end">Actions</th><?php endif; ?>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <?php foreach ($seasonGroup['items'] as $item): ?>
+                                    <?php
+                                      $payload = json_encode([
+                                          'id' => (int) $item['id'],
+                                          'title_id' => (int) $item['title_id'],
+                                          'season_number' => (int) ($item['season_number'] ?? 0),
+                                          'episode_number' => (int) ($item['episode_number'] ?? 0),
+                                          'item_label' => (string) $item['item_label'],
+                                          'duration_minutes' => (int) ($item['duration_minutes'] ?? 0),
+                                          'source_type' => (string) $item['source_type'],
+                                          'source_path' => (string) ($item['source_path'] ?? ''),
+                                          'external_id' => (string) ($item['external_id'] ?? ''),
+                                          'stream_ref' => (string) ($item['stream_ref'] ?? ''),
+                                          'stream_url' => (string) ($item['stream_url'] ?? ''),
+                                          'download_url' => (string) ($item['download_url'] ?? ''),
+                                          'drive_id' => (string) ($item['drive_id'] ?? ''),
+                                          'parent_item_id' => (string) ($item['parent_item_id'] ?? ''),
+                                          'mime_type' => (string) ($item['mime_type'] ?? ''),
+                                          'file_size_bytes' => (int) ($item['file_size_bytes'] ?? 0),
+                                          'upload_status' => (string) ($item['upload_status'] ?? 'READY'),
+                                          'subtitles' => (string) ($item['subtitles'] ?? ''),
+                                          'subtitles_json' => (string) ($item['subtitles_json'] ?? ''),
+                                          'audio_lang' => (string) ($item['audio_lang'] ?? ''),
+                                          'is_published' => (int) ($item['is_published'] ?? 1),
+                                          'thumbnail_url' => (string) ($item['thumbnail_url'] ?? ''),
+                                          'poster_url' => (string) ($item['poster_url'] ?? ''),
+                                          'backdrop_url' => (string) ($item['backdrop_url'] ?? ''),
+                                          'last_source_sync_at' => (string) ($item['last_source_sync_at'] ?? ''),
+                                      ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT);
+                                      $episodeNumber = max(0, (int) ($item['episode_number'] ?? 0));
+                                      $titleType = strtoupper((string) ($item['title_type'] ?? $titleGroup['title_type']));
+                                      $sequenceLabel = $titleType === 'COURSE'
+                                          ? ('Licao ' . str_pad((string) max(1, $episodeNumber), 2, '0', STR_PAD_LEFT))
+                                          : ($titleType === 'SERIES'
+                                              ? ('Episodio ' . str_pad((string) max(1, $episodeNumber), 2, '0', STR_PAD_LEFT))
+                                              : 'Feature');
+                                      $status = strtoupper((string) ($item['upload_status'] ?? 'READY'));
+                                      $uploadBadge = $status === 'READY' ? 'bg-label-success' : (($status === 'FAILED') ? 'bg-label-danger' : (($status === 'UPLOADING') ? 'bg-label-warning' : 'bg-label-secondary'));
+                                    ?>
+                                    <tr>
+                                      <td>
+                                        <div class="fw-medium"><?= e((string) $item['item_label']) ?></div>
+                                        <small class="text-body-secondary">
+                                          <?= e($sequenceLabel) ?>
+                                          <?php if ((int) ($item['duration_minutes'] ?? 0) > 0): ?> • <?= (int) $item['duration_minutes'] ?> min<?php endif; ?>
+                                          <?php if (trim((string) ($item['audio_lang'] ?? '')) !== ''): ?> • <?= e((string) $item['audio_lang']) ?><?php endif; ?>
+                                        </small>
+                                      </td>
+                                      <td>
+                                        <span class="badge bg-label-info"><?= e((string) $item['source_type']) ?></span>
+                                        <?php if (((string) ($item['source_type'] ?? '')) === 'ONEDRIVE' && (string) ($item['external_id'] ?? '') !== ''): ?>
+                                          <div><small class="text-body-secondary">ID: <?= e((string) $item['external_id']) ?></small></div>
+                                        <?php endif; ?>
+                                      </td>
+                                      <td><span class="badge <?= $uploadBadge ?>"><?= e($status) ?></span></td>
+                                      <td><span class="badge <?= ((int) $item['is_published'] === 1) ? 'bg-label-success' : 'bg-label-warning' ?>"><?= ((int) $item['is_published'] === 1) ? 'Sim' : 'Nao' ?></span></td>
+                                      <?php if ($canManageMedia): ?>
+                                      <td class="text-end">
+                                        <div class="dropdown wp-actions-dropdown">
+                                          <button type="button" class="btn btn-sm btn-icon js-actions-toggle" aria-haspopup="true" aria-expanded="false"><i class="ri ri-more-2-fill"></i></button>
+                                          <div class="dropdown-menu dropdown-menu-end wp-actions-menu" role="menu">
+                                            <a href="#" class="dropdown-item js-edit-media" data-media='<?= e($payload) ?>'><i class="ri ri-pencil-line me-2"></i>Editar</a>
+                                            <a href="#" class="dropdown-item js-replace-media-source" data-media='<?= e($payload) ?>'><i class="ri ri-upload-cloud-2-line me-2"></i>Substituir video</a>
+                                            <a href="#" class="dropdown-item text-danger js-delete-media" data-id="<?= (int) $item['id'] ?>" data-name="<?= e((string) $item['item_label']) ?>"><i class="ri ri-delete-bin-line me-2"></i>Excluir</a>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <?php endif; ?>
+                                    </tr>
+                                  <?php endforeach; ?>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    <?php endforeach; ?>
+                  </div>
+                </div>
               </div>
             </div>
-          </td>
-          <?php endif; ?>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </div>
   </div>
 </div>
 
