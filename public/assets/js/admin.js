@@ -627,6 +627,89 @@
   }
 
   function bindAdminChrome() {
+    var FAVORITES_KEY = 'wiseplay-admin-favorites';
+    var LANGUAGE_KEY = 'wiseplay-admin-language';
+
+    function getStoredFavorites() {
+      try {
+        var raw = window.localStorage.getItem(FAVORITES_KEY);
+        var parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveStoredFavorites(items) {
+      window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(items || []));
+    }
+
+    function currentFavoriteEntry() {
+      var path = String((window.WISEPLAY && window.WISEPLAY.currentPath) || '/admin');
+      var title = $.trim($('.wp-admin-page-intro-text h1').first().text()) || document.title || 'Admin';
+      return {
+        path: path,
+        title: title
+      };
+    }
+
+    function renderFavorites() {
+      var favorites = getStoredFavorites();
+      var current = currentFavoriteEntry();
+      var $list = $('.js-admin-favorites-list');
+      var $toggle = $('.js-admin-favorite-toggle');
+      if (!$list.length || !$toggle.length) {
+        return;
+      }
+
+      var exists = favorites.some(function (item) {
+        return String(item.path || '') === current.path;
+      });
+
+      $toggle.text(exists ? 'Remove current' : 'Save current');
+
+      if (!favorites.length) {
+        $list.html('<div class="dropdown-item-text text-body-secondary small">No saved pages yet.</div>');
+        return;
+      }
+
+      var html = favorites.map(function (item) {
+        var safeTitle = $('<div>').text(String(item.title || item.path || 'Admin')).html();
+        var safePath = $('<div>').text(String(item.path || '/admin')).html();
+        return '<div class="dropdown-item-text d-flex align-items-center justify-content-between gap-2 wp-admin-favorite-row">' +
+          '<a class="text-body flex-grow-1 text-decoration-none" href="' + safePath + '">' + safeTitle + '</a>' +
+          '<button type="button" class="btn btn-sm btn-icon text-danger js-admin-favorite-remove" data-path="' + safePath + '" aria-label="Remove favorite"><i class="ri ri-close-line"></i></button>' +
+        '</div>';
+      }).join('');
+
+      $list.html(html);
+    }
+
+    function applyAdminLanguage(lang) {
+      var normalized = lang === 'pt-BR' ? 'pt-BR' : 'en-US';
+      document.documentElement.setAttribute('lang', normalized);
+      window.localStorage.setItem(LANGUAGE_KEY, normalized);
+      $('.js-admin-topbar-search')
+        .attr('placeholder', normalized === 'pt-BR' ? 'Buscar [CTRL + K]' : 'Search [CTRL + K]')
+        .attr('aria-label', normalized === 'pt-BR' ? 'Buscar no admin' : 'Search admin');
+      $('.js-admin-lang-option').removeClass('active');
+      $('.js-admin-lang-option[data-lang="' + normalized + '"]').addClass('active');
+    }
+
+    function syncThemeIcon() {
+      var currentTheme = String(document.documentElement.getAttribute('data-bs-theme') || 'light').toLowerCase();
+      $('.js-admin-theme-toggle').find('i')
+        .removeClass('ri-sun-line ri-moon-clear-line')
+        .addClass(currentTheme === 'dark' ? 'ri-moon-clear-line' : 'ri-sun-line');
+    }
+
+    function ensureCustomizer() {
+      if (window.templateCustomizer && typeof window.templateCustomizer.update === 'function') {
+        window.templateCustomizer.update();
+      }
+      return $('.template-customizer-open-btn').first().length > 0;
+    }
+
     $(document).on('keydown', function (event) {
       if ((event.ctrlKey || event.metaKey) && String(event.key || '').toLowerCase() === 'k') {
         event.preventDefault();
@@ -657,6 +740,7 @@
 
     $(document).on('click', '.js-admin-open-customizer', function (event) {
       event.preventDefault();
+      ensureCustomizer();
       var $trigger = $('.template-customizer-open-btn').first();
       if (!$trigger.length) {
         sweetError('Painel de personalizacao do tema indisponivel nesta pagina.');
@@ -675,40 +759,51 @@
       } else {
         document.documentElement.setAttribute('data-bs-theme', nextTheme);
       }
-
-      $(this).find('i')
-        .removeClass('ri-sun-line ri-moon-clear-line')
-        .addClass(nextTheme === 'dark' ? 'ri-moon-clear-line' : 'ri-sun-line');
+      document.documentElement.setAttribute('data-bs-theme', nextTheme);
+      syncThemeIcon();
     });
 
-    $(document).on('click', '.js-admin-navbar-action', function (event) {
+    $(document).on('click', '.js-admin-lang-option', function (event) {
       event.preventDefault();
-      var action = String($(this).data('action') || '');
-      var copy = {
-        translate: {
-          title: 'Idiomas',
-          text: 'O seletor de idiomas do tema pode ser ligado no proximo passo, sem afetar o layout atual.'
-        },
-        favorite: {
-          title: 'Favoritos',
-          text: 'Espaco reservado para atalhos rapidos do admin.'
-        },
-        notifications: {
-          title: 'Notificacoes',
-          text: 'Painel de notificacoes ainda nao foi conectado aos eventos do sistema.'
-        }
-      };
+      var lang = String($(this).data('lang') || 'en-US');
+      applyAdminLanguage(lang);
+    });
 
-      if (!copy[action]) {
+    $(document).on('click', '.js-admin-favorite-toggle', function (event) {
+      event.preventDefault();
+      var favorites = getStoredFavorites();
+      var current = currentFavoriteEntry();
+      var next = favorites.filter(function (item) {
+        return String(item.path || '') !== current.path;
+      });
+
+      if (next.length === favorites.length) {
+        next.unshift(current);
+      }
+
+      saveStoredFavorites(next.slice(0, 8));
+      renderFavorites();
+    });
+
+    $(document).on('click', '.js-admin-favorite-remove', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      var path = String($(this).data('path') || '');
+      if (path === '') {
         return;
       }
 
-      swalFire({
-        icon: 'info',
-        title: copy[action].title,
-        text: copy[action].text
+      var next = getStoredFavorites().filter(function (item) {
+        return String(item.path || '') !== path;
       });
+      saveStoredFavorites(next);
+      renderFavorites();
     });
+
+    applyAdminLanguage(window.localStorage.getItem(LANGUAGE_KEY) || document.documentElement.getAttribute('lang') || 'en-US');
+    syncThemeIcon();
+    renderFavorites();
+    ensureCustomizer();
   }
 
   function refreshFormImagePreviews($form) {

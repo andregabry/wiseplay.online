@@ -8,6 +8,7 @@ use App\core\Auth;
 use App\core\Response;
 use App\core\View;
 use App\models\AuditLog;
+use App\models\DashboardStats;
 
 abstract class AdminBaseController extends BaseController
 {
@@ -105,6 +106,13 @@ abstract class AdminBaseController extends BaseController
             'eyebrow' => 'Admin',
         ];
 
+        $notifications = [];
+        try {
+            $notifications = (new DashboardStats())->recentAudits(6);
+        } catch (\Throwable) {
+            $notifications = [];
+        }
+
         View::render($view, array_merge($data, [
             'currentPath' => current_path(),
             'adminUser' => Auth::user(),
@@ -113,6 +121,7 @@ abstract class AdminBaseController extends BaseController
             'pageDescription' => $data['pageDescription'] ?? $pageMeta['description'],
             'pageIcon' => $data['pageIcon'] ?? $pageMeta['icon'],
             'pageEyebrow' => $data['pageEyebrow'] ?? $pageMeta['eyebrow'],
+            'adminNotifications' => $notifications,
         ]), 'admin');
     }
 }

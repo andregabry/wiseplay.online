@@ -3,6 +3,8 @@ $avatar = trim((string) ($adminUser['account_avatar'] ?? ''));
 if ($avatar === '' || str_ends_with($avatar, '.gitkeep')) {
     $avatar = '/assets/img/avatar-library/avatar-01.svg';
 }
+$notifications = $adminNotifications ?? [];
+$notificationCount = count($notifications);
 ?>
 <nav class="layout-navbar container-xxl navbar-detached navbar navbar-expand-xl align-items-center bg-navbar-theme wp-admin-topbar">
   <div class="wp-admin-topbar-search flex-grow-1">
@@ -12,25 +14,58 @@ if ($avatar === '' || str_ends_with($avatar, '.gitkeep')) {
 
   <div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
     <ul class="navbar-nav flex-row align-items-center wp-admin-topbar-actions">
-      <li class="nav-item">
-        <a class="nav-link wp-admin-topbar-icon js-admin-navbar-action" href="javascript:void(0)" data-action="translate" aria-label="Idiomas">
+      <li class="nav-item dropdown">
+        <a class="nav-link wp-admin-topbar-icon dropdown-toggle hide-arrow" href="javascript:void(0)" data-bs-toggle="dropdown" aria-label="Idiomas">
           <i class="ri ri-translate-2"></i>
         </a>
+        <div class="dropdown-menu dropdown-menu-end wp-admin-topbar-menu">
+          <div class="dropdown-header">Language</div>
+          <button type="button" class="dropdown-item js-admin-lang-option" data-lang="en-US">English</button>
+          <button type="button" class="dropdown-item js-admin-lang-option" data-lang="pt-BR">Portugues (Brasil)</button>
+        </div>
       </li>
       <li class="nav-item">
         <a class="nav-link wp-admin-topbar-icon js-admin-theme-toggle" href="javascript:void(0)" aria-label="Tema">
           <i class="ri ri-sun-line"></i>
         </a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link wp-admin-topbar-icon js-admin-navbar-action" href="javascript:void(0)" data-action="favorite" aria-label="Favoritos">
+      <li class="nav-item dropdown">
+        <a class="nav-link wp-admin-topbar-icon dropdown-toggle hide-arrow" href="javascript:void(0)" data-bs-toggle="dropdown" aria-label="Favoritos">
           <i class="ri ri-star-line"></i>
         </a>
+        <div class="dropdown-menu dropdown-menu-end wp-admin-topbar-menu wp-admin-topbar-menu-wide">
+          <div class="dropdown-header d-flex align-items-center justify-content-between gap-2">
+            <span>Favorites</span>
+            <button type="button" class="btn btn-sm btn-outline-primary js-admin-favorite-toggle">Save current</button>
+          </div>
+          <div class="wp-admin-favorites-list js-admin-favorites-list">
+            <div class="dropdown-item-text text-body-secondary small">No saved pages yet.</div>
+          </div>
+        </div>
       </li>
-      <li class="nav-item">
-        <a class="nav-link wp-admin-topbar-icon js-admin-navbar-action" href="javascript:void(0)" data-action="notifications" aria-label="Notificacoes">
+      <li class="nav-item dropdown">
+        <a class="nav-link wp-admin-topbar-icon dropdown-toggle hide-arrow position-relative" href="javascript:void(0)" data-bs-toggle="dropdown" aria-label="Notificacoes">
           <i class="ri ri-notification-3-line"></i>
+          <?php if ($notificationCount > 0): ?>
+            <span class="badge rounded-pill bg-danger wp-admin-topbar-badge"><?= $notificationCount > 9 ? '9+' : $notificationCount ?></span>
+          <?php endif; ?>
         </a>
+        <div class="dropdown-menu dropdown-menu-end wp-admin-topbar-menu wp-admin-topbar-menu-wide">
+          <div class="dropdown-header">Recent activity</div>
+          <?php if ($notifications === []): ?>
+            <div class="dropdown-item-text text-body-secondary small">No recent notifications.</div>
+          <?php else: ?>
+            <?php foreach ($notifications as $notification): ?>
+              <div class="dropdown-item-text wp-admin-notification-item">
+                <div class="fw-medium"><?= e((string) ($notification['action'] ?? 'event')) ?></div>
+                <div class="small text-body-secondary">
+                  <?= e((string) ($notification['actor_name'] ?? 'System')) ?> • <?= e((string) ($notification['entity_type'] ?? '-')) ?>
+                </div>
+                <div class="small text-body-secondary"><?= e((string) ($notification['created_at'] ?? '')) ?></div>
+              </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
       </li>
       <li class="nav-item">
         <a class="nav-link wp-admin-topbar-icon wp-admin-topbar-accent js-admin-open-customizer" href="javascript:void(0)" aria-label="Personalizar layout">
