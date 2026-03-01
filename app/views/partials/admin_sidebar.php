@@ -16,8 +16,8 @@ $menu = [
       <span class="app-brand-logo demo wp-admin-brand-mark"><i class="ri ri-tv-2-line icon-28px"></i></span>
       <span class="app-brand-text demo menu-text fw-semibold ms-2">WisePlay</span>
     </a>
-    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
-      <i class="ri ri-arrow-left-s-line icon-base"></i>
+    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto" aria-label="Toggle sidebar">
+      <i class="ri ri-menu-line icon-base"></i>
     </a>
   </div>
 
