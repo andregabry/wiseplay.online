@@ -14,49 +14,49 @@ abstract class AdminBaseController extends BaseController
     private const PAGE_META = [
         'dashboard' => [
             'title' => 'Dashboard',
-            'description' => 'Visao executiva do WisePlay com indicadores de usuarios, catalogo, perfis, assinaturas e eventos recentes.',
+            'description' => 'Executive overview of users, catalog, subscriptions, and recent platform activity.',
             'icon' => 'ri-dashboard-line',
             'eyebrow' => 'Overview',
         ],
         'users' => [
             'title' => 'Users',
-            'description' => 'Gerencie contas, papeis, status, planos e operacoes administrativas em uma unica visao.',
+            'description' => 'Manage accounts, roles, statuses, plans, and administrative actions in one place.',
             'icon' => 'ri-user-line',
             'eyebrow' => 'Accounts',
         ],
         'profiles' => [
             'title' => 'Profiles',
-            'description' => 'Acompanhe perfis criados no app publico, perfis kids e operacoes de manutencao.',
+            'description' => 'Review public profiles, kids accounts, and profile maintenance operations.',
             'icon' => 'ri-team-line',
             'eyebrow' => 'Profiles',
         ],
         'titles' => [
             'title' => 'Titles',
-            'description' => 'Organize o catalogo de filmes, series e cursos com status editorial e midias visuais.',
+            'description' => 'Organize movies, series, and courses with editorial status and visual assets.',
             'icon' => 'ri-movie-2-line',
             'eyebrow' => 'Catalog',
         ],
         'media' => [
             'title' => 'Media',
-            'description' => 'Controle uploads, fontes OneDrive, hierarquia de episodios e publicacao de conteudo.',
+            'description' => 'Control uploads, OneDrive sources, episode hierarchy, and publication state.',
             'icon' => 'ri-film-line',
             'eyebrow' => 'Library',
         ],
         'billing' => [
             'title' => 'Billing',
-            'description' => 'Configure planos, limites, cobranca, assinaturas e disponibilidade comercial do produto.',
+            'description' => 'Configure plans, limits, subscription billing, and commercial availability.',
             'icon' => 'ri-bank-card-line',
             'eyebrow' => 'Revenue',
         ],
         'settings' => [
             'title' => 'Settings',
-            'description' => 'Centralize configuracoes gerais, OneDrive, SMTP, upload e parametros operacionais.',
+            'description' => 'Centralize general settings, OneDrive, SMTP, upload, and runtime controls.',
             'icon' => 'ri-settings-4-line',
             'eyebrow' => 'Configuration',
         ],
         'me' => [
             'title' => 'My Profile',
-            'description' => 'Atualize seus dados pessoais, seguranca da conta e preferencias administrativas.',
+            'description' => 'Update personal details, account security, and admin preferences.',
             'icon' => 'ri-user-settings-line',
             'eyebrow' => 'Account',
         ],
@@ -100,7 +100,7 @@ abstract class AdminBaseController extends BaseController
         $viewName = basename($view);
         $pageMeta = self::PAGE_META[$viewName] ?? [
             'title' => $data['pageTitle'] ?? 'Admin',
-            'description' => 'Gerencie esta area administrativa do WisePlay.',
+            'description' => 'Manage this WisePlay administrative area.',
             'icon' => 'ri-layout-grid-line',
             'eyebrow' => 'Admin',
         ];

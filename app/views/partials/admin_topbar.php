@@ -5,12 +5,6 @@ if ($avatar === '' || str_ends_with($avatar, '.gitkeep')) {
 }
 ?>
 <nav class="layout-navbar container-xxl navbar-detached navbar navbar-expand-xl align-items-center bg-navbar-theme wp-admin-topbar">
-  <div class="layout-menu-toggle navbar-nav align-items-xl-center me-2 me-xl-0">
-    <a class="nav-item nav-link px-0" href="javascript:void(0)" aria-label="Alternar menu">
-      <i class="icon-base ri ri-menu-fold-line icon-22px"></i>
-    </a>
-  </div>
-
   <div class="wp-admin-topbar-search flex-grow-1">
     <i class="ri ri-search-line"></i>
     <input type="search" class="form-control js-admin-topbar-search" placeholder="Search [CTRL + K]" aria-label="Buscar no admin">

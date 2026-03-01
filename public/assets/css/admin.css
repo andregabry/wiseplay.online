@@ -617,9 +617,9 @@ body[data-admin-page="me"] {
 body[data-admin-page] #layout-menu {
   margin: 18px 0 18px 18px;
   border-radius: 0 var(--wp-admin-card-radius) var(--wp-admin-card-radius) 0;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 18px 42px rgba(42, 46, 79, 0.08);
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 body[data-admin-page] #layout-menu::before {
@@ -664,7 +664,7 @@ body[data-admin-page] #layout-menu::before {
 }
 
 .layout-menu .menu-link:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.62);
   color: #373d57;
   transform: translateX(2px);
 }
@@ -682,27 +682,12 @@ body[data-admin-page] #layout-menu::before {
 .wp-admin-topbar {
   margin-top: 18px;
   min-height: 76px;
-  padding: 12px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.74);
+  padding: 0 6px;
+  border: 0;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 16px 34px rgba(48, 51, 77, 0.08);
-}
-
-.wp-admin-topbar .layout-menu-toggle .nav-link {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #57607e;
-}
-
-.wp-admin-topbar .layout-menu-toggle .nav-link:hover {
-  background: rgba(115, 103, 240, 0.08);
-  color: var(--wp-admin-accent);
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 .wp-admin-topbar-search {
@@ -712,11 +697,11 @@ body[data-admin-page] #layout-menu::before {
   min-width: 0;
   max-width: 540px;
   padding: 0 16px;
-  margin-left: 10px;
+  margin-left: 0;
   border-radius: 18px;
-  border: 1px solid rgba(115, 103, 240, 0.1);
-  background: #f9f9fc;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(115, 103, 240, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: none;
 }
 
 .wp-admin-topbar-search i {
@@ -774,9 +759,9 @@ body[data-admin-page] #layout-menu::before {
   border: 0;
   border-radius: var(--wp-admin-card-radius);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.84)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.62)),
     radial-gradient(circle at 88% 14%, var(--wp-admin-page-glow), transparent 30%);
-  box-shadow: 0 18px 40px rgba(45, 49, 72, 0.08);
+  box-shadow: 0 14px 28px rgba(45, 49, 72, 0.05);
 }
 
 .wp-admin-page-intro .card-body {
@@ -793,54 +778,41 @@ body[data-admin-page] #layout-menu::before {
   box-shadow: 0 0 26px var(--wp-admin-page-glow);
 }
 
-.wp-admin-page-intro-copy {
-  padding-left: 8px;
-}
-
-.wp-admin-page-intro-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--wp-admin-accent-soft);
-  color: var(--wp-admin-accent);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .wp-admin-page-intro-main {
   display: flex;
-  align-items: center;
-  gap: 18px;
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .wp-admin-page-intro-icon {
-  width: 62px;
-  height: 62px;
-  border-radius: 20px;
+  width: auto;
+  height: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
-  color: #fff;
-  background: linear-gradient(135deg, var(--wp-admin-accent), color-mix(in srgb, var(--wp-admin-accent) 75%, #ffffff));
-  box-shadow: 0 16px 30px var(--wp-admin-page-glow);
+  font-size: 2em;
+  line-height: 1;
+  color: var(--wp-admin-accent);
+  background: transparent;
+  box-shadow: none;
+  flex: 0 0 auto;
+  margin-top: 2px;
 }
 
 .wp-admin-page-intro-text h1 {
-  margin: 0 0 4px;
-  font-size: clamp(1.38rem, 1.18rem + 0.65vw, 2rem);
+  margin: 0;
+  font-size: 2em;
+  line-height: 1.05;
   color: #363b52;
+  font-weight: 700;
 }
 
 .wp-admin-page-intro-text p {
-  margin: 0;
+  margin: 6px 0 0;
   max-width: 780px;
-  color: #72788e;
-  font-size: 0.95rem;
+  color: rgba(76, 85, 108, 0.66);
+  font-size: 0.92rem;
+  line-height: 1.45;
 }
 
 .container-xxl .card {
@@ -864,7 +836,7 @@ body[data-admin-page] #layout-menu::before {
 
 @media (max-width: 991px) {
   .wp-admin-topbar {
-    padding: 10px 12px;
+    padding: 0;
     min-height: 68px;
     border-radius: 20px;
   }
@@ -892,9 +864,7 @@ body[data-admin-page] #layout-menu::before {
   }
 
   .wp-admin-page-intro-icon {
-    width: 54px;
-    height: 54px;
-    border-radius: 18px;
+    font-size: 2em;
   }
 }
 
