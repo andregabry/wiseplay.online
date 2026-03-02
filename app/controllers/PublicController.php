@@ -31,7 +31,57 @@ final class PublicController extends BaseController
             Response::redirect('/onboarding');
         }
 
-        Response::redirect('/login');
+        $titleModel = new Title();
+        $planModel = new BillingPlan();
+
+        $rows = $titleModel->rowsForBrowse(null);
+        $wallItems = [];
+        $seen = [];
+
+        foreach ($rows as $items) {
+            foreach ($items as $item) {
+                $itemId = (int) ($item['id'] ?? 0);
+                if ($itemId <= 0 || isset($seen[$itemId])) {
+                    continue;
+                }
+
+                $image = trim((string) ($item['cover_image'] ?? ''));
+                if ($image === '') {
+                    $image = trim((string) ($item['backdrop_image'] ?? ''));
+                }
+                if ($image === '') {
+                    continue;
+                }
+
+                $seen[$itemId] = true;
+                $wallItems[] = [
+                    'id' => $itemId,
+                    'title' => (string) ($item['title_name'] ?? 'WisePlay'),
+                    'image' => $image,
+                ];
+
+                if (count($wallItems) >= 36) {
+                    break 2;
+                }
+            }
+        }
+
+        $plans = $planModel->listPublicPlans();
+        $startingPlan = null;
+        foreach ($plans as $plan) {
+            if ((int) ($plan['active'] ?? 0) !== 1) {
+                continue;
+            }
+            $startingPlan = $plan;
+            break;
+        }
+
+        View::render('public/home', [
+            'title' => 'WisePlay',
+            'currentPath' => current_path(),
+            'wallItems' => $wallItems,
+            'startingPlan' => $startingPlan,
+        ], 'public');
     }
 
     public function onboardingEntry(): void
