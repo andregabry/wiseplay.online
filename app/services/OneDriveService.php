@@ -433,21 +433,33 @@ final class OneDriveService
             return null;
         }
 
-        $total = isset($quota['total']) && is_numeric($quota['total']) ? max(0, (int) $quota['total']) : 0;
-        $used = isset($quota['used']) && is_numeric($quota['used']) ? max(0, (int) $quota['used']) : 0;
-        $remaining = isset($quota['remaining']) && is_numeric($quota['remaining']) ? max(0, (int) $quota['remaining']) : 0;
+        $hasTotal = array_key_exists('total', $quota) && is_numeric($quota['total']);
+        $hasUsed = array_key_exists('used', $quota) && is_numeric($quota['used']);
+        $hasRemaining = array_key_exists('remaining', $quota) && is_numeric($quota['remaining']);
+
+        $total = $hasTotal ? max(0, (int) $quota['total']) : 0;
+        $used = $hasUsed ? max(0, (int) $quota['used']) : 0;
+        $remaining = $hasRemaining ? max(0, (int) $quota['remaining']) : null;
         $state = isset($quota['state']) ? strtolower(trim((string) $quota['state'])) : 'unknown';
 
         if ($total <= 0) {
-            if ($used > 0 || $remaining > 0) {
+            if ($hasUsed && $remaining !== null) {
                 $total = $used + $remaining;
+            } elseif ($hasUsed) {
+                $total = $used;
+            } elseif ($remaining !== null) {
+                $total = $remaining;
             } else {
                 return null;
             }
         }
 
-        if ($remaining <= 0 && $total >= $used) {
+        if ($remaining === null && $total >= $used) {
             $remaining = max(0, $total - $used);
+        }
+
+        if ($remaining === null) {
+            $remaining = 0;
         }
 
         $percentage = $total > 0 ? ((float) $used / (float) $total) * 100.0 : 0.0;
@@ -487,7 +499,11 @@ final class OneDriveService
             $unitIndex++;
         }
 
-        $precision = $unitIndex <= 2 ? 0 : 1;
+        $precision = match (true) {
+            $unitIndex <= 2 => 0, // B/KB/MB
+            $unitIndex === 3 => 2, // GB
+            default => 3, // TB/PB to avoid "1.0 TB" for values like 0.999 TB
+        };
         return number_format($value, $precision, '.', '') . ' ' . $units[$unitIndex];
     }
 

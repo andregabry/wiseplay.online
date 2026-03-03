@@ -64,23 +64,12 @@ final class EmailService
             return ['ok' => false, 'message' => 'SMTP nao configurado corretamente.'];
         }
 
-        $transportHost = $host;
-        if ($encryption === 'ssl') {
-            $transportHost = 'ssl://' . $host;
+        $connection = $this->openSmtpSocket($host, $port, $encryption);
+        if (($connection['ok'] ?? false) !== true || !isset($connection['socket']) || !is_resource($connection['socket'])) {
+            return ['ok' => false, 'message' => (string) ($connection['message'] ?? 'Falha ao conectar SMTP.')];
         }
 
-        $socket = @stream_socket_client(
-            $transportHost . ':' . $port,
-            $errno,
-            $errstr,
-            15,
-            STREAM_CLIENT_CONNECT
-        );
-
-        if (!is_resource($socket)) {
-            return ['ok' => false, 'message' => 'Falha ao conectar SMTP: ' . $errstr];
-        }
-
+        $socket = $connection['socket'];
         stream_set_timeout($socket, 15);
 
         $expect = function (array $codes) use ($socket): array {
@@ -199,6 +188,60 @@ final class EmailService
         fclose($socket);
 
         return ['ok' => true, 'message' => 'Email enviado via SMTP.'];
+    }
+
+    private function openSmtpSocket(string $host, int $port, string $encryption): array
+    {
+        $candidates = $this->smtpConnectionCandidates($host);
+        $errors = [];
+
+        foreach ($candidates as $candidateHost) {
+            $transportHost = $candidateHost;
+            if ($encryption === 'ssl') {
+                $transportHost = 'ssl://' . $candidateHost;
+            }
+
+            $errno = 0;
+            $errstr = '';
+            $socket = @stream_socket_client(
+                $transportHost . ':' . $port,
+                $errno,
+                $errstr,
+                15,
+                STREAM_CLIENT_CONNECT
+            );
+
+            if (is_resource($socket)) {
+                return ['ok' => true, 'socket' => $socket];
+            }
+
+            $reason = trim($errstr) !== '' ? trim($errstr) : ('errno ' . $errno);
+            $errors[] = $candidateHost . ':' . $port . ' (' . $reason . ')';
+        }
+
+        return [
+            'ok' => false,
+            'message' => 'Falha ao conectar SMTP. Tentativas: ' . implode(', ', $errors),
+        ];
+    }
+
+    private function smtpConnectionCandidates(string $host): array
+    {
+        $normalizedHost = strtolower(trim($host));
+        $candidates = [$host];
+
+        // Local development: when using Mailpit, the app might run either inside Docker (mailpit)
+        // or directly on host machine (localhost / 127.0.0.1 with published SMTP port).
+        $isLocalAlias = in_array($normalizedHost, ['mailpit', 'localhost', '127.0.0.1'], true);
+        if ($isLocalAlias) {
+            foreach (['mailpit', 'localhost', '127.0.0.1'] as $fallback) {
+                if (!in_array($fallback, $candidates, true)) {
+                    $candidates[] = $fallback;
+                }
+            }
+        }
+
+        return $candidates;
     }
 
     private function smtpEnabled(): bool

@@ -2590,6 +2590,63 @@
   }
 
   function bindSettingsModule() {
+    function getSettingsCategoryMap() {
+      var $source = $('#settings-category-data');
+      if (!$source.length) {
+        return {};
+      }
+      var parsed = parsePayload($source.attr('data-categories'));
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    }
+
+    function renderCategorySettingsFields(items) {
+      var $container = $('#s-c-e-items');
+      if (!$container.length) {
+        return;
+      }
+
+      if (!Array.isArray(items) || !items.length) {
+        $container.html('<div class="text-body-secondary small">Nenhuma configuracao nesta categoria.</div>');
+        return;
+      }
+
+      var html = items.map(function (item, index) {
+        var id = parseInt(item.id, 10) || 0;
+        var keyName = $('<div>').text(String(item.key_name || '')).html();
+        var valueText = $('<div>').text(String(item.value_text || '')).html();
+        var isSecret = parseInt(item.is_secret, 10) === 1 ? 1 : 0;
+
+        return '' +
+          '<div class="border rounded p-3">' +
+            '<input type="hidden" name="ids[' + index + ']" value="' + id + '">' +
+            '<input type="hidden" name="key_names[' + index + ']" value="' + keyName + '">' +
+            '<div class="mb-2">' +
+              '<label class="form-label">Chave</label>' +
+              '<input class="form-control" value="' + keyName + '" readonly>' +
+            '</div>' +
+            '<div class="mb-2">' +
+              '<label class="form-label">Valor</label>' +
+              '<textarea class="form-control" name="values[' + index + ']" rows="2">' + valueText + '</textarea>' +
+            '</div>' +
+            '<div class="mb-0">' +
+              '<label class="form-label">Secreta</label>' +
+              '<select class="form-select" name="secrets[' + index + ']">' +
+                '<option value="0"' + (isSecret === 0 ? ' selected' : '') + '>Nao</option>' +
+                '<option value="1"' + (isSecret === 1 ? ' selected' : '') + '>Sim</option>' +
+              '</select>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+
+      $container.html(html);
+    }
+
+    $(document).on('click', '.js-edit-onedrive', function (event) {
+      event.preventDefault();
+      clearErrors('onedrive-save');
+      openModal('#onedrive-edit-modal');
+    });
+
     $(document).on('click', '.js-view-setting', function (event) {
       event.preventDefault();
       var item = parsePayload($(this).attr('data-setting'));
@@ -2607,19 +2664,18 @@
 
     $(document).on('click', '.js-edit-setting', function (event) {
       event.preventDefault();
-      var item = parsePayload($(this).attr('data-setting'));
-      if (!item) {
+      var category = String($(this).data('category') || 'general');
+      if (!category) {
         return;
       }
+      var categoryMap = getSettingsCategoryMap();
+      var categoryItems = Array.isArray(categoryMap[category]) ? categoryMap[category] : [];
 
-      $('#s-e-id').val(item.id || '');
-      $('#s-e-category').val(item.category || 'general');
-      $('#s-e-key-name').val(item.key_name || '');
-      $('#s-e-value-text').val(item.value_text || '');
-      $('#s-e-is-secret').val(item.is_secret || 0);
+      $('#s-c-e-category').val(category);
+      renderCategorySettingsFields(categoryItems);
 
-      clearErrors('setting-edit');
-      openModal('#setting-edit-modal');
+      clearErrors('setting-category-edit');
+      openModal('#setting-category-edit-modal');
     });
 
     $(document).on('click', '.js-delete-setting', function (event) {

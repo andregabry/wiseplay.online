@@ -33,7 +33,7 @@ final class Setting extends BaseModel
         return $value !== '' ? $value : $default;
     }
 
-    public function paginate(array $filters, int $page, int $perPage): array
+    public function paginate(array $filters, int $page, int $perPage, array $options = []): array
     {
         $where = ['1 = 1'];
         $params = [];
@@ -51,25 +51,38 @@ final class Setting extends BaseModel
             $params[':category'] = $category;
         }
 
+        $excludeKeyPrefixes = $options['exclude_key_prefixes'] ?? [];
+        if (is_array($excludeKeyPrefixes)) {
+            foreach (array_values($excludeKeyPrefixes) as $idx => $prefix) {
+                $prefix = trim((string) $prefix);
+                if ($prefix === '') {
+                    continue;
+                }
+
+                $paramName = ':exclude_prefix_' . $idx;
+                $where[] = "key_name NOT LIKE {$paramName}";
+                $params[$paramName] = $prefix . '%';
+            }
+        }
+
         $whereSql = implode(' AND ', $where);
 
         $countStmt = $this->db()->prepare("SELECT COUNT(*) FROM settings WHERE {$whereSql}");
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
 
-        $offset = ($page - 1) * $perPage;
+        $safePerPage = max(1, $perPage);
+        $safeOffset = max(0, ($page - 1) * $safePerPage);
 
         $sql = "SELECT * FROM settings
                 WHERE {$whereSql}
                 ORDER BY category ASC, key_name ASC
-                LIMIT :limit OFFSET :offset";
+                LIMIT {$safePerPage} OFFSET {$safeOffset}";
 
         $stmt = $this->db()->prepare($sql);
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
         }
-        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $stmt->execute();
 
         return ['items' => $stmt->fetchAll(), 'total' => $total];

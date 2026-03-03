@@ -85,6 +85,7 @@ $router->post('/admin/billing/subscriptions/assign', [AdminBillingController::cl
 $router->get('/admin/settings', [AdminSettingsController::class, 'index']);
 $router->post('/admin/settings/create', [AdminSettingsController::class, 'create']);
 $router->post('/admin/settings/update', [AdminSettingsController::class, 'update']);
+$router->post('/admin/settings/update-category', [AdminSettingsController::class, 'updateCategory']);
 $router->post('/admin/settings/delete', [AdminSettingsController::class, 'delete']);
 $router->post('/admin/settings/onedrive/save', [AdminSettingsController::class, 'saveOneDrive']);
 $router->get('/admin/settings/onedrive/connect', [AdminSettingsController::class, 'connectOneDrive']);

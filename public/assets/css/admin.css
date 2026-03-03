@@ -160,10 +160,27 @@
 }
 
 .setting-value-cell {
-  max-width: 360px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 560px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.wp-setting-names-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wp-setting-name-item {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(115, 103, 240, 0.12);
+  color: var(--bs-body-color);
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .form-errors {
@@ -704,6 +721,10 @@ body[data-admin-page].swal2-shown {
 
 .swal2-popup.wp-swal {
   border-radius: 14px;
+}
+
+.swal2-container {
+  z-index: 2000 !important;
 }
 
 .swal2-confirm.btn-semantic-primary,

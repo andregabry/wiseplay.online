@@ -25,11 +25,13 @@ final class AdminSettingsController extends AdminBaseController
             'category' => trim((string) ($_GET['category'] ?? '')),
         ];
 
-        $page = max(1, (int) ($_GET['page'] ?? 1));
-        $perPage = 12;
+        $page = 1;
+        $perPage = 100000;
 
         try {
-            $result = $model->paginate($filters, $page, $perPage);
+            $result = $model->paginate($filters, $page, $perPage, [
+                'exclude_key_prefixes' => ['onedrive.'],
+            ]);
         } catch (\Throwable) {
             flash('error', 'Nao foi possivel carregar configuracoes.');
             $result = ['items' => [], 'total' => 0];
@@ -57,18 +59,25 @@ final class AdminSettingsController extends AdminBaseController
         $quotaCard = $oneDriveService->presentQuota($quotaResult);
         $canManageSettings = in_array((string) (($_SESSION['auth_user']['role'] ?? '')), self::MANAGE_ROLES, true);
 
+        $categories = $model->categories();
+        if (!in_array('auth', $categories, true)) {
+            $categories[] = 'auth';
+            sort($categories);
+        }
+
         $this->render('admin/settings', [
             'title' => 'Settings | WisePlay Admin',
             'pageTitle' => 'Settings',
             'items' => $result['items'],
             'filters' => $filters,
             'pagination' => [
-                'page' => $page,
+                'page' => 1,
                 'perPage' => $perPage,
                 'total' => (int) $result['total'],
-                'lastPage' => max(1, (int) ceil(((int) $result['total']) / $perPage)),
+                'lastPage' => 1,
             ],
-            'categories' => $model->categories(),
+            'categories' => $categories,
+            'categoryItemsMap' => $this->buildCategoryItemsMap($model->grouped()),
             'onedrive' => $onedrive,
             'oneDriveQuota' => $quotaCard,
             'canManageSettings' => $canManageSettings,
@@ -167,6 +176,93 @@ final class AdminSettingsController extends AdminBaseController
         $this->audit('setting.delete', 'setting', (string) $id, ['key_name' => $setting['key_name']]);
 
         Response::json(['ok' => true, 'message' => 'Configuracao excluida com sucesso.']);
+    }
+
+    public function updateCategory(): void
+    {
+        $this->authorize(self::MANAGE_ROLES);
+        $this->requireCsrf();
+
+        $category = trim((string) ($_POST['category'] ?? ''));
+        $ids = $_POST['ids'] ?? [];
+        $keyNames = $_POST['key_names'] ?? [];
+        $values = $_POST['values'] ?? [];
+        $secrets = $_POST['secrets'] ?? [];
+
+        if ($category === '') {
+            Response::json(['ok' => false, 'message' => 'Categoria invalida.'], 422);
+        }
+
+        if (!is_array($ids) || !is_array($keyNames) || !is_array($values) || !is_array($secrets) || count($ids) === 0) {
+            Response::json(['ok' => false, 'message' => 'Nenhum item para atualizar.'], 422);
+        }
+
+        if (count($ids) !== count($keyNames) || count($ids) !== count($values) || count($ids) !== count($secrets)) {
+            Response::json(['ok' => false, 'message' => 'Payload invalido.'], 422);
+        }
+
+        $model = new Setting();
+        $updated = 0;
+
+        try {
+            foreach (array_values($ids) as $idx => $rawId) {
+                $id = (int) $rawId;
+                $keyName = trim((string) ($keyNames[$idx] ?? ''));
+                if (!Validator::required($keyName) || !Validator::maxLength($keyName, 190)) {
+                    Response::json(['ok' => false, 'message' => 'Chave invalida encontrada no lote.'], 422);
+                }
+
+                $existing = null;
+                if ($id > 0) {
+                    $existing = $model->findById($id);
+                    if (!$existing) {
+                        Response::json(['ok' => false, 'message' => 'Configuracao nao encontrada no lote.'], 404);
+                    }
+                } else {
+                    $existing = $model->findByKey($keyName);
+                }
+
+                $valueText = trim((string) ($values[$idx] ?? ''));
+                $isSecret = (int) ($secrets[$idx] ?? 0) === 1 ? 1 : 0;
+
+                if ($existing) {
+                    $itemCategory = trim((string) ($existing['category'] ?? ''));
+                    $itemCategoryLabel = $itemCategory !== '' ? $itemCategory : 'uncategorized';
+                    if ($itemCategoryLabel !== $category) {
+                        Response::json(['ok' => false, 'message' => 'As configuracoes devem pertencer a mesma categoria.'], 422);
+                    }
+
+                    $model->update((int) $existing['id'], [
+                        'category' => $itemCategory,
+                        'key_name' => (string) ($existing['key_name'] ?? $keyName),
+                        'value_text' => $valueText,
+                        'is_secret' => $isSecret,
+                    ]);
+                } else {
+                    $model->create([
+                        'category' => $category,
+                        'key_name' => $keyName,
+                        'value_text' => $valueText,
+                        'is_secret' => $isSecret,
+                    ]);
+                }
+
+                $updated++;
+            }
+        } catch (\Throwable) {
+            Response::json(['ok' => false, 'message' => 'Falha ao atualizar configuracoes da categoria.'], 500);
+        }
+
+        $this->audit('setting.update_category', 'setting', null, [
+            'category' => $category,
+            'updated_count' => $updated,
+        ]);
+
+        Response::json([
+            'ok' => true,
+            'message' => 'Categoria atualizada com sucesso.',
+            'updated_count' => $updated,
+        ]);
     }
 
     public function saveOneDrive(): void
@@ -460,5 +556,88 @@ final class AdminSettingsController extends AdminBaseController
         }
 
         return $errors;
+    }
+
+    private function buildCategoryItemsMap(array $grouped): array
+    {
+        $map = [];
+        foreach ($grouped as $category => $items) {
+            $label = trim((string) $category);
+            if ($label === '') {
+                $label = 'uncategorized';
+            }
+
+            foreach ((array) $items as $item) {
+                $keyName = (string) ($item['key_name'] ?? '');
+                if (str_starts_with($keyName, 'onedrive.')) {
+                    continue;
+                }
+
+                $map[$label][] = [
+                    'id' => (int) ($item['id'] ?? 0),
+                    'key_name' => $keyName,
+                    'value_text' => (string) ($item['value_text'] ?? ''),
+                    'is_secret' => (int) ($item['is_secret'] ?? 0),
+                ];
+            }
+        }
+
+        $authDefaults = $this->authDefaultSettings();
+        if (!isset($map['auth'])) {
+            $map['auth'] = [];
+        }
+
+        $byKey = [];
+        foreach ($map['auth'] as $item) {
+            $byKey[(string) ($item['key_name'] ?? '')] = $item;
+        }
+
+        $normalizedAuth = [];
+        foreach ($authDefaults as $defaultItem) {
+            $keyName = (string) $defaultItem['key_name'];
+            if (isset($byKey[$keyName])) {
+                $normalizedAuth[] = $byKey[$keyName];
+                continue;
+            }
+
+            $normalizedAuth[] = [
+                'id' => 0,
+                'key_name' => $keyName,
+                'value_text' => (string) $defaultItem['value_text'],
+                'is_secret' => (int) $defaultItem['is_secret'],
+            ];
+        }
+
+        foreach ($map['auth'] as $item) {
+            $keyName = (string) ($item['key_name'] ?? '');
+            if ($keyName === '') {
+                continue;
+            }
+            $alreadyIncluded = false;
+            foreach ($normalizedAuth as $authItem) {
+                if ((string) ($authItem['key_name'] ?? '') === $keyName) {
+                    $alreadyIncluded = true;
+                    break;
+                }
+            }
+            if (!$alreadyIncluded) {
+                $normalizedAuth[] = $item;
+            }
+        }
+
+        $map['auth'] = $normalizedAuth;
+
+        return $map;
+    }
+
+    private function authDefaultSettings(): array
+    {
+        return [
+            ['key_name' => 'auth.password_min_length', 'value_text' => '8', 'is_secret' => 0],
+            ['key_name' => 'auth.verification_code_max_attempts', 'value_text' => '5', 'is_secret' => 0],
+            ['key_name' => 'auth.verification_code_ttl_minutes', 'value_text' => '10', 'is_secret' => 0],
+            ['key_name' => 'auth.verification_resend_cooldown_seconds', 'value_text' => '60', 'is_secret' => 0],
+            ['key_name' => 'auth.verification_session_ttl_minutes', 'value_text' => '30', 'is_secret' => 0],
+        ];
     }
 }
