@@ -276,19 +276,21 @@
     }, 18000);
   }
 
-  function bindSeasonTrailers() {
-    var $trailers = $('.js-season-trailer');
-    if (!$trailers.length) {
+  function bindLoopVideos(selector, forceMuted) {
+    var $videos = $(selector);
+    if (!$videos.length) {
       return;
     }
 
-    $trailers.each(function () {
+    $videos.each(function () {
       var video = this;
       var loopSeconds = parseInt($(video).data('loopSeconds'), 10) || 45;
       loopSeconds = Math.max(5, loopSeconds);
 
-      video.muted = true;
-      video.defaultMuted = true;
+      if (forceMuted) {
+        video.muted = true;
+        video.defaultMuted = true;
+      }
       video.playsInline = true;
 
       var tryPlay = function () {
@@ -320,6 +322,31 @@
       });
 
       tryPlay();
+    });
+  }
+
+  function bindSeasonTrailers() {
+    bindLoopVideos('.js-season-trailer', true);
+  }
+
+  function bindHeroPreviews() {
+    bindLoopVideos('.js-hero-preview, .js-title-hero-preview', true);
+
+    $(document).on('click', '.js-hero-sound-toggle', function (event) {
+      event.preventDefault();
+      var target = String($(this).data('target') || '');
+      if (target === '') {
+        return;
+      }
+
+      var video = $(target).first().get(0);
+      if (!video) {
+        return;
+      }
+
+      video.muted = !video.muted;
+      video.defaultMuted = video.muted;
+      $(this).toggleClass('is-on', !video.muted);
     });
   }
 
@@ -663,5 +690,6 @@
     bindRowNavigation();
     bindWatchProgress();
     bindSeasonTrailers();
+    bindHeroPreviews();
   });
 })(jQuery);

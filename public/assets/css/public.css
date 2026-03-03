@@ -1269,6 +1269,29 @@ a {
   gap: 20px;
   align-items: center;
   padding: 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+.wp-title-hero-preview-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.wp-title-hero-preview-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(77deg, rgba(9, 10, 15, 0.9) 20%, rgba(9, 10, 15, 0.62) 56%, rgba(9, 10, 15, 0.92) 100%);
+  pointer-events: none;
+}
+
+.wp-title-hero-preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .wp-title-poster {
@@ -1276,6 +1299,20 @@ a {
   max-width: 220px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.22);
+  position: relative;
+  z-index: 1;
+}
+
+.wp-title-hero-body {
+  position: relative;
+  z-index: 1;
+}
+
+.wp-title-hero-sound {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1;
 }
 
 .wp-title-hero-body h1 {
@@ -2118,10 +2155,36 @@ body.wp-modal-open {
   background-size: cover;
   background-position: center;
   position: relative;
+  overflow: hidden;
+}
+
+.wp-hero-preview-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.wp-hero-preview-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(77deg, rgba(0, 0, 0, 0.78) 18%, rgba(0, 0, 0, 0.32) 54%, rgba(0, 0, 0, 0.82) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.72) 94%);
+  pointer-events: none;
+}
+
+.wp-hero-preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .wp-hero-content--cinema {
   max-width: 620px;
+  position: relative;
+  z-index: 1;
 }
 
 .wp-hero-content--cinema .eyebrow {
@@ -2189,6 +2252,7 @@ body.wp-modal-open {
   display: flex;
   align-items: center;
   gap: 18px;
+  z-index: 1;
 }
 
 .wp-hero-sound {
@@ -2199,6 +2263,11 @@ body.wp-modal-open {
   background: rgba(20, 20, 20, 0.25);
   color: #fff;
   cursor: pointer;
+}
+
+.wp-hero-sound.is-on {
+  background: rgba(20, 20, 20, 0.46);
+  border-color: rgba(255, 255, 255, 0.92);
 }
 
 .wp-hero-rating {

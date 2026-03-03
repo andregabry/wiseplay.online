@@ -653,6 +653,11 @@ final class PublicController extends BaseController
             }
         }
         $firstPlayableByTitle = $mediaModel->firstPlayableByTitleIds($titleIds);
+        $featuredHeroTrailer = null;
+        if ($featured) {
+            $featuredPlayable = $firstPlayableByTitle[(int) $featured['id']] ?? null;
+            $featuredHeroTrailer = $this->resolveHeroPreview($featuredPlayable);
+        }
 
         View::render('public/browse', [
             'title' => 'Browse | WisePlay',
@@ -665,6 +670,7 @@ final class PublicController extends BaseController
             'continueWatching' => $continueWatching,
             'subscription' => $subscription,
             'firstPlayableByTitle' => $firstPlayableByTitle,
+            'featuredHeroTrailer' => $featuredHeroTrailer,
             'appTagline' => $appTagline,
         ], 'public');
     }
@@ -694,6 +700,7 @@ final class PublicController extends BaseController
         $mediaHierarchy = (new Media())->hierarchyForTitle((int) $title['id'], true);
         $firstPlayable = (new Media())->firstPlayableByTitle((int) $title['id']);
         $seasonTrailers = $this->buildSeasonTrailers($mediaHierarchy, (string) ($title['type'] ?? 'MOVIE'));
+        $heroTrailer = $this->resolveHeroPreview($firstPlayable);
 
         View::render('public/title', [
             'title' => (string) $title['title_name'] . ' | WisePlay',
@@ -705,6 +712,7 @@ final class PublicController extends BaseController
             'mediaHierarchy' => $mediaHierarchy,
             'firstPlayable' => $firstPlayable,
             'seasonTrailers' => $seasonTrailers,
+            'heroTrailer' => $heroTrailer,
         ], 'public');
     }
 
@@ -871,6 +879,46 @@ final class PublicController extends BaseController
         }
 
         return $trailers;
+    }
+
+    private function resolveHeroPreview(?array $mediaRef): ?array
+    {
+        if (!is_array($mediaRef) || (int) ($mediaRef['id'] ?? 0) <= 0) {
+            return null;
+        }
+
+        $media = (new Media())->findPlayableById((int) $mediaRef['id']);
+        if (!$media) {
+            return null;
+        }
+
+        $resolved = (new MediaSourceResolver())->resolve($media);
+        $url = trim((string) ($resolved['url'] ?? ''));
+        if ($url === '') {
+            return null;
+        }
+
+        $mimeType = trim((string) (($resolved['mime_type'] ?? '') !== '' ? $resolved['mime_type'] : ($media['mime_type'] ?? '')));
+        $mimeTypeLower = strtolower($mimeType);
+        $isTsSource = (
+            preg_match('/\.ts(\?.*)?$/i', $url) === 1
+            || str_contains($mimeTypeLower, 'mp2t')
+            || str_contains($mimeTypeLower, 'mpegts')
+            || str_contains($mimeTypeLower, 'mpeg-tts')
+            || (str_contains($mimeTypeLower, 'mpeg') && str_contains($mimeTypeLower, 'ts'))
+        );
+
+        if ($isTsSource) {
+            return null;
+        }
+
+        return [
+            'media_id' => (int) ($media['id'] ?? 0),
+            'url' => $url,
+            'mime_type' => $mimeType,
+            'poster' => (string) (($media['backdrop_url'] ?? '') !== '' ? $media['backdrop_url'] : ($media['thumbnail_url'] ?? '')),
+            'item_label' => (string) ($media['item_label'] ?? ''),
+        ];
     }
 
     private function redirectByOnboardingStep(string $step): never

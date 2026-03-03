@@ -4,6 +4,7 @@ $titleItem = $titleItem ?? null;
 $mediaHierarchy = $mediaHierarchy ?? [];
 $firstPlayable = $firstPlayable ?? null;
 $seasonTrailers = $seasonTrailers ?? [];
+$heroTrailer = $heroTrailer ?? null;
 
 if (!$titleItem) {
     echo '<main class="wp-generic"><p>Titulo nao encontrado.</p></main>';
@@ -32,6 +33,25 @@ $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), '/assets/i
 
 <main class="wp-title-page">
   <section class="wp-title-hero" style="background-image: linear-gradient(77deg, rgba(9,10,15,0.9) 20%, rgba(9,10,15,0.62) 56%, rgba(9,10,15,0.92) 100%), url('<?= e($backdrop) ?>');">
+    <?php if (is_array($heroTrailer) && ((string) ($heroTrailer['url'] ?? '')) !== ''): ?>
+      <?php $heroTrailerMime = trim((string) ($heroTrailer['mime_type'] ?? '')); ?>
+      <div class="wp-title-hero-preview-wrap">
+        <video
+          class="wp-title-hero-preview-video js-loop-trailer js-title-hero-preview"
+          data-loop-seconds="45"
+          autoplay
+          muted
+          playsinline
+          preload="metadata"
+          poster="<?= e($backdrop) ?>">
+          <source src="<?= e((string) $heroTrailer['url']) ?>"<?= $heroTrailerMime !== '' ? ' type="' . e($heroTrailerMime) . '"' : '' ?>>
+        </video>
+      </div>
+      <button type="button" class="wp-hero-sound js-hero-sound-toggle wp-title-hero-sound" data-target=".js-title-hero-preview" aria-label="Ativar/desativar audio">
+        <span>&#128266;</span>
+      </button>
+    <?php endif; ?>
+
     <img class="wp-title-poster" src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='/assets/img/avatar-library/avatar-01.svg'">
 
     <div class="wp-title-hero-body">

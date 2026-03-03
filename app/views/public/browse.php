@@ -7,6 +7,7 @@ $rows = $rows ?? [];
 $continueWatching = $continueWatching ?? [];
 $subscription = $subscription ?? null;
 $firstPlayableByTitle = $firstPlayableByTitle ?? [];
+$featuredHeroTrailer = $featuredHeroTrailer ?? null;
 $appTagline = (string) ($appTagline ?? 'Seu streaming inteligente para filmes, series e cursos.');
 
 $assetOrFallback = static function (?string $value, string $fallback): string {
@@ -51,6 +52,22 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
 
 <main class="wp-browse-page wp-browse-page--cinema">
   <section class="wp-hero wp-hero--cinema" style="background-image: linear-gradient(77deg, rgba(0,0,0,0.78) 18%, rgba(0,0,0,0.32) 54%, rgba(0,0,0,0.82) 100%), linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.72) 94%), url('<?= e($featuredImage) ?>');">
+    <?php if (is_array($featuredHeroTrailer) && ((string) ($featuredHeroTrailer['url'] ?? '')) !== ''): ?>
+      <?php $featuredTrailerMime = trim((string) ($featuredHeroTrailer['mime_type'] ?? '')); ?>
+      <div class="wp-hero-preview-wrap">
+        <video
+          class="wp-hero-preview-video js-loop-trailer js-hero-preview"
+          data-loop-seconds="45"
+          autoplay
+          muted
+          playsinline
+          preload="metadata"
+          poster="<?= e($featuredImage) ?>">
+          <source src="<?= e((string) $featuredHeroTrailer['url']) ?>"<?= $featuredTrailerMime !== '' ? ' type="' . e($featuredTrailerMime) . '"' : '' ?>>
+        </video>
+      </div>
+    <?php endif; ?>
+
     <div class="wp-hero-content wp-hero-content--cinema">
       <p class="eyebrow"><?= e($heroEyebrow) ?></p>
       <h1><?= e((string) ($featured['title_name'] ?? 'Catalogo WisePlay')) ?></h1>
@@ -85,7 +102,7 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
     </div>
 
     <div class="wp-hero-floating-meta">
-      <button type="button" class="wp-hero-sound js-public-coming-soon" data-label="Controle de audio" aria-label="Controle de audio">
+      <button type="button" class="wp-hero-sound js-hero-sound-toggle" data-target=".js-hero-preview" aria-label="Ativar/desativar audio">
         <span>&#128266;</span>
       </button>
       <div class="wp-hero-rating"><?= e((string) ($featured['maturity_rating'] ?? '16+')) ?></div>
