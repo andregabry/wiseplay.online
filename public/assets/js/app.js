@@ -276,6 +276,53 @@
     }, 18000);
   }
 
+  function bindSeasonTrailers() {
+    var $trailers = $('.js-season-trailer');
+    if (!$trailers.length) {
+      return;
+    }
+
+    $trailers.each(function () {
+      var video = this;
+      var loopSeconds = parseInt($(video).data('loopSeconds'), 10) || 45;
+      loopSeconds = Math.max(5, loopSeconds);
+
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+
+      var tryPlay = function () {
+        var playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(function () {
+            // Autoplay may be blocked until user interaction.
+          });
+        }
+      };
+
+      video.addEventListener('loadedmetadata', function () {
+        if (video.currentTime >= loopSeconds) {
+          video.currentTime = 0;
+        }
+        tryPlay();
+      });
+
+      video.addEventListener('timeupdate', function () {
+        if (video.currentTime >= loopSeconds) {
+          video.currentTime = 0;
+          tryPlay();
+        }
+      });
+
+      video.addEventListener('ended', function () {
+        video.currentTime = 0;
+        tryPlay();
+      });
+
+      tryPlay();
+    });
+  }
+
   function bindProfileManagement() {
     if (!$('.wp-profiles-page').length) {
       return;
@@ -615,5 +662,6 @@
     bindOnboardingPaymentForm();
     bindRowNavigation();
     bindWatchProgress();
+    bindSeasonTrailers();
   });
 })(jQuery);

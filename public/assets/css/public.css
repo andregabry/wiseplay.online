@@ -1328,6 +1328,43 @@ a {
   font-size: 1rem;
 }
 
+.wp-season-trailer {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.wp-season-trailer-media {
+  background: #000;
+  aspect-ratio: 16 / 9;
+}
+
+.wp-season-trailer-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.wp-season-trailer-meta {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.wp-season-trailer-meta strong {
+  font-size: 0.9rem;
+}
+
+.wp-season-trailer-meta small {
+  color: var(--wp-muted);
+  flex: 1 1 260px;
+}
+
 .wp-episode-list {
   display: grid;
   gap: 10px;

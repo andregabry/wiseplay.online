@@ -693,6 +693,7 @@ final class PublicController extends BaseController
 
         $mediaHierarchy = (new Media())->hierarchyForTitle((int) $title['id'], true);
         $firstPlayable = (new Media())->firstPlayableByTitle((int) $title['id']);
+        $seasonTrailers = $this->buildSeasonTrailers($mediaHierarchy, (string) ($title['type'] ?? 'MOVIE'));
 
         View::render('public/title', [
             'title' => (string) $title['title_name'] . ' | WisePlay',
@@ -703,6 +704,7 @@ final class PublicController extends BaseController
             'titleItem' => $title,
             'mediaHierarchy' => $mediaHierarchy,
             'firstPlayable' => $firstPlayable,
+            'seasonTrailers' => $seasonTrailers,
         ], 'public');
     }
 
@@ -823,6 +825,52 @@ final class PublicController extends BaseController
         }
 
         return $context;
+    }
+
+    private function buildSeasonTrailers(array $mediaHierarchy, string $titleType): array
+    {
+        if ($titleType === 'MOVIE') {
+            return [];
+        }
+
+        $resolver = new MediaSourceResolver();
+        $trailers = [];
+
+        foreach ($mediaHierarchy as $seasonNumber => $episodes) {
+            if (!is_array($episodes) || $episodes === []) {
+                continue;
+            }
+
+            $firstEpisode = $episodes[0];
+            $resolved = $resolver->resolve($firstEpisode);
+            $url = trim((string) ($resolved['url'] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+
+            $mimeType = trim((string) (($resolved['mime_type'] ?? '') !== '' ? $resolved['mime_type'] : ($firstEpisode['mime_type'] ?? '')));
+            $mimeTypeLower = strtolower($mimeType);
+            $isTsSource = (
+                preg_match('/\.ts(\?.*)?$/i', $url) === 1
+                || str_contains($mimeTypeLower, 'mp2t')
+                || str_contains($mimeTypeLower, 'mpegts')
+                || str_contains($mimeTypeLower, 'mpeg-tts')
+                || (str_contains($mimeTypeLower, 'mpeg') && str_contains($mimeTypeLower, 'ts'))
+            );
+
+            $trailers[(int) $seasonNumber] = [
+                'media_id' => (int) ($firstEpisode['id'] ?? 0),
+                'item_label' => (string) ($firstEpisode['item_label'] ?? ''),
+                'episode_number' => (int) ($firstEpisode['episode_number'] ?? 1),
+                'duration_minutes' => (int) ($firstEpisode['duration_minutes'] ?? 0),
+                'url' => $url,
+                'mime_type' => $mimeType,
+                'source_is_ts' => $isTsSource ? 1 : 0,
+                'poster' => (string) (($firstEpisode['thumbnail_url'] ?? '') !== '' ? $firstEpisode['thumbnail_url'] : ($firstEpisode['backdrop_url'] ?? '')),
+            ];
+        }
+
+        return $trailers;
     }
 
     private function redirectByOnboardingStep(string $step): never

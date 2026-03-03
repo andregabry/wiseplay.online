@@ -3,6 +3,7 @@ $profile = $profile ?? [];
 $titleItem = $titleItem ?? null;
 $mediaHierarchy = $mediaHierarchy ?? [];
 $firstPlayable = $firstPlayable ?? null;
+$seasonTrailers = $seasonTrailers ?? [];
 
 if (!$titleItem) {
     echo '<main class="wp-generic"><p>Titulo nao encontrado.</p></main>';
@@ -62,6 +63,48 @@ $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), '/assets/i
         <article class="wp-season-block">
           <?php if ($type !== 'MOVIE'): ?>
             <h3><?= e($seasonLabel) ?> <?= (int) $seasonNumber ?></h3>
+          <?php endif; ?>
+
+          <?php $seasonTrailer = $seasonTrailers[(int) $seasonNumber] ?? null; ?>
+          <?php if (is_array($seasonTrailer) && ((string) ($seasonTrailer['url'] ?? '')) !== ''): ?>
+            <?php
+              $trailerPoster = $assetOrFallback(
+                  (string) ($seasonTrailer['poster'] ?? ''),
+                  $backdrop
+              );
+              $trailerMime = trim((string) ($seasonTrailer['mime_type'] ?? ''));
+              $trailerSourceIsTs = (int) ($seasonTrailer['source_is_ts'] ?? 0) === 1;
+            ?>
+            <div class="wp-season-trailer">
+              <div class="wp-season-trailer-media">
+                <video
+                  class="wp-season-trailer-video js-season-trailer"
+                  data-loop-seconds="45"
+                  data-source-is-ts="<?= $trailerSourceIsTs ? '1' : '0' ?>"
+                  autoplay
+                  muted
+                  playsinline
+                  preload="metadata"
+                  poster="<?= e($trailerPoster) ?>">
+                  <source src="<?= e((string) $seasonTrailer['url']) ?>"<?= $trailerMime !== '' ? ' type="' . e($trailerMime) . '"' : '' ?>>
+                </video>
+              </div>
+              <div class="wp-season-trailer-meta">
+                <strong>Trailer automatico (45s)</strong>
+                <small>
+                  Baseado em: <?= e((string) ($seasonTrailer['item_label'] ?? 'Primeiro video')) ?>
+                  <?php if ((int) ($seasonTrailer['episode_number'] ?? 0) > 0): ?>
+                    • <?= e($episodeLabel) ?> <?= (int) $seasonTrailer['episode_number'] ?>
+                  <?php endif; ?>
+                  <?php if ((int) ($seasonTrailer['duration_minutes'] ?? 0) > 0): ?>
+                    • <?= (int) $seasonTrailer['duration_minutes'] ?> min
+                  <?php endif; ?>
+                </small>
+                <?php if ((int) ($seasonTrailer['media_id'] ?? 0) > 0): ?>
+                  <a class="wp-btn tiny ghost" href="/watch/<?= (int) $seasonTrailer['media_id'] ?>">Assistir completo</a>
+                <?php endif; ?>
+              </div>
+            </div>
           <?php endif; ?>
 
           <div class="wp-episode-list">
