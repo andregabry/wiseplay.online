@@ -1042,9 +1042,26 @@
     var $user = $('.js-stream-user');
     var $trigger = $('.js-stream-user-trigger');
     var $menu = $('.wp-stream-user-menu');
+    var $hero = $('.wp-hero--cinema, .wp-title-hero').first();
+    var solidThreshold = 36;
+
+    function updateSolidThreshold() {
+      if (!$hero.length) {
+        solidThreshold = 36;
+        return;
+      }
+
+      var heroHeight = Math.round($hero.outerHeight() || 0);
+      if (heroHeight <= 0) {
+        solidThreshold = 36;
+        return;
+      }
+
+      solidThreshold = Math.max(42, Math.min(140, Math.round(heroHeight * 0.14)));
+    }
 
     function syncHeaderState() {
-      $header.toggleClass('is-solid', $(window).scrollTop() > 24 || $menu.is(':visible'));
+      $header.toggleClass('is-solid', $(window).scrollTop() > solidThreshold || $menu.is(':visible'));
     }
 
     function closeMenu() {
@@ -1103,13 +1120,18 @@
       });
     });
 
-    $(window).on('scroll resize', syncHeaderState);
+    $(window).on('scroll', syncHeaderState);
+    $(window).on('resize', function () {
+      updateSolidThreshold();
+      syncHeaderState();
+    });
     $(document).on('keydown', function (event) {
       if (event.key === 'Escape') {
         closeMenu();
       }
     });
 
+    updateSolidThreshold();
     syncHeaderState();
   }
 
