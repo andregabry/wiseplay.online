@@ -22,20 +22,28 @@ if ($profileAvatar === '' || str_ends_with($profileAvatar, '.gitkeep')) {
         <button type="button" class="wp-stream-link-button js-public-coming-soon" data-label="Jogos">Jogos</button>
         <button type="button" class="wp-stream-link-button js-public-coming-soon" data-label="Bombando">Bombando</button>
         <button type="button" class="wp-stream-link-button js-public-coming-soon" data-label="Minha lista">Minha lista</button>
-        <button type="button" class="wp-stream-link-button js-public-coming-soon" data-label="Idiomas">Navegar por idiomas</button>
+        <button type="button" class="wp-stream-link-button js-public-coming-soon" data-label="Navegar por idiomas">Navegar por idiomas</button>
       </nav>
     </div>
 
     <div class="wp-stream-header__right">
       <button type="button" class="wp-stream-icon-btn js-public-coming-soon" data-label="Busca" aria-label="Buscar">
-        <span class="wp-stream-icon">&#9906;</span>
+        <span class="wp-stream-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M15.5 14h-.79l-.28-.27a6 6 0 1 0-.71.71l.27.28v.79L20 21.49 21.49 20l-5.99-6zm-5.5 0A4.5 4.5 0 1 1 10 5a4.5 4.5 0 0 1 0 9z"></path>
+          </svg>
+        </span>
       </button>
       <button type="button" class="wp-stream-kids-link<?= $isKids ? ' active' : '' ?> js-public-coming-soon" data-label="Modo infantil">
         Infantil
       </button>
       <button type="button" class="wp-stream-icon-btn js-public-coming-soon has-badge" data-label="Notificacoes" aria-label="Notificacoes">
-        <span class="wp-stream-icon">&#128276;</span>
-        <span class="wp-stream-badge">15</span>
+        <span class="wp-stream-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22zm6.4-6.1v-4.5c0-3.4-1.8-6.2-5.1-6.9v-.7a1.3 1.3 0 1 0-2.6 0v.7C7.4 5.2 5.6 8 5.6 11.4v4.5L4 17.5v1.2h16v-1.2l-1.6-1.6z"></path>
+          </svg>
+        </span>
+        <span class="wp-stream-badge">3</span>
       </button>
 
       <div class="wp-stream-user js-stream-user">

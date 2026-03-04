@@ -48,6 +48,15 @@ $rowAnchor = static function (string $key, int $index): string {
 $featuredImage = $assetOrFallback((string) ($featured['backdrop_image'] ?? ''), '/assets/img/placeholders/bakground.jpg');
 $featuredPlayable = $featured ? ($firstPlayableByTitle[(int) $featured['id']] ?? null) : null;
 $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay Original')) : 'WISEPLAY';
+$heroTypeLabel = $featured
+    ? ((string) ($featured['type'] ?? 'MOVIE') === 'MOVIE'
+        ? 'O FILME'
+        : (((string) ($featured['type'] ?? 'MOVIE') === 'COURSE' ? 'O CURSO' : 'A SERIE')))
+    : 'ORIGINAL WISEPLAY';
+$heroCompactDescription = trim((string) (($featured['description'] ?? '') !== '' ? $featured['description'] : $appTagline));
+$continueReference = $continueWatching[0]['title_name'] ?? null;
+$featuredHeroPreviewUrl = is_array($featuredHeroTrailer) ? trim((string) ($featuredHeroTrailer['url'] ?? '')) : '';
+$featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($featuredHeroTrailer['mime_type'] ?? '')) : '';
 ?>
 
 <?php include BASE_PATH . '/app/views/partials/public_header.php'; ?>
@@ -72,8 +81,11 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
 
     <div class="wp-hero-content wp-hero-content--cinema">
       <p class="eyebrow"><?= e($heroEyebrow) ?></p>
-      <h1><?= e((string) ($featured['title_name'] ?? 'Catalogo WisePlay')) ?></h1>
-      <p><?= e((string) (($featured['description'] ?? '') !== '' ? $featured['description'] : $appTagline)) ?></p>
+      <div class="wp-hero-logo-stack">
+        <h1><?= e((string) ($featured['title_name'] ?? 'Catalogo WisePlay')) ?></h1>
+        <span><?= e($heroTypeLabel) ?></span>
+      </div>
+      <p><?= e($heroCompactDescription) ?></p>
 
       <div class="wp-hero-meta wp-hero-meta--cinema">
         <?php if ($featured): ?>
@@ -95,7 +107,12 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
           </a>
         <?php endif; ?>
         <?php if ($featured): ?>
-          <button type="button" class="wp-btn ghost wp-btn-hero-more js-open-title-modal" data-title-id="<?= (int) $featured['id'] ?>">
+          <button
+            type="button"
+            class="wp-btn ghost wp-btn-hero-more js-open-title-modal"
+            data-title-id="<?= (int) $featured['id'] ?>"
+            <?= $featuredHeroPreviewUrl !== '' ? 'data-preview-url="' . e($featuredHeroPreviewUrl) . '"' : '' ?>
+            <?= $featuredHeroPreviewMime !== '' ? 'data-preview-mime="' . e($featuredHeroPreviewMime) . '"' : '' ?>>
             <span class="wp-btn-icon">i</span>
             <span>Mais informacoes</span>
           </button>
@@ -118,7 +135,9 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
       <?php
         $rowId = $rowAnchor((string) $key, $rowIndex);
         $railId = 'wp-row-' . $rowIndex;
-        $heading = $rowIndex === 0 ? 'Principais escolhas do dia para voce' : $rowLabel((string) $key);
+        $heading = $rowIndex === 0
+            ? ('Porque voce viu ' . ($continueReference ? $continueReference : 'os seus favoritos'))
+            : $rowLabel((string) $key);
       ?>
       <section class="wp-row-section<?= $rowIndex === 0 ? ' is-first' : '' ?>" id="<?= e($rowId) ?>">
         <div class="wp-row-head">
@@ -135,12 +154,20 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
               $titleId = (int) $titleItem['id'];
               $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), $imageFallback);
               $playable = $firstPlayableByTitle[$titleId] ?? null;
-              $cardBadge = ((int) ($titleItem['featured'] ?? 0) === 1 || $itemIndex < 2) ? 'Em destaque' : '';
+              $isFeaturedTitle = (int) ($titleItem['featured'] ?? 0) === 1;
+              $showTop10Badge = $rowIndex <= 1 && $itemIndex < 2;
+              $highlightRibbon = '';
+              if ($isFeaturedTitle) {
+                  $highlightRibbon = 'Novidade';
+              } elseif (($itemIndex % 4) === 1) {
+                  $highlightRibbon = 'Nova temporada';
+              }
             ?>
             <article class="wp-title-card wp-title-card--cinema">
               <a href="/title/<?= $titleId ?>" class="wp-title-cover">
                 <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
-                <?php if ($cardBadge !== ''): ?><span class="wp-title-badge"><?= e($cardBadge) ?></span><?php endif; ?>
+                <?php if ($showTop10Badge): ?><span class="wp-title-badge-top10">TOP 10</span><?php endif; ?>
+                <?php if ($highlightRibbon !== ''): ?><span class="wp-title-badge-ribbon"><?= e($highlightRibbon) ?></span><?php endif; ?>
               </a>
               <?php
                 $cardMeta = $browseMetaByTitle[$titleId] ?? [];
@@ -163,7 +190,13 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
                   <?php endif; ?>
                   <button type="button" class="wp-hover-circle js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
                   <button type="button" class="wp-hover-circle js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
-                  <button type="button" class="wp-hover-circle wp-hover-circle--chevron js-open-title-modal" data-title-id="<?= $titleId ?>" aria-label="Mais informacoes">&#709;</button>
+                  <button
+                    type="button"
+                    class="wp-hover-circle wp-hover-circle--chevron js-open-title-modal"
+                    data-title-id="<?= $titleId ?>"
+                    <?= $cardPreviewUrl !== '' ? 'data-preview-url="' . e($cardPreviewUrl) . '"' : '' ?>
+                    <?= $cardPreviewMime !== '' ? 'data-preview-mime="' . e($cardPreviewMime) . '"' : '' ?>
+                    aria-label="Mais informacoes">&#709;</button>
                 </div>
                 <?php if ($hoverBadges !== []): ?>
                   <div class="wp-title-hover-badges">
@@ -184,7 +217,12 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
                   <?php if ($playable): ?>
                     <a class="wp-btn tiny light" href="/watch/<?= (int) $playable['id'] ?>">Assistir</a>
                   <?php endif; ?>
-                  <button type="button" class="wp-btn tiny ghost js-open-title-modal" data-title-id="<?= $titleId ?>">Mais informacoes</button>
+                  <button
+                    type="button"
+                    class="wp-btn tiny ghost js-open-title-modal"
+                    data-title-id="<?= $titleId ?>"
+                    <?= $cardPreviewUrl !== '' ? 'data-preview-url="' . e($cardPreviewUrl) . '"' : '' ?>
+                    <?= $cardPreviewMime !== '' ? 'data-preview-mime="' . e($cardPreviewMime) . '"' : '' ?>>Mais informacoes</button>
                 </div>
               </div>
             </article>

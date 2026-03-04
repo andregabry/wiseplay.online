@@ -578,11 +578,73 @@
       $episodes.html(episodeHtml || '<div class="wp-title-modal-empty">No playable items available.</div>');
     }
 
-    function renderMedia(meta) {
+    function renderMedia(meta, previewOverride) {
+      var override = previewOverride || {};
       var previewUrl = String(meta.preview_url || '');
+      if (previewUrl === '') {
+        previewUrl = String(override.url || '');
+      }
       var previewMime = String(meta.preview_mime || '');
+      if (previewMime === '') {
+        previewMime = String(override.mime_type || '');
+      }
       var cover = String(meta.backdrop_image || meta.cover_image || '/assets/img/placeholders/bakground.jpg');
       var safeTitle = String(meta.title_name || 'Titulo');
+
+      function startModalLoop(videoElement) {
+        if (!videoElement) {
+          return;
+        }
+
+        var loopSeconds = 45;
+        videoElement.muted = true;
+        videoElement.defaultMuted = true;
+        videoElement.playsInline = true;
+
+        var safePlay = function () {
+          var playPromise = videoElement.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(function () {
+              // noop
+            });
+          }
+        };
+
+        videoElement.addEventListener('loadedmetadata', function () {
+          if (videoElement.currentTime >= loopSeconds) {
+            videoElement.currentTime = 0;
+          }
+          safePlay();
+        });
+
+        videoElement.addEventListener('canplay', function () {
+          safePlay();
+        });
+
+        videoElement.addEventListener('timeupdate', function () {
+          if (videoElement.currentTime >= loopSeconds) {
+            videoElement.currentTime = 0;
+            safePlay();
+          }
+        });
+
+        videoElement.addEventListener('ended', function () {
+          videoElement.currentTime = 0;
+          safePlay();
+        });
+
+        try {
+          videoElement.load();
+        } catch (error) {
+          // noop
+        }
+
+        window.setTimeout(function () {
+          safePlay();
+        }, 120);
+
+        safePlay();
+      }
 
       if (previewUrl) {
         var sourceTag = '<source src="' + $('<div>').text(previewUrl).html() + '"' + (previewMime ? ' type="' + $('<div>').text(previewMime).html() + '"' : '') + '>';
@@ -591,34 +653,23 @@
             sourceTag +
           '</video>'
         );
-        var modalVideo = $media.find('.js-title-modal-video').get(0);
-        if (modalVideo) {
-          modalVideo.addEventListener('timeupdate', function () {
-            if (modalVideo.currentTime >= 45) {
-              modalVideo.currentTime = 0;
-              var playPromise = modalVideo.play();
-              if (playPromise && typeof playPromise.catch === 'function') {
-                playPromise.catch(function () {
-                  // noop
-                });
-              }
-            }
-          });
-        }
+        startModalLoop($media.find('.js-title-modal-video').get(0));
         return;
       }
 
       $media.html('<img src="' + $('<div>').text(cover).html() + '" alt="' + $('<div>').text(safeTitle).html() + '">');
     }
 
-    function openModalForTitle(titleId) {
+    function openModalForTitle(titleId, previewOverride) {
       var normalized = String(parseInt(titleId, 10) || 0);
       if (normalized === '0' || !items[normalized]) {
         return;
       }
 
       var meta = items[normalized];
-      renderMedia(meta);
+      $modal.removeAttr('hidden');
+      $('body').addClass('wp-modal-open');
+      renderMedia(meta, previewOverride);
       $heading.text(String(meta.title_name || 'Titulo'));
       $description.text(String(meta.description || 'Sem descricao disponivel.'));
       $details.attr('href', '/title/' + normalized);
@@ -637,9 +688,6 @@
       $badges.html(badgeHtml);
       renderSummary(meta);
       renderEpisodes(meta);
-
-      $modal.removeAttr('hidden');
-      $('body').addClass('wp-modal-open');
     }
 
     $(document).on('click', '.js-open-title-modal', function (event) {
@@ -648,7 +696,60 @@
       if (titleId <= 0) {
         return;
       }
-      openModalForTitle(titleId);
+      var previewUrl = String($(this).attr('data-preview-url') || '');
+      var previewMime = String($(this).attr('data-preview-mime') || '');
+      var normalizedTitleId = String(parseInt(titleId, 10) || 0);
+      if (previewUrl === '') {
+        var $heroSource = $('.js-hero-preview source').first();
+        var $heroVideo = $('.js-hero-preview').first();
+        if ($heroSource.length) {
+          previewUrl = String($heroSource.attr('src') || '');
+          if (previewMime === '') {
+            previewMime = String($heroSource.attr('type') || '');
+          }
+        } else if ($heroVideo.length) {
+          previewUrl = String($heroVideo.attr('src') || '');
+        }
+      }
+
+      var existingMeta = items[normalizedTitleId] || {};
+      var existingPreviewUrl = String(existingMeta.preview_url || '');
+      var existingPreviewMime = String(existingMeta.preview_mime || '');
+      if (previewUrl === '' && existingPreviewUrl !== '') {
+        previewUrl = existingPreviewUrl;
+      }
+      if (previewMime === '' && existingPreviewMime !== '') {
+        previewMime = existingPreviewMime;
+      }
+
+      if (previewUrl !== '') {
+        openModalForTitle(titleId, {
+          url: previewUrl,
+          mime_type: previewMime
+        });
+        return;
+      }
+
+      $.ajax({
+        url: '/title/' + normalizedTitleId + '/preview',
+        method: 'GET',
+        dataType: 'json',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).done(function (response) {
+        if (response && response.ok) {
+          previewUrl = String(response.url || '');
+          previewMime = String(response.mime_type || '');
+          if (items[normalizedTitleId]) {
+            items[normalizedTitleId].preview_url = previewUrl;
+            items[normalizedTitleId].preview_mime = previewMime;
+          }
+        }
+      }).always(function () {
+        openModalForTitle(titleId, {
+          url: previewUrl,
+          mime_type: previewMime
+        });
+      });
     });
 
     $(document).on('click', '.js-close-title-modal', function (event) {

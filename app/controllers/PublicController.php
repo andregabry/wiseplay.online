@@ -760,6 +760,48 @@ final class PublicController extends BaseController
         ], 'public');
     }
 
+    public function titlePreview(array $params): void
+    {
+        Auth::requireLogin(false);
+        $this->ensureOnboardingAllowed([OnboardingService::STEP_COMPLETE]);
+
+        $profile = $this->requireSelectedProfile(false);
+        if (!$profile) {
+            Response::json(['ok' => false, 'message' => 'Perfil nao selecionado.'], 422);
+        }
+
+        $titleId = (int) ($params['id'] ?? 0);
+        if ($titleId <= 0) {
+            Response::json(['ok' => false, 'message' => 'Titulo invalido.'], 422);
+        }
+
+        $title = (new Title())->findPublishedById($titleId);
+        if (!$title) {
+            Response::json(['ok' => false, 'message' => 'Titulo nao encontrado.'], 404);
+        }
+
+        if ((int) ($profile['is_kids'] ?? 0) === 1 && !$this->isKidsAllowed((string) ($title['maturity_rating'] ?? '18'))) {
+            Response::json(['ok' => false, 'message' => 'Titulo indisponivel para perfil infantil.'], 403);
+        }
+
+        $playable = (new Media())->firstPlayableByTitle($titleId);
+        if (!$playable) {
+            Response::json(['ok' => false, 'message' => 'Sem midia reproduzivel para este titulo.'], 404);
+        }
+
+        $preview = $this->resolveHeroPreview($playable);
+        if (!is_array($preview) || trim((string) ($preview['url'] ?? '')) === '') {
+            Response::json(['ok' => false, 'message' => 'Trailer indisponivel para este titulo.'], 404);
+        }
+
+        Response::json([
+            'ok' => true,
+            'url' => (string) ($preview['url'] ?? ''),
+            'mime_type' => (string) ($preview['mime_type'] ?? ''),
+            'media_id' => (int) ($preview['media_id'] ?? 0),
+        ]);
+    }
+
     public function updateWatchProgress(): void
     {
         Auth::requireLogin(false);
@@ -1062,27 +1104,14 @@ final class PublicController extends BaseController
 
     private function buildPreviewFromPlayable(array $playable): ?array
     {
-        $url = trim((string) ($playable['source_path'] ?? ''));
-        if ($url === '') {
-            return null;
-        }
-
-        $mimeType = trim((string) ($playable['mime_type'] ?? ''));
-        $mimeTypeLower = strtolower($mimeType);
-        $sourceType = strtoupper(trim((string) ($playable['source_type'] ?? 'URL')));
-        $canEmbed = (
-            $sourceType === 'ONEDRIVE'
-            || preg_match('/\.(mp4|webm|ogg|mov|mkv)(\\?.*)?$/i', $url) === 1
-            || str_starts_with($mimeTypeLower, 'video/')
-        );
-
-        if (!$canEmbed) {
+        $resolved = $this->resolveHeroPreview($playable);
+        if (!is_array($resolved) || $resolved === []) {
             return null;
         }
 
         return [
-            'url' => $url,
-            'mime_type' => $mimeType,
+            'url' => (string) ($resolved['url'] ?? ''),
+            'mime_type' => (string) ($resolved['mime_type'] ?? ''),
         ];
     }
 

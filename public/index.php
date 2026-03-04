@@ -43,6 +43,7 @@ $router->post('/profiles/update', [PublicController::class, 'updateProfile']);
 $router->post('/profiles/delete', [PublicController::class, 'deleteProfile']);
 $router->get('/browse', [PublicController::class, 'browse']);
 $router->get('/title/{id}', [PublicController::class, 'title']);
+$router->get('/title/{id}/preview', [PublicController::class, 'titlePreview']);
 $router->get('/watch/{id}', [PublicController::class, 'watch']);
 $router->post('/watch/progress', [PublicController::class, 'updateWatchProgress']);
 
