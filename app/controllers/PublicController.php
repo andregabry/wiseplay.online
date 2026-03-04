@@ -653,7 +653,8 @@ final class PublicController extends BaseController
             }
         }
         $firstPlayableByTitle = $mediaModel->firstPlayableByTitleIds($titleIds);
-        $browseMetaByTitle = $this->buildBrowseMetaByTitle($featured, $rows, $firstPlayableByTitle);
+        $mediaHierarchyByTitle = $mediaModel->hierarchyForTitleIds($titleIds, true);
+        $browseMetaByTitle = $this->buildBrowseMetaByTitle($featured, $rows, $firstPlayableByTitle, $mediaHierarchyByTitle);
         $featuredHeroTrailer = null;
         if ($featured) {
             $featuredPlayable = $firstPlayableByTitle[(int) $featured['id']] ?? null;
@@ -883,10 +884,10 @@ final class PublicController extends BaseController
         return $trailers;
     }
 
-    private function buildBrowseMetaByTitle(?array $featured, array $rows, array $firstPlayableByTitle): array
+    private function buildBrowseMetaByTitle(?array $featured, array $rows, array $firstPlayableByTitle, array $mediaHierarchyByTitle): array
     {
         $meta = [];
-        $append = function (array $title) use (&$meta, $firstPlayableByTitle): void {
+        $append = function (array $title) use (&$meta, $firstPlayableByTitle, $mediaHierarchyByTitle): void {
             $titleId = (int) ($title['id'] ?? 0);
             if ($titleId <= 0 || isset($meta[$titleId])) {
                 return;
@@ -894,13 +895,52 @@ final class PublicController extends BaseController
 
             $playable = $firstPlayableByTitle[$titleId] ?? null;
             $preview = is_array($playable) ? $this->buildPreviewFromPlayable($playable) : null;
+            $titleType = (string) ($title['type'] ?? 'TITLE');
+            $genre = (string) ($title['genre'] ?? 'General');
+            $hierarchy = $mediaHierarchyByTitle[$titleId] ?? [];
+            $seasonCount = count($hierarchy);
+            $episodeCount = 0;
+            $seasons = [];
+
+            foreach ($hierarchy as $seasonNumber => $episodes) {
+                $seasonItems = [];
+                foreach ($episodes as $episode) {
+                    $episodeCount++;
+                    $thumbnail = trim((string) (($episode['thumbnail_url'] ?? '') !== '' ? $episode['thumbnail_url'] : (($episode['backdrop_url'] ?? '') !== '' ? $episode['backdrop_url'] : (($title['backdrop_image'] ?? '') !== '' ? $title['backdrop_image'] : ($title['cover_image'] ?? '')))));
+
+                    $seasonItems[] = [
+                        'id' => (int) ($episode['id'] ?? 0),
+                        'number' => (int) ($episode['episode_number'] ?? 1),
+                        'label' => (string) ($episode['item_label'] ?? ''),
+                        'duration_label' => $this->formatMediaDuration((int) ($episode['duration_minutes'] ?? 0)),
+                        'thumbnail' => $thumbnail,
+                        'watch_url' => '/watch/' . (int) ($episode['id'] ?? 0),
+                    ];
+                }
+
+                $seasons[] = [
+                    'number' => (int) $seasonNumber,
+                    'label' => $this->seasonDisplayLabel($titleType, (int) $seasonNumber, $seasonCount),
+                    'items' => $seasonItems,
+                ];
+            }
+
+            $runtimeLabel = $this->browseRuntimeLabel($titleType, $playable, $seasonCount, $episodeCount);
+            $facts = [
+                ['label' => 'Genres', 'value' => $genre],
+                ['label' => 'Format', 'value' => $this->browseTypeLabel($titleType)],
+            ];
+            if ($runtimeLabel !== '') {
+                $facts[] = ['label' => 'Watch time', 'value' => $runtimeLabel];
+            }
 
             $meta[$titleId] = [
                 'id' => $titleId,
                 'title_name' => (string) ($title['title_name'] ?? ''),
                 'description' => (string) ($title['description'] ?? ''),
-                'type' => (string) ($title['type'] ?? 'TITLE'),
-                'genre' => (string) ($title['genre'] ?? 'General'),
+                'type' => $titleType,
+                'type_label' => $this->browseTypeLabel($titleType),
+                'genre' => $genre,
                 'year' => (string) (($title['year'] ?? '') !== '' ? $title['year'] : '-'),
                 'maturity_rating' => (string) ($title['maturity_rating'] ?? '16'),
                 'cover_image' => (string) ($title['cover_image'] ?? ''),
@@ -908,6 +948,17 @@ final class PublicController extends BaseController
                 'watch_media_id' => is_array($playable) ? (int) ($playable['id'] ?? 0) : 0,
                 'preview_url' => is_array($preview) ? (string) ($preview['url'] ?? '') : '',
                 'preview_mime' => is_array($preview) ? (string) ($preview['mime_type'] ?? '') : '',
+                'hover_badges' => array_values(array_filter([
+                    (string) ($title['maturity_rating'] ?? '16+'),
+                    $runtimeLabel,
+                    'HD',
+                ])),
+                'tags' => $this->browseGenreTags($genre),
+                'season_label' => $seasonCount > 0 ? (string) ($seasons[0]['label'] ?? '') : '',
+                'season_count' => $seasonCount,
+                'episode_count' => $episodeCount,
+                'facts' => $facts,
+                'seasons' => $seasons,
             ];
         };
 
@@ -923,6 +974,90 @@ final class PublicController extends BaseController
         }
 
         return $meta;
+    }
+
+    private function browseTypeLabel(string $type): string
+    {
+        return match (strtoupper($type)) {
+            'SERIES' => 'Series',
+            'COURSE' => 'Course',
+            'MOVIE' => 'Movie',
+            default => 'Title',
+        };
+    }
+
+    private function seasonDisplayLabel(string $type, int $seasonNumber, int $seasonCount = 1): string
+    {
+        $normalized = strtoupper($type);
+        if ($normalized === 'MOVIE') {
+            return 'Movie';
+        }
+
+        if ($normalized === 'COURSE') {
+            return 'Module ' . $seasonNumber;
+        }
+
+        return $seasonCount > 1 ? 'Season ' . $seasonNumber : 'Season 1';
+    }
+
+    private function browseGenreTags(string $genre): array
+    {
+        $parts = preg_split('/[,\\/|]+/', $genre) ?: [];
+        $tags = [];
+
+        foreach ($parts as $part) {
+            $label = trim((string) $part);
+            if ($label === '' || in_array($label, $tags, true)) {
+                continue;
+            }
+            $tags[] = $label;
+            if (count($tags) >= 3) {
+                break;
+            }
+        }
+
+        return $tags;
+    }
+
+    private function browseRuntimeLabel(string $type, ?array $playable, int $seasonCount, int $episodeCount): string
+    {
+        $normalized = strtoupper($type);
+        if ($normalized === 'MOVIE') {
+            return $this->formatMediaDuration((int) ($playable['duration_minutes'] ?? 0));
+        }
+
+        if ($normalized === 'COURSE') {
+            if ($seasonCount > 1) {
+                return $seasonCount . ' modules';
+            }
+
+            return $episodeCount > 0 ? $episodeCount . ' lessons' : '';
+        }
+
+        if ($seasonCount > 1) {
+            return $seasonCount . ' seasons';
+        }
+
+        return $episodeCount > 0 ? $episodeCount . ' episodes' : '';
+    }
+
+    private function formatMediaDuration(int $minutes): string
+    {
+        if ($minutes <= 0) {
+            return '';
+        }
+
+        if ($minutes < 60) {
+            return $minutes . ' min';
+        }
+
+        $hours = intdiv($minutes, 60);
+        $remaining = $minutes % 60;
+        if ($remaining === 0) {
+            return $hours . 'h';
+        }
+
+        return $hours . 'h ' . $remaining . 'min';
     }
 
     private function buildPreviewFromPlayable(array $playable): ?array

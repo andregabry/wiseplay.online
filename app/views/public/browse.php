@@ -10,6 +10,7 @@ $firstPlayableByTitle = $firstPlayableByTitle ?? [];
 $browseMetaByTitle = $browseMetaByTitle ?? [];
 $featuredHeroTrailer = $featuredHeroTrailer ?? null;
 $appTagline = (string) ($appTagline ?? 'Seu streaming inteligente para filmes, series e cursos.');
+$imageFallback = '/assets/img/placeholders/image-placeholder.svg';
 
 $assetOrFallback = static function (?string $value, string $fallback): string {
     $value = trim((string) $value);
@@ -132,34 +133,49 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
           <?php foreach ($items as $itemIndex => $titleItem): ?>
             <?php
               $titleId = (int) $titleItem['id'];
-              $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), '/assets/img/avatar-library/avatar-01.svg');
+              $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), $imageFallback);
               $playable = $firstPlayableByTitle[$titleId] ?? null;
               $cardBadge = ((int) ($titleItem['featured'] ?? 0) === 1 || $itemIndex < 2) ? 'Em destaque' : '';
             ?>
             <article class="wp-title-card wp-title-card--cinema">
               <a href="/title/<?= $titleId ?>" class="wp-title-cover">
-                <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='/assets/img/avatar-library/avatar-01.svg'">
+                <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
                 <?php if ($cardBadge !== ''): ?><span class="wp-title-badge"><?= e($cardBadge) ?></span><?php endif; ?>
               </a>
               <?php
                 $cardMeta = $browseMetaByTitle[$titleId] ?? [];
                 $cardPreviewUrl = trim((string) ($cardMeta['preview_url'] ?? ''));
                 $cardPreviewMime = trim((string) ($cardMeta['preview_mime'] ?? ''));
+                $hoverBadges = (array) ($cardMeta['hover_badges'] ?? []);
+                $hoverTags = (array) ($cardMeta['tags'] ?? []);
               ?>
               <div class="wp-title-hover-panel">
                 <div class="wp-title-hover-media">
                   <?php if ($cardPreviewUrl !== ''): ?>
                     <video class="wp-title-hover-video js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($cardPreviewUrl) ?>"<?= $cardPreviewMime !== '' ? ' data-mime="' . e($cardPreviewMime) . '"' : '' ?>></video>
                   <?php else: ?>
-                    <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='/assets/img/avatar-library/avatar-01.svg'">
+                    <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
                   <?php endif; ?>
                 </div>
                 <div class="wp-title-hover-actions">
                   <?php if ($playable): ?>
-                    <a class="wp-hover-circle" href="/watch/<?= (int) $playable['id'] ?>" aria-label="Assistir">&#9658;</a>
+                    <a class="wp-hover-circle wp-hover-circle--play" href="/watch/<?= (int) $playable['id'] ?>" aria-label="Assistir">&#9658;</a>
                   <?php endif; ?>
-                  <button type="button" class="wp-hover-circle js-open-title-modal" data-title-id="<?= $titleId ?>" aria-label="Mais informacoes">i</button>
+                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
+                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
+                  <button type="button" class="wp-hover-circle wp-hover-circle--chevron js-open-title-modal" data-title-id="<?= $titleId ?>" aria-label="Mais informacoes">&#709;</button>
                 </div>
+                <?php if ($hoverBadges !== []): ?>
+                  <div class="wp-title-hover-badges">
+                    <?php foreach ($hoverBadges as $badge): ?>
+                      <?php if (trim((string) $badge) === '') { continue; } ?>
+                      <span><?= e((string) $badge) ?></span>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+                <?php if ($hoverTags !== []): ?>
+                  <p class="wp-title-hover-tags"><?= e(implode(' • ', $hoverTags)) ?></p>
+                <?php endif; ?>
               </div>
               <div class="wp-title-meta wp-title-meta--cinema">
                 <h3><?= e((string) $titleItem['title_name']) ?></h3>
@@ -186,12 +202,12 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
         <div class="wp-continue-grid">
           <?php foreach ($continueWatching as $item): ?>
             <?php
-              $cover = $assetOrFallback((string) ($item['cover_image'] ?? ''), '/assets/img/avatar-library/avatar-01.svg');
+              $cover = $assetOrFallback((string) ($item['cover_image'] ?? ''), $imageFallback);
               $progress = max(0, min(100, (int) ($item['progress_percent'] ?? 0)));
             ?>
             <article class="wp-continue-card wp-continue-card--cinema">
               <a href="/watch/<?= (int) $item['media_item_id'] ?>">
-                <img src="<?= e($cover) ?>" alt="<?= e((string) $item['title_name']) ?>" onerror="this.src='/assets/img/avatar-library/avatar-01.svg'">
+                <img src="<?= e($cover) ?>" alt="<?= e((string) $item['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
                 <div class="wp-continue-body">
                   <h3><?= e((string) $item['title_name']) ?></h3>
                   <p><?= e((string) $item['item_label']) ?></p>
@@ -215,13 +231,29 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
       <div class="wp-title-modal-hero-overlay"></div>
       <div class="wp-title-modal-hero-content">
         <h2 id="wp-title-modal-heading">Titulo</h2>
-        <p id="wp-title-modal-description"></p>
         <div class="wp-title-modal-actions">
           <a class="wp-btn light" id="wp-title-modal-watch" href="/browse">Assistir</a>
+          <button type="button" class="wp-hover-circle wp-hover-circle--light js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
+          <button type="button" class="wp-hover-circle wp-hover-circle--light js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
           <a class="wp-btn ghost" id="wp-title-modal-details" href="/browse">Pagina do titulo</a>
         </div>
         <div class="wp-title-modal-badges" id="wp-title-modal-badges"></div>
       </div>
+    </div>
+    <div class="wp-title-modal-body">
+      <div class="wp-title-modal-summary">
+        <div class="wp-title-modal-summary-main">
+          <div class="wp-title-modal-meta-line" id="wp-title-modal-meta-line"></div>
+          <h3 id="wp-title-modal-hook">More information</h3>
+          <p id="wp-title-modal-description"></p>
+        </div>
+        <div class="wp-title-modal-summary-side" id="wp-title-modal-summary-side"></div>
+      </div>
+      <div class="wp-title-modal-section-head">
+        <h4 id="wp-title-modal-episodes-heading">Episodes</h4>
+        <span id="wp-title-modal-season-pick"></span>
+      </div>
+      <div class="wp-title-modal-episodes" id="wp-title-modal-episodes"></div>
     </div>
   </div>
 </div>

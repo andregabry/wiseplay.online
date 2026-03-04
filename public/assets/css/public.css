@@ -2300,7 +2300,10 @@ body.wp-modal-open {
 
 .wp-row-rail--cinema {
   grid-auto-columns: minmax(290px, 290px);
-  gap: 14px;
+  gap: 10px;
+  overflow-y: visible;
+  padding-top: 18px;
+  padding-bottom: 56px;
 }
 
 .wp-title-card--cinema {
@@ -2330,8 +2333,8 @@ body.wp-modal-open {
 }
 
 .wp-title-card--cinema.is-hover-active {
-  transform: scale(1.22) translateY(-16px);
-  z-index: 12;
+  transform: scale(1.3) translateY(-24px);
+  z-index: 16;
 }
 
 .wp-title-badge {
@@ -2360,7 +2363,7 @@ body.wp-modal-open {
   border-radius: 0 0 6px 6px;
   background: #181818;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.62);
 }
 
 .wp-title-card--cinema.is-hover-active .wp-title-hover-panel {
@@ -2390,12 +2393,12 @@ body.wp-modal-open {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px;
+  padding: 14px 14px 10px;
 }
 
 .wp-hover-circle {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.78);
   display: inline-grid;
@@ -2407,9 +2410,54 @@ body.wp-modal-open {
   font-weight: 800;
 }
 
+.wp-hover-circle--play {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+.wp-hover-circle--play:hover {
+  background: #ececec;
+  border-color: #ececec;
+}
+
+.wp-hover-circle--chevron {
+  margin-left: auto;
+  font-size: 1.3rem;
+}
+
+.wp-hover-circle--light {
+  width: 46px;
+  height: 46px;
+}
+
 .wp-hover-circle:hover {
   border-color: #fff;
   background: rgba(255, 255, 255, 0.1);
+}
+
+.wp-title-hover-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 14px;
+}
+
+.wp-title-hover-badges span {
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  padding: 4px 8px;
+  color: #f8f8f8;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.wp-title-hover-tags {
+  margin: 10px 0 0;
+  padding: 0 14px 16px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.83rem;
+  line-height: 1.5;
 }
 
 .wp-title-modal {
@@ -2429,11 +2477,14 @@ body.wp-modal-open {
 .wp-title-modal-dialog {
   position: relative;
   z-index: 1;
-  width: min(920px, calc(100vw - 36px));
-  border-radius: 8px;
+  width: min(1120px, calc(100vw - 36px));
+  max-height: min(92vh, 980px);
+  border-radius: 12px;
   overflow: hidden;
   background: #181818;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.62);
+  display: flex;
+  flex-direction: column;
 }
 
 .wp-title-modal-close {
@@ -2453,7 +2504,7 @@ body.wp-modal-open {
 
 .wp-title-modal-hero {
   position: relative;
-  min-height: 460px;
+  min-height: 520px;
   background: #181818;
 }
 
@@ -2488,13 +2539,7 @@ body.wp-modal-open {
 
 .wp-title-modal-hero-content h2 {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3rem);
-}
-
-.wp-title-modal-hero-content p {
-  margin: 12px 0 0;
-  color: #e1e1e1;
-  max-width: 74ch;
+  font-size: clamp(2.4rem, 4vw, 4rem);
 }
 
 .wp-title-modal-actions {
@@ -2502,6 +2547,7 @@ body.wp-modal-open {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
 }
 
 .wp-title-modal-badges {
@@ -2517,6 +2563,150 @@ body.wp-modal-open {
   padding: 4px 10px;
   font-size: 0.78rem;
   color: #f0f0f0;
+}
+
+.wp-title-modal-body {
+  overflow-y: auto;
+  padding: 26px 34px 34px;
+  background: #181818;
+}
+
+.wp-title-modal-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(250px, 0.86fr);
+  gap: 28px;
+}
+
+.wp-title-modal-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #46d369;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.wp-title-modal-meta-line span {
+  color: inherit;
+}
+
+.wp-title-modal-summary-main h3 {
+  margin: 16px 0 10px;
+  font-size: 1.8rem;
+  color: #fff;
+}
+
+.wp-title-modal-summary-main p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+.wp-title-modal-summary-side {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.wp-title-modal-summary-side p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.5;
+}
+
+.wp-title-modal-summary-side strong {
+  color: rgba(255, 255, 255, 0.54);
+  font-weight: 700;
+}
+
+.wp-title-modal-section-head {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.wp-title-modal-section-head h4 {
+  margin: 0;
+  font-size: 1.95rem;
+  color: #fff;
+}
+
+.wp-title-modal-section-head span {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 1.02rem;
+}
+
+.wp-title-modal-episodes {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.wp-title-modal-episode {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  border-radius: 8px;
+  padding: 10px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.025);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.wp-title-modal-episode:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.wp-title-modal-episode-thumb {
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #090909;
+}
+
+.wp-title-modal-episode-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.wp-title-modal-episode-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.wp-title-modal-episode-head strong {
+  color: #fff;
+  font-size: 1.05rem;
+}
+
+.wp-title-modal-episode-head span {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.92rem;
+}
+
+.wp-title-modal-episode-copy p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.wp-title-modal-empty {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 18px;
+  color: rgba(255, 255, 255, 0.66);
 }
 
 .wp-continue-card--cinema {
@@ -2651,10 +2841,12 @@ body.wp-modal-open {
 
   .wp-row-rail--cinema {
     grid-auto-columns: minmax(220px, 220px);
+    padding-top: 10px;
+    padding-bottom: 36px;
   }
 
   .wp-title-card--cinema.is-hover-active {
-    transform: scale(1.12) translateY(-8px);
+    transform: scale(1.14) translateY(-10px);
   }
 
   .wp-title-modal-dialog {
@@ -2669,6 +2861,24 @@ body.wp-modal-open {
     left: 16px;
     right: 16px;
     bottom: 16px;
+  }
+
+  .wp-title-modal-body {
+    padding: 18px 16px 22px;
+  }
+
+  .wp-title-modal-summary {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .wp-title-modal-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wp-title-modal-episode {
+    grid-template-columns: 1fr;
   }
 
   .wp-profile-grid-stage.is-manage {

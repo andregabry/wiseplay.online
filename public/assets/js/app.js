@@ -483,6 +483,12 @@
     var $watch = $('#wp-title-modal-watch');
     var $details = $('#wp-title-modal-details');
     var $badges = $('#wp-title-modal-badges');
+    var $metaLine = $('#wp-title-modal-meta-line');
+    var $hook = $('#wp-title-modal-hook');
+    var $summarySide = $('#wp-title-modal-summary-side');
+    var $seasonPick = $('#wp-title-modal-season-pick');
+    var $episodesHeading = $('#wp-title-modal-episodes-heading');
+    var $episodes = $('#wp-title-modal-episodes');
 
     function closeModal() {
       var modalVideo = $modal.find('.js-title-modal-video').get(0);
@@ -500,6 +506,76 @@
 
     function buildBadge(value) {
       return '<span>' + $('<div>').text(value).html() + '</span>';
+    }
+
+    function renderSummary(meta) {
+      var summaryBits = [
+        String(meta.year || ''),
+        String(meta.type_label || meta.type || ''),
+        String(meta.maturity_rating || ''),
+        String((meta.hover_badges && meta.hover_badges[1]) || '')
+      ].filter(function (value, index, array) {
+        return value && array.indexOf(value) === index;
+      });
+
+      $metaLine.html(summaryBits.map(function (value) {
+        return '<span>' + $('<div>').text(value).html() + '</span>';
+      }).join(''));
+
+      var tags = Array.isArray(meta.tags) && meta.tags.length ? meta.tags.join(' • ') : String(meta.genre || '');
+      $hook.text(tags || 'A new highlight for your next session');
+
+      var facts = Array.isArray(meta.facts) ? meta.facts : [];
+      if (!facts.length) {
+        $summarySide.empty();
+        return;
+      }
+
+      var factHtml = facts.map(function (fact) {
+        return (
+          '<p><strong>' + $('<div>').text(String(fact.label || '')).html() + ':</strong> ' +
+          '<span>' + $('<div>').text(String(fact.value || '')).html() + '</span></p>'
+        );
+      }).join('');
+
+      $summarySide.html(factHtml);
+    }
+
+    function renderEpisodes(meta) {
+      var seasons = Array.isArray(meta.seasons) ? meta.seasons : [];
+      if (!seasons.length) {
+        $episodesHeading.text('Details');
+        $seasonPick.text('');
+        $episodes.html('<div class="wp-title-modal-empty">No episodes or lessons available for this title yet.</div>');
+        return;
+      }
+
+      var season = seasons[0] || {};
+      var items = Array.isArray(season.items) ? season.items : [];
+      $episodesHeading.text(String(meta.type || '') === 'MOVIE' ? 'Featured playback' : 'Episodes');
+      $seasonPick.text(String(season.label || ''));
+
+      var episodeHtml = items.map(function (item) {
+        var thumb = String(item.thumbnail || '/assets/img/placeholders/image-placeholder.svg');
+        var duration = String(item.duration_label || '');
+
+        return (
+          '<a class="wp-title-modal-episode" href="' + $('<div>').text(String(item.watch_url || '/browse')).html() + '">' +
+            '<div class="wp-title-modal-episode-thumb">' +
+              '<img src="' + $('<div>').text(thumb).html() + '" alt="' + $('<div>').text(String(item.label || 'Episode')).html() + '">' +
+            '</div>' +
+            '<div class="wp-title-modal-episode-copy">' +
+              '<div class="wp-title-modal-episode-head">' +
+                '<strong>' + $('<div>').text(String(item.number || 1) + '. ' + String(item.label || 'Episode')).html() + '</strong>' +
+                (duration ? '<span>' + $('<div>').text(duration).html() + '</span>' : '') +
+              '</div>' +
+              '<p>Continue watching from this entry or open the full title page for more details.</p>' +
+            '</div>' +
+          '</a>'
+        );
+      }).join('');
+
+      $episodes.html(episodeHtml || '<div class="wp-title-modal-empty">No playable items available.</div>');
     }
 
     function renderMedia(meta) {
@@ -553,12 +629,14 @@
       $watch.attr('aria-disabled', watchMediaId <= 0 ? 'true' : 'false');
 
       var badgeHtml = [
-        buildBadge(String(meta.type || 'TITLE')),
+        buildBadge(String(meta.type_label || meta.type || 'TITLE')),
         buildBadge(String(meta.genre || 'General')),
         buildBadge(String(meta.year || '-')),
         buildBadge(String(meta.maturity_rating || '16+'))
       ].join('');
       $badges.html(badgeHtml);
+      renderSummary(meta);
+      renderEpisodes(meta);
 
       $modal.removeAttr('hidden');
       $('body').addClass('wp-modal-open');
@@ -588,6 +666,18 @@
       if (event.key === 'Escape' && !$modal.is('[hidden]')) {
         closeModal();
       }
+    });
+  }
+
+  function bindPublicSoonActions() {
+    $(document).on('click', '.js-public-soon', function (event) {
+      var label = String($(this).data('label') || $(this).text() || 'This action');
+      event.preventDefault();
+      fireAlert({
+        icon: 'info',
+        title: label,
+        text: 'This interaction is already designed in WisePlay, but the personalized public flow is still being finalized.'
+      });
     });
   }
 
@@ -934,5 +1024,6 @@
     bindHeroPreviews();
     bindBrowseHoverPreview();
     bindBrowseTitleModal();
+    bindPublicSoonActions();
   });
 })(jQuery);

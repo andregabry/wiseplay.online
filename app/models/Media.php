@@ -317,6 +317,61 @@ final class Media extends BaseModel
         return $grouped;
     }
 
+    public function hierarchyForTitleIds(array $titleIds, bool $publishedOnly = true): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $titleIds), static fn (int $id): bool => $id > 0)));
+        if ($ids === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM media_items WHERE title_id IN ({$placeholders})";
+        if ($publishedOnly) {
+            $sql .= " AND is_published = 1 AND (upload_status IS NULL OR upload_status IN ('READY'))";
+        }
+        $sql .= ' ORDER BY title_id ASC, COALESCE(season_number, 1), COALESCE(episode_number, 1), id';
+
+        $stmt = $this->db()->prepare($sql);
+        foreach ($ids as $index => $id) {
+            $stmt->bindValue($index + 1, $id, \PDO::PARAM_INT);
+        }
+        $stmt->execute();
+
+        $grouped = [];
+        foreach ($stmt->fetchAll() as $item) {
+            $titleId = (int) ($item['title_id'] ?? 0);
+            if ($titleId <= 0) {
+                continue;
+            }
+
+            $season = (int) ($item['season_number'] ?? 0);
+            $episode = (int) ($item['episode_number'] ?? 0);
+            if ($season <= 0) {
+                $season = 1;
+            }
+
+            $grouped[$titleId] ??= [];
+            $grouped[$titleId][$season] ??= [];
+            $grouped[$titleId][$season][] = array_merge($item, [
+                'season_number' => $season,
+                'episode_number' => $episode > 0 ? $episode : 1,
+            ]);
+        }
+
+        foreach ($grouped as &$seasons) {
+            ksort($seasons);
+            foreach ($seasons as &$episodes) {
+                usort($episodes, static function (array $a, array $b): int {
+                    return ((int) $a['episode_number']) <=> ((int) $b['episode_number']);
+                });
+            }
+            unset($episodes);
+        }
+        unset($seasons);
+
+        return $grouped;
+    }
+
     public function firstPlayableByTitle(int $titleId): ?array
     {
         $sql = "SELECT
