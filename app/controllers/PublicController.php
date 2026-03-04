@@ -653,6 +653,7 @@ final class PublicController extends BaseController
             }
         }
         $firstPlayableByTitle = $mediaModel->firstPlayableByTitleIds($titleIds);
+        $browseMetaByTitle = $this->buildBrowseMetaByTitle($featured, $rows, $firstPlayableByTitle);
         $featuredHeroTrailer = null;
         if ($featured) {
             $featuredPlayable = $firstPlayableByTitle[(int) $featured['id']] ?? null;
@@ -670,6 +671,7 @@ final class PublicController extends BaseController
             'continueWatching' => $continueWatching,
             'subscription' => $subscription,
             'firstPlayableByTitle' => $firstPlayableByTitle,
+            'browseMetaByTitle' => $browseMetaByTitle,
             'featuredHeroTrailer' => $featuredHeroTrailer,
             'appTagline' => $appTagline,
         ], 'public');
@@ -879,6 +881,74 @@ final class PublicController extends BaseController
         }
 
         return $trailers;
+    }
+
+    private function buildBrowseMetaByTitle(?array $featured, array $rows, array $firstPlayableByTitle): array
+    {
+        $meta = [];
+        $append = function (array $title) use (&$meta, $firstPlayableByTitle): void {
+            $titleId = (int) ($title['id'] ?? 0);
+            if ($titleId <= 0 || isset($meta[$titleId])) {
+                return;
+            }
+
+            $playable = $firstPlayableByTitle[$titleId] ?? null;
+            $preview = is_array($playable) ? $this->buildPreviewFromPlayable($playable) : null;
+
+            $meta[$titleId] = [
+                'id' => $titleId,
+                'title_name' => (string) ($title['title_name'] ?? ''),
+                'description' => (string) ($title['description'] ?? ''),
+                'type' => (string) ($title['type'] ?? 'TITLE'),
+                'genre' => (string) ($title['genre'] ?? 'General'),
+                'year' => (string) (($title['year'] ?? '') !== '' ? $title['year'] : '-'),
+                'maturity_rating' => (string) ($title['maturity_rating'] ?? '16'),
+                'cover_image' => (string) ($title['cover_image'] ?? ''),
+                'backdrop_image' => (string) ($title['backdrop_image'] ?? ''),
+                'watch_media_id' => is_array($playable) ? (int) ($playable['id'] ?? 0) : 0,
+                'preview_url' => is_array($preview) ? (string) ($preview['url'] ?? '') : '',
+                'preview_mime' => is_array($preview) ? (string) ($preview['mime_type'] ?? '') : '',
+            ];
+        };
+
+        if (is_array($featured) && $featured !== []) {
+            $append($featured);
+        }
+        foreach ($rows as $rowItems) {
+            foreach ((array) $rowItems as $title) {
+                if (is_array($title)) {
+                    $append($title);
+                }
+            }
+        }
+
+        return $meta;
+    }
+
+    private function buildPreviewFromPlayable(array $playable): ?array
+    {
+        $url = trim((string) ($playable['source_path'] ?? ''));
+        if ($url === '') {
+            return null;
+        }
+
+        $mimeType = trim((string) ($playable['mime_type'] ?? ''));
+        $mimeTypeLower = strtolower($mimeType);
+        $sourceType = strtoupper(trim((string) ($playable['source_type'] ?? 'URL')));
+        $canEmbed = (
+            $sourceType === 'ONEDRIVE'
+            || preg_match('/\.(mp4|webm|ogg|mov|mkv)(\\?.*)?$/i', $url) === 1
+            || str_starts_with($mimeTypeLower, 'video/')
+        );
+
+        if (!$canEmbed) {
+            return null;
+        }
+
+        return [
+            'url' => $url,
+            'mime_type' => $mimeType,
+        ];
     }
 
     private function resolveHeroPreview(?array $mediaRef): ?array

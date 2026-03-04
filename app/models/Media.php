@@ -319,7 +319,18 @@ final class Media extends BaseModel
 
     public function firstPlayableByTitle(int $titleId): ?array
     {
-        $sql = "SELECT m.id, m.title_id, m.item_label, m.season_number, m.episode_number
+        $sql = "SELECT
+                    m.id,
+                    m.title_id,
+                    m.item_label,
+                    m.season_number,
+                    m.episode_number,
+                    m.duration_minutes,
+                    m.source_type,
+                    m.source_path,
+                    m.mime_type,
+                    m.thumbnail_url,
+                    m.backdrop_url
                   FROM media_items m
                   INNER JOIN titles t ON t.id = m.title_id
                  WHERE m.title_id = :title_id
@@ -349,7 +360,13 @@ final class Media extends BaseModel
                     m.title_id,
                     m.item_label,
                     m.season_number,
-                    m.episode_number
+                    m.episode_number,
+                    m.duration_minutes,
+                    m.source_type,
+                    m.source_path,
+                    m.mime_type,
+                    m.thumbnail_url,
+                    m.backdrop_url
                 FROM media_items m
                 INNER JOIN titles t ON t.id = m.title_id
                 INNER JOIN (

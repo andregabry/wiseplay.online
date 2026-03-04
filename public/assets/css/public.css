@@ -2308,18 +2308,30 @@ body.wp-modal-open {
   border-radius: 6px;
   background: #1c1c1c;
   border: 0;
+  overflow: visible;
+  transition: transform 0.22s ease;
+  transform-origin: center center;
+  z-index: 1;
 }
 
 .wp-title-card--cinema .wp-title-cover {
   aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .wp-title-card--cinema .wp-title-cover img {
   transition: transform 0.28s ease;
 }
 
-.wp-title-card--cinema:hover .wp-title-cover img {
+.wp-title-card--cinema:hover .wp-title-cover img,
+.wp-title-card--cinema.is-hover-active .wp-title-cover img {
   transform: scale(1.06);
+}
+
+.wp-title-card--cinema.is-hover-active {
+  transform: scale(1.22) translateY(-16px);
+  z-index: 12;
 }
 
 .wp-title-badge {
@@ -2341,6 +2353,170 @@ body.wp-modal-open {
 
 .wp-title-meta--cinema {
   background: linear-gradient(180deg, rgba(20, 20, 20, 0), rgba(20, 20, 20, 0.96));
+}
+
+.wp-title-hover-panel {
+  display: none;
+  border-radius: 0 0 6px 6px;
+  background: #181818;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
+}
+
+.wp-title-card--cinema.is-hover-active .wp-title-hover-panel {
+  display: block;
+}
+
+.wp-title-card--cinema.is-hover-active .wp-title-meta--cinema {
+  display: none;
+}
+
+.wp-title-hover-media {
+  aspect-ratio: 16 / 9;
+  border-radius: 0;
+  overflow: hidden;
+  background: #080808;
+}
+
+.wp-title-hover-media img,
+.wp-title-hover-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.wp-title-hover-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+
+.wp-hover-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.78);
+  display: inline-grid;
+  place-items: center;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.wp-hover-circle:hover {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.wp-title-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+}
+
+.wp-title-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.74);
+}
+
+.wp-title-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(920px, calc(100vw - 36px));
+  border-radius: 8px;
+  overflow: hidden;
+  background: #181818;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.62);
+}
+
+.wp-title-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(20, 20, 20, 0.82);
+  color: #fff;
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+
+.wp-title-modal-hero {
+  position: relative;
+  min-height: 460px;
+  background: #181818;
+}
+
+.wp-title-modal-hero-media {
+  position: absolute;
+  inset: 0;
+}
+
+.wp-title-modal-hero-media img,
+.wp-title-modal-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.wp-title-modal-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(24, 24, 24, 0) 52%, rgba(24, 24, 24, 0.96) 88%),
+    linear-gradient(90deg, rgba(24, 24, 24, 0.44) 0%, rgba(24, 24, 24, 0) 62%);
+}
+
+.wp-title-modal-hero-content {
+  position: absolute;
+  left: 34px;
+  right: 34px;
+  bottom: 28px;
+  z-index: 2;
+}
+
+.wp-title-modal-hero-content h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.wp-title-modal-hero-content p {
+  margin: 12px 0 0;
+  color: #e1e1e1;
+  max-width: 74ch;
+}
+
+.wp-title-modal-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wp-title-modal-badges {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wp-title-modal-badges span {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  color: #f0f0f0;
 }
 
 .wp-continue-card--cinema {
@@ -2475,6 +2651,24 @@ body.wp-modal-open {
 
   .wp-row-rail--cinema {
     grid-auto-columns: minmax(220px, 220px);
+  }
+
+  .wp-title-card--cinema.is-hover-active {
+    transform: scale(1.12) translateY(-8px);
+  }
+
+  .wp-title-modal-dialog {
+    width: min(100vw - 16px, 100%);
+  }
+
+  .wp-title-modal-hero {
+    min-height: 360px;
+  }
+
+  .wp-title-modal-hero-content {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
   }
 
   .wp-profile-grid-stage.is-manage {

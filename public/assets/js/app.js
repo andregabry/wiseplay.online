@@ -350,6 +350,247 @@
     });
   }
 
+  function bindBrowseHoverPreview() {
+    var $cards = $('.wp-title-card--cinema');
+    if (!$cards.length) {
+      return;
+    }
+
+    var closeTimer = null;
+
+    function stopCardVideo($card) {
+      var video = $card.find('.js-card-hover-video').get(0);
+      if (!video) {
+        return;
+      }
+      try {
+        video.pause();
+        video.currentTime = 0;
+      } catch (error) {
+        // noop
+      }
+    }
+
+    function openCard($card) {
+      if (!$card.length) {
+        return;
+      }
+
+      $cards.not($card).each(function () {
+        var $other = $(this);
+        $other.removeClass('is-hover-active');
+        stopCardVideo($other);
+      });
+
+      $card.addClass('is-hover-active');
+      var video = $card.find('.js-card-hover-video').get(0);
+      if (!video) {
+        return;
+      }
+
+      var src = String($(video).attr('data-src') || '');
+      var mime = String($(video).attr('data-mime') || '');
+      if (src && !video.getAttribute('src')) {
+        video.src = src;
+        if (mime) {
+          video.setAttribute('type', mime);
+        }
+      }
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.loop = false;
+
+      var playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(function () {
+          // Autoplay may be blocked by browser policy.
+        });
+      }
+    }
+
+    function closeCard($card) {
+      if (!$card.length) {
+        return;
+      }
+      $card.removeClass('is-hover-active');
+      stopCardVideo($card);
+    }
+
+    $cards.each(function () {
+      var video = $(this).find('.js-card-hover-video').get(0);
+      if (!video) {
+        return;
+      }
+      video.addEventListener('timeupdate', function () {
+        if (video.currentTime >= 45) {
+          video.currentTime = 0;
+          var playPromise = video.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(function () {
+              // noop
+            });
+          }
+        }
+      });
+      video.addEventListener('ended', function () {
+        video.currentTime = 0;
+        var playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(function () {
+            // noop
+          });
+        }
+      });
+    });
+
+    $(document).on('mouseenter focusin', '.wp-title-card--cinema', function () {
+      if (closeTimer) {
+        window.clearTimeout(closeTimer);
+        closeTimer = null;
+      }
+      openCard($(this));
+    });
+
+    $(document).on('mouseleave focusout', '.wp-title-card--cinema', function () {
+      var $card = $(this);
+      closeTimer = window.setTimeout(function () {
+        closeCard($card);
+      }, 80);
+    });
+  }
+
+  function bindBrowseTitleModal() {
+    var $modal = $('#wp-title-info-modal');
+    var $store = $('#wp-browse-meta-store');
+    if (!$modal.length || !$store.length) {
+      return;
+    }
+
+    var items = {};
+    var raw = String($store.attr('data-items') || '');
+    if (raw) {
+      try {
+        items = JSON.parse(raw);
+      } catch (error) {
+        items = {};
+      }
+    }
+
+    var $media = $('#wp-title-modal-hero-media');
+    var $heading = $('#wp-title-modal-heading');
+    var $description = $('#wp-title-modal-description');
+    var $watch = $('#wp-title-modal-watch');
+    var $details = $('#wp-title-modal-details');
+    var $badges = $('#wp-title-modal-badges');
+
+    function closeModal() {
+      var modalVideo = $modal.find('.js-title-modal-video').get(0);
+      if (modalVideo) {
+        try {
+          modalVideo.pause();
+          modalVideo.currentTime = 0;
+        } catch (error) {
+          // noop
+        }
+      }
+      $modal.attr('hidden', 'hidden');
+      $('body').removeClass('wp-modal-open');
+    }
+
+    function buildBadge(value) {
+      return '<span>' + $('<div>').text(value).html() + '</span>';
+    }
+
+    function renderMedia(meta) {
+      var previewUrl = String(meta.preview_url || '');
+      var previewMime = String(meta.preview_mime || '');
+      var cover = String(meta.backdrop_image || meta.cover_image || '/assets/img/placeholders/bakground.jpg');
+      var safeTitle = String(meta.title_name || 'Titulo');
+
+      if (previewUrl) {
+        var sourceTag = '<source src="' + $('<div>').text(previewUrl).html() + '"' + (previewMime ? ' type="' + $('<div>').text(previewMime).html() + '"' : '') + '>';
+        $media.html(
+          '<video class="wp-title-modal-video js-title-modal-video" autoplay muted playsinline preload="metadata" poster="' + $('<div>').text(cover).html() + '">' +
+            sourceTag +
+          '</video>'
+        );
+        var modalVideo = $media.find('.js-title-modal-video').get(0);
+        if (modalVideo) {
+          modalVideo.addEventListener('timeupdate', function () {
+            if (modalVideo.currentTime >= 45) {
+              modalVideo.currentTime = 0;
+              var playPromise = modalVideo.play();
+              if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(function () {
+                  // noop
+                });
+              }
+            }
+          });
+        }
+        return;
+      }
+
+      $media.html('<img src="' + $('<div>').text(cover).html() + '" alt="' + $('<div>').text(safeTitle).html() + '">');
+    }
+
+    function openModalForTitle(titleId) {
+      var normalized = String(parseInt(titleId, 10) || 0);
+      if (normalized === '0' || !items[normalized]) {
+        return;
+      }
+
+      var meta = items[normalized];
+      renderMedia(meta);
+      $heading.text(String(meta.title_name || 'Titulo'));
+      $description.text(String(meta.description || 'Sem descricao disponivel.'));
+      $details.attr('href', '/title/' + normalized);
+
+      var watchMediaId = parseInt(meta.watch_media_id, 10) || 0;
+      $watch.attr('href', watchMediaId > 0 ? '/watch/' + watchMediaId : '/title/' + normalized);
+      $watch.toggleClass('disabled', watchMediaId <= 0);
+      $watch.attr('aria-disabled', watchMediaId <= 0 ? 'true' : 'false');
+
+      var badgeHtml = [
+        buildBadge(String(meta.type || 'TITLE')),
+        buildBadge(String(meta.genre || 'General')),
+        buildBadge(String(meta.year || '-')),
+        buildBadge(String(meta.maturity_rating || '16+'))
+      ].join('');
+      $badges.html(badgeHtml);
+
+      $modal.removeAttr('hidden');
+      $('body').addClass('wp-modal-open');
+    }
+
+    $(document).on('click', '.js-open-title-modal', function (event) {
+      event.preventDefault();
+      var titleId = parseInt($(this).data('titleId'), 10) || 0;
+      if (titleId <= 0) {
+        return;
+      }
+      openModalForTitle(titleId);
+    });
+
+    $(document).on('click', '.js-close-title-modal', function (event) {
+      event.preventDefault();
+      closeModal();
+    });
+
+    $(document).on('click', '#wp-title-info-modal', function (event) {
+      if ($(event.target).is('#wp-title-info-modal')) {
+        closeModal();
+      }
+    });
+
+    $(document).on('keydown', function (event) {
+      if (event.key === 'Escape' && !$modal.is('[hidden]')) {
+        closeModal();
+      }
+    });
+  }
+
   function bindProfileManagement() {
     if (!$('.wp-profiles-page').length) {
       return;
@@ -691,5 +932,7 @@
     bindWatchProgress();
     bindSeasonTrailers();
     bindHeroPreviews();
+    bindBrowseHoverPreview();
+    bindBrowseTitleModal();
   });
 })(jQuery);
