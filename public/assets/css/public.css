@@ -1261,6 +1261,7 @@ a {
 }
 
 .wp-title-page {
+  padding-top: 0;
   padding-bottom: 32px;
 }
 
@@ -1272,7 +1273,7 @@ a {
   grid-template-columns: 230px minmax(0, 1fr);
   gap: 20px;
   align-items: center;
-  padding: 30px;
+  padding: 96px 30px 30px;
   position: relative;
   overflow: hidden;
 }
@@ -2792,7 +2793,6 @@ body.wp-modal-open {
   border: 0;
 }
 
-.wp-title-page,
 .wp-watch-page {
   padding-top: 92px;
 }
@@ -2890,6 +2890,10 @@ body.wp-modal-open {
   .wp-hero--cinema {
     min-height: 82vh;
     padding: 88px 14px 120px;
+  }
+
+  .wp-title-hero {
+    padding: 84px 14px 20px;
   }
 
   .wp-hero-logo-stack strong {
