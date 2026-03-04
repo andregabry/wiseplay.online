@@ -489,6 +489,10 @@
     var $seasonPick = $('#wp-title-modal-season-pick');
     var $episodesHeading = $('#wp-title-modal-episodes-heading');
     var $episodes = $('#wp-title-modal-episodes');
+    var $episodesToggleWrap = $('#wp-title-modal-episodes-toggle-wrap');
+    var $episodesToggle = $('#wp-title-modal-episodes-toggle');
+
+    var EPISODE_COLLAPSE_LIMIT = 10;
 
     function closeModal() {
       var modalVideo = $modal.find('.js-title-modal-video').get(0);
@@ -543,39 +547,100 @@
 
     function renderEpisodes(meta) {
       var seasons = Array.isArray(meta.seasons) ? meta.seasons : [];
+      var type = String(meta.type || '').toUpperCase();
+      var isCourse = type === 'COURSE';
+      var isSeriesLike = type === 'SERIES' || isCourse;
+
+      function normalizeItemLabel(label) {
+        var value = String(label || '').trim();
+        if (!value) {
+          return isCourse ? 'Licao sem titulo' : 'Episodio sem titulo';
+        }
+
+        return value
+          .replace(/^S\d+\s*E\d+\s*-\s*/i, '')
+          .replace(/^M[oó]dulo\s*\d+\s*\/\s*L[ií]?[cç][aã]o\s*\d+\s*-\s*/i, '')
+          .replace(/^Episode\s*\d+\s*-\s*/i, '')
+          .replace(/^Epis[oó]dio\s*\d+\s*-\s*/i, '')
+          .trim() || value;
+      }
+
+      function buildEpisodeSummary(item, index) {
+        var explicit = String(item.summary || '').trim();
+        if (explicit) {
+          return explicit;
+        }
+
+        var base = normalizeItemLabel(item.label || '');
+        if (isCourse) {
+          return 'Aula ' + String(index + 1) + ': ' + base + '. Continue de onde voce parou.';
+        }
+        return 'Episodio ' + String(index + 1) + ': ' + base + '. Continue assistindo ou abra o titulo completo.';
+      }
+
       if (!seasons.length) {
-        $episodesHeading.text('Details');
+        $episodesHeading.text('Detalhes');
         $seasonPick.text('');
-        $episodes.html('<div class="wp-title-modal-empty">No episodes or lessons available for this title yet.</div>');
+        $episodes.html('<div class="wp-title-modal-empty">Nenhum episodio ou licao disponivel para este titulo.</div>');
+        $episodesToggleWrap.attr('hidden', 'hidden');
+        $episodes.removeClass('is-collapsed');
         return;
       }
 
       var season = seasons[0] || {};
-      var items = Array.isArray(season.items) ? season.items : [];
-      $episodesHeading.text(String(meta.type || '') === 'MOVIE' ? 'Featured playback' : 'Episodes');
-      $seasonPick.text(String(season.label || ''));
+      var episodeItems = Array.isArray(season.items) ? season.items : [];
+      if (type === 'MOVIE') {
+        $episodesHeading.text('Conteudo disponivel');
+        $seasonPick.text('');
+      } else {
+        $episodesHeading.text(isCourse ? 'Licoes' : 'Episodios');
+        $seasonPick.text(String(season.label || (isCourse ? 'Modulo 1' : 'Temporada 1')));
+      }
 
-      var episodeHtml = items.map(function (item) {
+      var episodeHtml = episodeItems.map(function (item, index) {
         var thumb = String(item.thumbnail || '/assets/img/placeholders/image-placeholder.svg');
         var duration = String(item.duration_label || '');
+        var itemLabel = normalizeItemLabel(item.label || '');
+        var itemNumber = parseInt(item.number, 10) || (index + 1);
+        var itemSummary = buildEpisodeSummary(item, index);
+        var isFirst = index === 0;
 
         return (
-          '<a class="wp-title-modal-episode" href="' + $('<div>').text(String(item.watch_url || '/browse')).html() + '">' +
+          '<a class="wp-title-modal-episode' + (isFirst ? ' is-featured' : '') + '" href="' + $('<div>').text(String(item.watch_url || '/browse')).html() + '">' +
+            '<div class="wp-title-modal-episode-index">' + $('<div>').text(String(itemNumber)).html() + '</div>' +
             '<div class="wp-title-modal-episode-thumb">' +
-              '<img src="' + $('<div>').text(thumb).html() + '" alt="' + $('<div>').text(String(item.label || 'Episode')).html() + '">' +
+              '<img src="' + $('<div>').text(thumb).html() + '" alt="' + $('<div>').text(String(itemLabel || 'Episodio')).html() + '">' +
             '</div>' +
-            '<div class="wp-title-modal-episode-copy">' +
+            '<div class="wp-title-modal-episode-copy' + (isFirst ? ' is-active' : '') + '">' +
               '<div class="wp-title-modal-episode-head">' +
-                '<strong>' + $('<div>').text(String(item.number || 1) + '. ' + String(item.label || 'Episode')).html() + '</strong>' +
+                '<strong>' + $('<div>').text(itemLabel).html() + '</strong>' +
                 (duration ? '<span>' + $('<div>').text(duration).html() + '</span>' : '') +
               '</div>' +
-              '<p>Continue watching from this entry or open the full title page for more details.</p>' +
+              '<p>' + $('<div>').text(itemSummary).html() + '</p>' +
             '</div>' +
           '</a>'
         );
       }).join('');
 
-      $episodes.html(episodeHtml || '<div class="wp-title-modal-empty">No playable items available.</div>');
+      $episodes.html(episodeHtml || '<div class="wp-title-modal-empty">Nenhum item reproduzivel disponivel.</div>');
+
+      if (!isSeriesLike || episodeItems.length <= EPISODE_COLLAPSE_LIMIT) {
+        $episodes.removeClass('is-collapsed');
+        $episodesToggleWrap.attr('hidden', 'hidden');
+        $episodesToggle.attr('aria-expanded', 'false');
+        $episodesToggle.attr('aria-label', 'Mostrar mais episodios');
+        $episodesToggle.attr('data-show-label', 'Mostrar mais episodios');
+        $episodesToggle.attr('data-hide-label', 'Mostrar menos');
+        return;
+      }
+
+      var showLabel = isCourse ? 'Mostrar mais licoes' : 'Mostrar mais episodios';
+      $episodes.addClass('is-collapsed');
+      $episodesToggleWrap.removeAttr('hidden');
+      $episodesToggle.attr('aria-expanded', 'false');
+      $episodesToggle.attr('aria-label', showLabel);
+      $episodesToggle.attr('data-show-label', showLabel);
+      $episodesToggle.attr('data-hide-label', 'Mostrar menos');
     }
 
     function renderMedia(meta, previewOverride) {
@@ -755,6 +820,15 @@
     $(document).on('click', '.js-close-title-modal', function (event) {
       event.preventDefault();
       closeModal();
+    });
+
+    $episodesToggle.on('click', function () {
+      var isCollapsed = $episodes.hasClass('is-collapsed');
+      $episodes.toggleClass('is-collapsed', !isCollapsed);
+      $episodesToggle.attr('aria-expanded', isCollapsed ? 'true' : 'false');
+      var showLabel = String($episodesToggle.attr('data-show-label') || 'Mostrar mais episodios');
+      var hideLabel = String($episodesToggle.attr('data-hide-label') || 'Mostrar menos');
+      $episodesToggle.attr('aria-label', isCollapsed ? hideLabel : showLabel);
     });
 
     $(document).on('click', '#wp-title-info-modal', function (event) {

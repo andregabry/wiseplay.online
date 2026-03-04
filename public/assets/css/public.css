@@ -2372,6 +2372,14 @@ body.wp-modal-open {
   padding-bottom: 60px;
 }
 
+.wp-row-rail--cinema .wp-title-card--cinema:first-child {
+  transform-origin: left center;
+}
+
+.wp-row-rail--cinema .wp-title-card--cinema:last-child {
+  transform-origin: right center;
+}
+
 .wp-title-card--cinema {
   position: relative;
   border-radius: 5px;
@@ -2559,11 +2567,12 @@ body.wp-modal-open {
   width: min(1320px, calc(100vw - 52px));
   max-height: min(92vh, 980px);
   border-radius: 8px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #181818;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.62);
-  display: flex;
-  flex-direction: column;
+  display: block;
+  -webkit-overflow-scrolling: touch;
 }
 
 .wp-title-modal-close {
@@ -2645,7 +2654,7 @@ body.wp-modal-open {
 }
 
 .wp-title-modal-body {
-  overflow-y: auto;
+  overflow: visible;
   padding: 26px 34px 34px;
   background: #181818;
 }
@@ -2721,25 +2730,47 @@ body.wp-modal-open {
 .wp-title-modal-episodes {
   margin-top: 14px;
   display: grid;
-  gap: 12px;
+  gap: 0;
+}
+
+.wp-title-modal-episodes.is-collapsed .wp-title-modal-episode:nth-child(n + 11) {
+  display: none;
 }
 
 .wp-title-modal-episode {
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
+  grid-template-columns: 54px 180px minmax(0, 1fr);
   gap: 16px;
   align-items: center;
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: 0;
+  padding: 14px 12px;
   text-decoration: none;
   color: inherit;
-  background: rgba(255, 255, 255, 0.025);
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .wp-title-modal-episode:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.wp-title-modal-episode.is-featured {
+  border-bottom: 0;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.wp-title-modal-episode.is-featured:hover {
+  background: rgba(255, 255, 255, 0.17);
+}
+
+.wp-title-modal-episode-index {
+  font-size: 2.05rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.82);
+  text-align: center;
 }
 
 .wp-title-modal-episode-thumb {
@@ -2765,19 +2796,57 @@ body.wp-modal-open {
 
 .wp-title-modal-episode-head strong {
   color: #fff;
-  font-size: 1.05rem;
+  font-size: 1.6rem;
+  line-height: 1.2;
 }
 
 .wp-title-modal-episode-head span {
   color: rgba(255, 255, 255, 0.6);
-  font-size: 0.92rem;
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 300;
 }
 
 .wp-title-modal-episode-copy p {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   color: rgba(255, 255, 255, 0.72);
   line-height: 1.55;
-  font-size: 0.95rem;
+  font-size: 1.08rem;
+}
+
+.wp-title-modal-episode-copy.is-active {
+  color: #fff;
+}
+
+.wp-title-modal-episodes-toggle-wrap {
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
+}
+
+.wp-title-modal-episodes-toggle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.52);
+  background: rgba(24, 24, 24, 0.96);
+  color: #fff;
+  font-size: 1.6rem;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.wp-title-modal-episodes-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.88);
+  background: rgba(56, 56, 56, 0.92);
+}
+
+.wp-title-modal-episodes-toggle[aria-expanded='true'] {
+  transform: rotate(180deg);
 }
 
 .wp-title-modal-empty {
@@ -2977,7 +3046,24 @@ body.wp-modal-open {
   }
 
   .wp-title-modal-episode {
-    grid-template-columns: 1fr;
+    grid-template-columns: 44px 1fr;
+    gap: 12px;
+  }
+
+  .wp-title-modal-episode-index {
+    font-size: 1.4rem;
+  }
+
+  .wp-title-modal-episode-thumb {
+    grid-column: 1 / -1;
+  }
+
+  .wp-title-modal-episode-head strong {
+    font-size: 1.15rem;
+  }
+
+  .wp-title-modal-episode-head span {
+    font-size: 1rem;
   }
 
   .wp-profile-grid-stage.is-manage {

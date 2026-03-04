@@ -288,10 +288,18 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
         <div class="wp-title-modal-summary-side" id="wp-title-modal-summary-side"></div>
       </div>
       <div class="wp-title-modal-section-head">
-        <h4 id="wp-title-modal-episodes-heading">Episodes</h4>
+        <h4 id="wp-title-modal-episodes-heading">Episodios</h4>
         <span id="wp-title-modal-season-pick"></span>
       </div>
       <div class="wp-title-modal-episodes" id="wp-title-modal-episodes"></div>
+      <div class="wp-title-modal-episodes-toggle-wrap" id="wp-title-modal-episodes-toggle-wrap" hidden>
+        <button
+          type="button"
+          class="wp-title-modal-episodes-toggle"
+          id="wp-title-modal-episodes-toggle"
+          aria-label="Mostrar mais episodios"
+          aria-expanded="false">&#709;</button>
+      </div>
     </div>
   </div>
 </div>

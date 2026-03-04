@@ -952,8 +952,16 @@ final class PublicController extends BaseController
 
                     $seasonItems[] = [
                         'id' => (int) ($episode['id'] ?? 0),
+                        'season_number' => (int) $seasonNumber,
                         'number' => (int) ($episode['episode_number'] ?? 1),
                         'label' => (string) ($episode['item_label'] ?? ''),
+                        'summary' => $this->browseEpisodeSummary(
+                            $titleType,
+                            (int) $seasonNumber,
+                            (int) ($episode['episode_number'] ?? 1),
+                            (string) ($episode['item_label'] ?? ''),
+                            (string) ($title['description'] ?? '')
+                        ),
                         'duration_label' => $this->formatMediaDuration((int) ($episode['duration_minutes'] ?? 0)),
                         'thumbnail' => $thumbnail,
                         'watch_url' => '/watch/' . (int) ($episode['id'] ?? 0),
@@ -1081,6 +1089,38 @@ final class PublicController extends BaseController
         }
 
         return $episodeCount > 0 ? $episodeCount . ' episodes' : '';
+    }
+
+    private function browseEpisodeSummary(string $type, int $seasonNumber, int $episodeNumber, string $itemLabel, string $titleDescription): string
+    {
+        $normalized = strtoupper($type);
+        $cleanLabel = trim(preg_replace('/^S\d+\s*E\d+\s*-\s*/i', '', $itemLabel) ?? '');
+        $cleanLabel = trim(preg_replace('/^M[oó]dulo\s*\d+\s*\/\s*L[ií]?[cç][aã]o\s*\d+\s*-\s*/i', '', $cleanLabel) ?? $cleanLabel);
+
+        if ($cleanLabel === '') {
+            $cleanLabel = $itemLabel !== '' ? $itemLabel : 'Sem titulo';
+        }
+
+        if ($normalized === 'COURSE') {
+            return sprintf(
+                'Modulo %d, licao %d: %s. Continue seu progresso neste curso.',
+                max(1, $seasonNumber),
+                max(1, $episodeNumber),
+                $cleanLabel
+            );
+        }
+
+        if ($normalized === 'SERIES') {
+            return sprintf(
+                'Temporada %d, episodio %d: %s. %s',
+                max(1, $seasonNumber),
+                max(1, $episodeNumber),
+                $cleanLabel,
+                trim($titleDescription) !== '' ? trim($titleDescription) : 'Continue assistindo para descobrir os proximos acontecimentos.'
+            );
+        }
+
+        return trim($titleDescription) !== '' ? trim($titleDescription) : $cleanLabel;
     }
 
     private function formatMediaDuration(int $minutes): string
