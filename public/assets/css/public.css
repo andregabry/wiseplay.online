@@ -2370,6 +2370,8 @@ body.wp-modal-open {
   overflow-y: visible;
   padding-top: 14px;
   padding-bottom: 60px;
+  padding-left: 4px;
+  padding-right: 4px;
 }
 
 .wp-row-rail--cinema .wp-title-card--cinema:first-child {
@@ -2389,6 +2391,7 @@ body.wp-modal-open {
   transition: transform 0.22s ease;
   transform-origin: center center;
   z-index: 1;
+  will-change: transform;
 }
 
 .wp-title-card--cinema .wp-title-cover {
@@ -2407,8 +2410,20 @@ body.wp-modal-open {
 }
 
 .wp-title-card--cinema.is-hover-active {
-  transform: scale(1.28) translateY(-22px);
+  transform: scale(1.22) translateY(-18px);
   z-index: 16;
+}
+
+.wp-title-card--cinema.is-edge-left {
+  transform-origin: left center;
+}
+
+.wp-title-card--cinema.is-edge-right {
+  transform-origin: right center;
+}
+
+.wp-title-card--cinema.is-edge-center {
+  transform-origin: center center;
 }
 
 .wp-title-badge-top10 {
@@ -2858,9 +2873,32 @@ body.wp-modal-open {
 }
 
 .wp-continue-card--cinema {
+  position: relative;
   border-radius: 6px;
   background: #1c1c1c;
   border: 0;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  transform-origin: center center;
+  z-index: 1;
+  will-change: transform;
+}
+
+.wp-continue-card--cinema.is-hover-active {
+  transform: scale(1.12) translateY(-8px);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.62);
+  z-index: 16;
+}
+
+.wp-continue-card--cinema.is-edge-left {
+  transform-origin: left center;
+}
+
+.wp-continue-card--cinema.is-edge-right {
+  transform-origin: right center;
+}
+
+.wp-continue-card--cinema.is-edge-center {
+  transform-origin: center center;
 }
 
 .wp-watch-page {
@@ -3015,6 +3053,10 @@ body.wp-modal-open {
 
   .wp-title-card--cinema.is-hover-active {
     transform: scale(1.14) translateY(-10px);
+  }
+
+  .wp-continue-card--cinema.is-hover-active {
+    transform: scale(1.06) translateY(-4px);
   }
 
   .wp-title-modal-dialog {

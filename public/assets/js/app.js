@@ -351,12 +351,51 @@
   }
 
   function bindBrowseHoverPreview() {
-    var $cards = $('.wp-title-card--cinema');
+    var CARD_SELECTOR = '.wp-title-card--cinema, .wp-continue-card--cinema';
+    var $cards = $(CARD_SELECTOR);
     if (!$cards.length) {
       return;
     }
 
     var closeTimer = null;
+    var EDGE_CLASS_LEFT = 'is-edge-left';
+    var EDGE_CLASS_RIGHT = 'is-edge-right';
+    var EDGE_CLASS_CENTER = 'is-edge-center';
+
+    function clearEdgeClasses($card) {
+      $card.removeClass(EDGE_CLASS_LEFT + ' ' + EDGE_CLASS_RIGHT + ' ' + EDGE_CLASS_CENTER);
+    }
+
+    function applyEdgeClass($card) {
+      var cardEl = $card.get(0);
+      if (!cardEl || typeof cardEl.getBoundingClientRect !== 'function') {
+        return;
+      }
+
+      clearEdgeClasses($card);
+
+      var cardRect = cardEl.getBoundingClientRect();
+      var railEl = $card.closest('.wp-row-rail, .wp-continue-grid').get(0);
+      var railRect = railEl && typeof railEl.getBoundingClientRect === 'function'
+        ? railEl.getBoundingClientRect()
+        : { left: 0, right: window.innerWidth || 0 };
+
+      var leftGap = cardRect.left - railRect.left;
+      var rightGap = railRect.right - cardRect.right;
+      var threshold = 28;
+
+      if (leftGap <= threshold) {
+        $card.addClass(EDGE_CLASS_LEFT);
+        return;
+      }
+
+      if (rightGap <= threshold) {
+        $card.addClass(EDGE_CLASS_RIGHT);
+        return;
+      }
+
+      $card.addClass(EDGE_CLASS_CENTER);
+    }
 
     function stopCardVideo($card) {
       var video = $card.find('.js-card-hover-video').get(0);
@@ -376,9 +415,12 @@
         return;
       }
 
+      applyEdgeClass($card);
+
       $cards.not($card).each(function () {
         var $other = $(this);
         $other.removeClass('is-hover-active');
+        clearEdgeClasses($other);
         stopCardVideo($other);
       });
 
@@ -414,6 +456,7 @@
         return;
       }
       $card.removeClass('is-hover-active');
+      clearEdgeClasses($card);
       stopCardVideo($card);
     }
 
@@ -444,7 +487,7 @@
       });
     });
 
-    $(document).on('mouseenter focusin', '.wp-title-card--cinema', function () {
+    $(document).on('mouseenter focusin', CARD_SELECTOR, function () {
       if (closeTimer) {
         window.clearTimeout(closeTimer);
         closeTimer = null;
@@ -452,7 +495,7 @@
       openCard($(this));
     });
 
-    $(document).on('mouseleave focusout', '.wp-title-card--cinema', function () {
+    $(document).on('mouseleave focusout', CARD_SELECTOR, function () {
       var $card = $(this);
       closeTimer = window.setTimeout(function () {
         closeCard($card);
