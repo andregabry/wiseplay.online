@@ -357,54 +357,39 @@
       return;
     }
 
+    var OPEN_DELAY_MS = 220;
+    var OPEN_DELAY_WHEN_ACTIVE_MS = 140;
+    var CLOSE_DELAY_MS = 150;
+    var EDGE_PADDING_PX = 10;
+    var HEADER_SAFE_TOP = 74;
+    var FLYOUT_SELECTOR = '.wp-hover-flyout';
+
+    var openTimer = null;
     var closeTimer = null;
-    var EDGE_CLASS_LEFT = 'is-edge-left';
-    var EDGE_CLASS_RIGHT = 'is-edge-right';
-    var EDGE_CLASS_CENTER = 'is-edge-center';
-    var PREVIEW_READY_CLASS = 'is-preview-ready';
-    var ROW_HOVER_CLASS = 'is-hover-context';
+    var activeCard = null;
+    var activeFlyout = null;
+    var flyoutHovered = false;
 
-    function clearEdgeClasses($card) {
-      $card.removeClass(EDGE_CLASS_LEFT + ' ' + EDGE_CLASS_RIGHT + ' ' + EDGE_CLASS_CENTER);
+    var $root = $('#wp-hover-flyout-root');
+    if (!$root.length) {
+      $root = $('<div id="wp-hover-flyout-root" class="wp-hover-flyout-root" hidden></div>');
+      $('body').append($root);
     }
 
-    function clearPreviewReady($card) {
-      $card.removeClass(PREVIEW_READY_CLASS);
+    function getCardScale($card) {
+      var isContinue = $card.hasClass('wp-continue-card--cinema');
+      var compact = window.matchMedia && window.matchMedia('(max-width: 1100px)').matches;
+      if (compact) {
+        return isContinue ? 1.14 : 1.18;
+      }
+      return isContinue ? 1.28 : 1.3;
     }
 
-    function applyEdgeClass($card) {
-      var cardEl = $card.get(0);
-      if (!cardEl || typeof cardEl.getBoundingClientRect !== 'function') {
+    function stopFlyoutVideo($flyout) {
+      if (!$flyout || !$flyout.length) {
         return;
       }
-
-      clearEdgeClasses($card);
-
-      var cardRect = cardEl.getBoundingClientRect();
-      var railEl = $card.closest('.wp-row-rail, .wp-continue-grid').get(0);
-      var railRect = railEl && typeof railEl.getBoundingClientRect === 'function'
-        ? railEl.getBoundingClientRect()
-        : { left: 0, right: window.innerWidth || 0 };
-
-      var leftGap = cardRect.left - railRect.left;
-      var rightGap = railRect.right - cardRect.right;
-      var threshold = 28;
-
-      if (leftGap <= threshold) {
-        $card.addClass(EDGE_CLASS_LEFT);
-        return;
-      }
-
-      if (rightGap <= threshold) {
-        $card.addClass(EDGE_CLASS_RIGHT);
-        return;
-      }
-
-      $card.addClass(EDGE_CLASS_CENTER);
-    }
-
-    function stopCardVideo($card) {
-      var video = $card.find('.js-card-hover-video').get(0);
+      var video = $flyout.find('.js-card-hover-video').get(0);
       if (!video) {
         return;
       }
@@ -414,31 +399,64 @@
       } catch (error) {
         // noop
       }
-      clearPreviewReady($card);
     }
 
-    function openCard($card) {
-      if (!$card.length) {
+    function clearTimers() {
+      if (openTimer) {
+        window.clearTimeout(openTimer);
+        openTimer = null;
+      }
+      if (closeTimer) {
+        window.clearTimeout(closeTimer);
+        closeTimer = null;
+      }
+    }
+
+    function closeFlyout(immediate) {
+      clearTimers();
+      var $flyout = activeFlyout;
+      var $card = activeCard;
+      activeFlyout = null;
+      activeCard = null;
+      flyoutHovered = false;
+      if ($card && $card.length) {
+        $card.removeClass('is-hover-source');
+      }
+      if (!$flyout || !$flyout.length) {
+        $root.attr('hidden', 'hidden').empty();
         return;
       }
 
-      applyEdgeClass($card);
-      var $rowSection = $card.closest('.wp-row-section');
-      $('.wp-row-section').removeClass(ROW_HOVER_CLASS);
-      if ($rowSection.length) {
-        $rowSection.addClass(ROW_HOVER_CLASS);
+      stopFlyoutVideo($flyout);
+      var removeNode = function () {
+        $flyout.remove();
+        if (!$root.children().length) {
+          $root.attr('hidden', 'hidden').empty();
+        }
+      };
+
+      if (immediate) {
+        removeNode();
+      } else {
+        $flyout.removeClass('is-active');
+        window.setTimeout(removeNode, 180);
       }
+    }
 
-      $cards.not($card).each(function () {
-        var $other = $(this);
-        $other.removeClass('is-hover-active');
-        clearEdgeClasses($other);
-        clearPreviewReady($other);
-        stopCardVideo($other);
-      });
+    function scheduleClose() {
+      if (closeTimer) {
+        window.clearTimeout(closeTimer);
+      }
+      closeTimer = window.setTimeout(function () {
+        if (flyoutHovered) {
+          return;
+        }
+        closeFlyout(false);
+      }, CLOSE_DELAY_MS);
+    }
 
-      $card.addClass('is-hover-active');
-      var video = $card.find('.js-card-hover-video').get(0);
+    function wireFlyoutVideo($flyout) {
+      var video = $flyout.find('.js-card-hover-video').get(0);
       if (!video) {
         return;
       }
@@ -446,95 +464,186 @@
       var src = String($(video).attr('data-src') || '');
       var mime = String($(video).attr('data-mime') || '');
       if (src && !video.getAttribute('src')) {
-        video.setAttribute('data-ready', '0');
         video.src = src;
         if (mime) {
           video.setAttribute('type', mime);
         }
       }
+
       video.muted = true;
       video.defaultMuted = true;
       video.playsInline = true;
       video.loop = false;
 
-      if (String(video.getAttribute('data-ready') || '0') === '1') {
-        $card.addClass(PREVIEW_READY_CLASS);
-      } else {
-        $card.removeClass(PREVIEW_READY_CLASS);
-      }
-
-      var playPromise = video.play();
-      if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(function () {
-          // Autoplay may be blocked by browser policy.
-        });
-      }
-    }
-
-    function closeCard($card) {
-      if (!$card.length) {
-        return;
-      }
-      $card.removeClass('is-hover-active');
-      clearEdgeClasses($card);
-      clearPreviewReady($card);
-      stopCardVideo($card);
-      $card.closest('.wp-row-section').removeClass(ROW_HOVER_CLASS);
-    }
-
-    $cards.each(function () {
-      var $card = $(this);
-      var video = $card.find('.js-card-hover-video').get(0);
-      if (!video) {
-        return;
-      }
-
       var markReady = function () {
-        video.setAttribute('data-ready', '1');
-        if ($card.hasClass('is-hover-active')) {
-          $card.addClass(PREVIEW_READY_CLASS);
-        }
+        $flyout.addClass('is-preview-ready');
       };
-
       video.addEventListener('loadeddata', markReady);
       video.addEventListener('canplay', markReady);
       video.addEventListener('playing', markReady);
-
       video.addEventListener('timeupdate', function () {
         if (video.currentTime >= 45) {
           video.currentTime = 0;
-          var playPromise = video.play();
-          if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(function () {
-              // noop
-            });
+          var p = video.play();
+          if (p && typeof p.catch === 'function') {
+            p.catch(function () {});
           }
         }
       });
       video.addEventListener('ended', function () {
         video.currentTime = 0;
-        var playPromise = video.play();
-        if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch(function () {
-            // noop
-          });
+        var p = video.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(function () {});
         }
       });
-    });
+
+      var playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(function () {
+          // Autoplay may be blocked.
+        });
+      }
+    }
+
+    function buildFlyoutForCard($card) {
+      var cardEl = $card.get(0);
+      if (!cardEl || typeof cardEl.getBoundingClientRect !== 'function') {
+        return null;
+      }
+      var $surface = $card.find('.wp-title-card-surface').first().clone(true, true);
+      if (!$surface.length) {
+        return null;
+      }
+
+      var rect = cardEl.getBoundingClientRect();
+      var scale = getCardScale($card);
+      var expandedWidth = Math.round(rect.width * scale);
+
+      var $tempMeasure = $('<div class="wp-hover-flyout wp-hover-flyout--measure"></div>').append($surface.clone(true, true));
+      $tempMeasure.css({
+        left: '-9999px',
+        top: '-9999px',
+        width: expandedWidth + 'px'
+      });
+      $root.removeAttr('hidden').append($tempMeasure);
+      var panelHeight = Math.ceil($tempMeasure.find('.wp-title-hover-panel').outerHeight() || 0);
+      var mediaHeight = Math.ceil($tempMeasure.find('.wp-title-cover').outerHeight() || Math.round(rect.height * scale));
+      $tempMeasure.remove();
+
+      var viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+      var viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+
+      var left = Math.round(rect.left - ((expandedWidth - rect.width) / 2));
+      if (left < EDGE_PADDING_PX) {
+        left = EDGE_PADDING_PX;
+      }
+      if (left + expandedWidth > viewportWidth - EDGE_PADDING_PX) {
+        left = Math.max(EDGE_PADDING_PX, viewportWidth - EDGE_PADDING_PX - expandedWidth);
+      }
+
+      var fullHeight = mediaHeight + panelHeight;
+      var top = Math.round(rect.top - 14);
+      if (top + fullHeight > viewportHeight - EDGE_PADDING_PX) {
+        top = Math.max(HEADER_SAFE_TOP, viewportHeight - EDGE_PADDING_PX - fullHeight);
+      }
+      if (top < HEADER_SAFE_TOP) {
+        top = HEADER_SAFE_TOP;
+      }
+
+      var $flyout = $('<div class="wp-hover-flyout"></div>');
+      $flyout.css({
+        left: left + 'px',
+        top: top + 'px',
+        width: expandedWidth + 'px'
+      });
+      $flyout.append($surface);
+
+      return $flyout;
+    }
+
+    function openFlyout($card) {
+      if (!$card || !$card.length) {
+        return;
+      }
+      if (activeCard && activeCard.get(0) === $card.get(0) && activeFlyout && activeFlyout.length) {
+        return;
+      }
+
+      closeFlyout(true);
+      var $flyout = buildFlyoutForCard($card);
+      if (!$flyout || !$flyout.length) {
+        return;
+      }
+
+      activeCard = $card;
+      activeFlyout = $flyout;
+      $card.addClass('is-hover-source');
+
+      $root.removeAttr('hidden').append($flyout);
+      window.requestAnimationFrame(function () {
+        if (activeFlyout && activeFlyout.get(0) === $flyout.get(0)) {
+          $flyout.addClass('is-active');
+        }
+      });
+
+      wireFlyoutVideo($flyout);
+    }
 
     $(document).on('mouseenter focusin', CARD_SELECTOR, function () {
+      var $current = $(this);
       if (closeTimer) {
         window.clearTimeout(closeTimer);
         closeTimer = null;
       }
-      openCard($(this));
+      if (openTimer) {
+        window.clearTimeout(openTimer);
+      }
+      var delay = activeFlyout ? OPEN_DELAY_WHEN_ACTIVE_MS : OPEN_DELAY_MS;
+      openTimer = window.setTimeout(function () {
+        openFlyout($current);
+        openTimer = null;
+      }, delay);
     });
 
     $(document).on('mouseleave focusout', CARD_SELECTOR, function () {
-      var $card = $(this);
-      closeTimer = window.setTimeout(function () {
-        closeCard($card);
-      }, 80);
+      if (openTimer) {
+        window.clearTimeout(openTimer);
+        openTimer = null;
+      }
+      scheduleClose();
+    });
+
+    $root.on('mouseenter', FLYOUT_SELECTOR, function () {
+      flyoutHovered = true;
+      if (closeTimer) {
+        window.clearTimeout(closeTimer);
+        closeTimer = null;
+      }
+    });
+
+    $root.on('mouseleave', FLYOUT_SELECTOR, function () {
+      flyoutHovered = false;
+      scheduleClose();
+    });
+
+    $root.on('click', '.js-card-sound-toggle', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      var $flyout = $(this).closest(FLYOUT_SELECTOR);
+      var video = $flyout.find('.js-card-hover-video').get(0);
+      if (!video) {
+        return;
+      }
+      video.muted = !video.muted;
+      video.defaultMuted = video.muted;
+      $(this).toggleClass('is-on', !video.muted);
+    });
+
+    $(window).on('scroll resize', function () {
+      if (activeFlyout) {
+        closeFlyout(true);
+      }
     });
   }
 

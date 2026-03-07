@@ -148,8 +148,9 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
           </div>
         </div>
 
-        <div class="wp-row-rail wp-row-rail--cinema" id="<?= e($railId) ?>">
-          <?php foreach ($items as $itemIndex => $titleItem): ?>
+        <div class="wp-row-rail-scroll" id="<?= e($railId) ?>">
+          <div class="wp-row-rail wp-row-rail--cinema">
+            <?php foreach ($items as $itemIndex => $titleItem): ?>
             <?php
               $titleId = (int) $titleItem['id'];
               $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), $imageFallback);
@@ -168,59 +169,63 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
                   $highlightRibbon = 'Nova temporada';
               }
             ?>
-            <article class="wp-title-card wp-title-card--cinema<?= $cardPreviewUrl !== '' ? ' has-hover-preview' : '' ?>">
-              <a href="/title/<?= $titleId ?>" class="wp-title-cover">
-                <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
-                <?php if ($cardPreviewUrl !== ''): ?>
-                  <video class="wp-title-cover-preview js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($cardPreviewUrl) ?>"<?= $cardPreviewMime !== '' ? ' data-mime="' . e($cardPreviewMime) . '"' : '' ?>></video>
-                <?php endif; ?>
-                <?php if ($showTop10Badge): ?><span class="wp-title-badge-top10">TOP 10</span><?php endif; ?>
-                <?php if ($highlightRibbon !== ''): ?><span class="wp-title-badge-ribbon"><?= e($highlightRibbon) ?></span><?php endif; ?>
-              </a>
-              <div class="wp-title-hover-panel">
-                <div class="wp-title-hover-actions">
-                  <?php if ($playable): ?>
-                    <a class="wp-hover-circle wp-hover-circle--play" href="/watch/<?= (int) $playable['id'] ?>" aria-label="Assistir">&#9658;</a>
-                  <?php endif; ?>
-                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
-                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
-                  <button
-                    type="button"
-                    class="wp-hover-circle wp-hover-circle--chevron js-open-title-modal"
-                    data-title-id="<?= $titleId ?>"
-                    <?= $cardPreviewUrl !== '' ? 'data-preview-url="' . e($cardPreviewUrl) . '"' : '' ?>
-                    <?= $cardPreviewMime !== '' ? 'data-preview-mime="' . e($cardPreviewMime) . '"' : '' ?>
-                    aria-label="Mais informacoes">&#709;</button>
-                </div>
-                <?php if ($hoverBadges !== []): ?>
-                  <div class="wp-title-hover-badges">
-                    <?php foreach ($hoverBadges as $badge): ?>
-                      <?php if (trim((string) $badge) === '') { continue; } ?>
-                      <span><?= e((string) $badge) ?></span>
-                    <?php endforeach; ?>
+              <article class="wp-title-card wp-title-card--cinema<?= $cardPreviewUrl !== '' ? ' has-hover-preview' : '' ?>">
+                <div class="wp-title-card-surface">
+                  <a href="/title/<?= $titleId ?>" class="wp-title-cover">
+                    <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
+                    <?php if ($cardPreviewUrl !== ''): ?>
+                      <video class="wp-title-cover-preview js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($cardPreviewUrl) ?>"<?= $cardPreviewMime !== '' ? ' data-mime="' . e($cardPreviewMime) . '"' : '' ?>></video>
+                      <button type="button" class="wp-card-sound-toggle js-card-sound-toggle" aria-label="Ativar/desativar audio">&#128266;</button>
+                    <?php endif; ?>
+                    <?php if ($showTop10Badge): ?><span class="wp-title-badge-top10">TOP 10</span><?php endif; ?>
+                    <?php if ($highlightRibbon !== ''): ?><span class="wp-title-badge-ribbon"><?= e($highlightRibbon) ?></span><?php endif; ?>
+                  </a>
+                  <div class="wp-title-hover-panel">
+                    <div class="wp-title-hover-actions">
+                      <?php if ($playable): ?>
+                        <a class="wp-hover-circle wp-hover-circle--play" href="/watch/<?= (int) $playable['id'] ?>" aria-label="Assistir">&#9658;</a>
+                      <?php endif; ?>
+                      <button type="button" class="wp-hover-circle js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
+                      <button type="button" class="wp-hover-circle js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
+                      <button
+                        type="button"
+                        class="wp-hover-circle wp-hover-circle--chevron js-open-title-modal"
+                        data-title-id="<?= $titleId ?>"
+                        <?= $cardPreviewUrl !== '' ? 'data-preview-url="' . e($cardPreviewUrl) . '"' : '' ?>
+                        <?= $cardPreviewMime !== '' ? 'data-preview-mime="' . e($cardPreviewMime) . '"' : '' ?>
+                        aria-label="Mais informacoes">&#709;</button>
+                    </div>
+                    <?php if ($hoverBadges !== []): ?>
+                      <div class="wp-title-hover-badges">
+                        <?php foreach ($hoverBadges as $badge): ?>
+                          <?php if (trim((string) $badge) === '') { continue; } ?>
+                          <span><?= e((string) $badge) ?></span>
+                        <?php endforeach; ?>
+                      </div>
+                    <?php endif; ?>
+                    <?php if ($hoverTags !== []): ?>
+                      <p class="wp-title-hover-tags"><?= e(implode(' • ', $hoverTags)) ?></p>
+                    <?php endif; ?>
                   </div>
-                <?php endif; ?>
-                <?php if ($hoverTags !== []): ?>
-                  <p class="wp-title-hover-tags"><?= e(implode(' • ', $hoverTags)) ?></p>
-                <?php endif; ?>
-              </div>
-              <div class="wp-title-meta wp-title-meta--cinema">
-                <h3><?= e((string) $titleItem['title_name']) ?></h3>
-                <p><?= e((string) ($titleItem['type'] ?? 'TITLE')) ?> • <?= e((string) ($titleItem['maturity_rating'] ?? '16')) ?></p>
-                <div class="wp-title-actions">
-                  <?php if ($playable): ?>
-                    <a class="wp-btn tiny light" href="/watch/<?= (int) $playable['id'] ?>">Assistir</a>
-                  <?php endif; ?>
-                  <button
-                    type="button"
-                    class="wp-btn tiny ghost js-open-title-modal"
-                    data-title-id="<?= $titleId ?>"
-                    <?= $cardPreviewUrl !== '' ? 'data-preview-url="' . e($cardPreviewUrl) . '"' : '' ?>
-                    <?= $cardPreviewMime !== '' ? 'data-preview-mime="' . e($cardPreviewMime) . '"' : '' ?>>Mais informacoes</button>
+                  <div class="wp-title-meta wp-title-meta--cinema">
+                    <h3><?= e((string) $titleItem['title_name']) ?></h3>
+                    <p><?= e((string) ($titleItem['type'] ?? 'TITLE')) ?> • <?= e((string) ($titleItem['maturity_rating'] ?? '16')) ?></p>
+                    <div class="wp-title-actions">
+                      <?php if ($playable): ?>
+                        <a class="wp-btn tiny light" href="/watch/<?= (int) $playable['id'] ?>">Assistir</a>
+                      <?php endif; ?>
+                      <button
+                        type="button"
+                        class="wp-btn tiny ghost js-open-title-modal"
+                        data-title-id="<?= $titleId ?>"
+                        <?= $cardPreviewUrl !== '' ? 'data-preview-url="' . e($cardPreviewUrl) . '"' : '' ?>
+                        <?= $cardPreviewMime !== '' ? 'data-preview-mime="' . e($cardPreviewMime) . '"' : '' ?>>Mais informacoes</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </article>
-          <?php endforeach; ?>
+              </article>
+            <?php endforeach; ?>
+          </div>
         </div>
       </section>
       <?php $rowIndex++; ?>
@@ -231,8 +236,9 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
         <div class="wp-row-head">
           <h2>Continue assistindo</h2>
         </div>
-        <div class="wp-continue-grid">
-          <?php foreach ($continueWatching as $item): ?>
+        <div class="wp-continue-scroll">
+          <div class="wp-continue-grid">
+            <?php foreach ($continueWatching as $item): ?>
             <?php
               $cover = $assetOrFallback((string) ($item['cover_image'] ?? ''), $imageFallback);
               $progress = max(0, min(100, (int) ($item['progress_percent'] ?? 0)));
@@ -243,51 +249,55 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
               $continuePreviewMime = trim((string) ($continueMeta['preview_mime'] ?? ''));
               $continueBadges = array_values(array_filter((array) ($continueMeta['hover_badges'] ?? []), static fn ($v) => trim((string) $v) !== ''));
             ?>
-            <article class="wp-continue-card wp-continue-card--cinema wp-title-card wp-title-card--cinema<?= $continuePreviewUrl !== '' ? ' has-hover-preview' : '' ?>">
-              <a href="/watch/<?= $mediaId ?>" class="wp-title-cover">
-                <img src="<?= e($cover) ?>" alt="<?= e((string) $item['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
-                <?php if ($continuePreviewUrl !== ''): ?>
-                  <video class="wp-title-cover-preview js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($continuePreviewUrl) ?>"<?= $continuePreviewMime !== '' ? ' data-mime="' . e($continuePreviewMime) . '"' : '' ?>></video>
-                <?php endif; ?>
-              </a>
-              <div class="wp-continue-body">
-                <h3><?= e((string) $item['title_name']) ?></h3>
-                <p><?= e((string) $item['item_label']) ?></p>
-                <div class="wp-progress"><span style="width: <?= $progress ?>%"></span></div>
-              </div>
-              <div class="wp-title-hover-panel wp-title-hover-panel--continue">
-                <div class="wp-title-hover-actions">
-                  <a class="wp-hover-circle wp-hover-circle--play" href="/watch/<?= $mediaId ?>" aria-label="Assistir">&#9658;</a>
-                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
-                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Remover da lista" aria-label="Remover da minha lista">&times;</button>
-                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
-                  <button
-                    type="button"
-                    class="wp-hover-circle wp-hover-circle--chevron js-open-title-modal"
-                    data-title-id="<?= $titleId ?>"
-                    <?= $continuePreviewUrl !== '' ? 'data-preview-url="' . e($continuePreviewUrl) . '"' : '' ?>
-                    <?= $continuePreviewMime !== '' ? 'data-preview-mime="' . e($continuePreviewMime) . '"' : '' ?>
-                    aria-label="Mais informacoes">&#709;</button>
-                </div>
-                <?php if ($continueBadges !== []): ?>
-                  <div class="wp-title-hover-badges">
-                    <?php foreach ($continueBadges as $badge): ?>
-                      <span><?= e((string) $badge) ?></span>
-                    <?php endforeach; ?>
+              <article class="wp-continue-card wp-continue-card--cinema wp-title-card wp-title-card--cinema<?= $continuePreviewUrl !== '' ? ' has-hover-preview' : '' ?>">
+                <div class="wp-title-card-surface">
+                  <a href="/watch/<?= $mediaId ?>" class="wp-title-cover">
+                    <img src="<?= e($cover) ?>" alt="<?= e((string) $item['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
+                    <?php if ($continuePreviewUrl !== ''): ?>
+                      <video class="wp-title-cover-preview js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($continuePreviewUrl) ?>"<?= $continuePreviewMime !== '' ? ' data-mime="' . e($continuePreviewMime) . '"' : '' ?>></video>
+                      <button type="button" class="wp-card-sound-toggle js-card-sound-toggle" aria-label="Ativar/desativar audio">&#128266;</button>
+                    <?php endif; ?>
+                  </a>
+                  <div class="wp-continue-body">
+                    <h3><?= e((string) $item['title_name']) ?></h3>
+                    <p><?= e((string) $item['item_label']) ?></p>
+                    <div class="wp-progress"><span style="width: <?= $progress ?>%"></span></div>
                   </div>
-                <?php endif; ?>
-                <div class="wp-continue-hover-copy">
-                  <p><?= e((string) $item['item_label']) ?></p>
-                  <div class="wp-continue-hover-progress-meta">
-                    <div class="wp-continue-hover-progress-line">
-                      <span class="bar" style="width: <?= $progress ?>%"></span>
+                  <div class="wp-title-hover-panel wp-title-hover-panel--continue">
+                    <div class="wp-title-hover-actions">
+                      <a class="wp-hover-circle wp-hover-circle--play" href="/watch/<?= $mediaId ?>" aria-label="Assistir">&#9658;</a>
+                      <button type="button" class="wp-hover-circle js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
+                      <button type="button" class="wp-hover-circle js-public-soon" data-label="Remover da lista" aria-label="Remover da minha lista">&times;</button>
+                      <button type="button" class="wp-hover-circle js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
+                      <button
+                        type="button"
+                        class="wp-hover-circle wp-hover-circle--chevron js-open-title-modal"
+                        data-title-id="<?= $titleId ?>"
+                        <?= $continuePreviewUrl !== '' ? 'data-preview-url="' . e($continuePreviewUrl) . '"' : '' ?>
+                        <?= $continuePreviewMime !== '' ? 'data-preview-mime="' . e($continuePreviewMime) . '"' : '' ?>
+                        aria-label="Mais informacoes">&#709;</button>
                     </div>
-                    <span><?= $progress ?>%</span>
+                    <?php if ($continueBadges !== []): ?>
+                      <div class="wp-title-hover-badges">
+                        <?php foreach ($continueBadges as $badge): ?>
+                          <span><?= e((string) $badge) ?></span>
+                        <?php endforeach; ?>
+                      </div>
+                    <?php endif; ?>
+                    <div class="wp-continue-hover-copy">
+                      <p><?= e((string) $item['item_label']) ?></p>
+                      <div class="wp-continue-hover-progress-meta">
+                        <div class="wp-continue-hover-progress-line">
+                          <span class="bar" style="width: <?= $progress ?>%"></span>
+                        </div>
+                        <span><?= $progress ?>%</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          <?php endforeach; ?>
+              </article>
+            <?php endforeach; ?>
+          </div>
         </div>
       </section>
     <?php endif; ?>
