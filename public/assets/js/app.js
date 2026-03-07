@@ -361,9 +361,14 @@
     var EDGE_CLASS_LEFT = 'is-edge-left';
     var EDGE_CLASS_RIGHT = 'is-edge-right';
     var EDGE_CLASS_CENTER = 'is-edge-center';
+    var PREVIEW_READY_CLASS = 'is-preview-ready';
 
     function clearEdgeClasses($card) {
       $card.removeClass(EDGE_CLASS_LEFT + ' ' + EDGE_CLASS_RIGHT + ' ' + EDGE_CLASS_CENTER);
+    }
+
+    function clearPreviewReady($card) {
+      $card.removeClass(PREVIEW_READY_CLASS);
     }
 
     function applyEdgeClass($card) {
@@ -408,6 +413,7 @@
       } catch (error) {
         // noop
       }
+      clearPreviewReady($card);
     }
 
     function openCard($card) {
@@ -421,6 +427,7 @@
         var $other = $(this);
         $other.removeClass('is-hover-active');
         clearEdgeClasses($other);
+        clearPreviewReady($other);
         stopCardVideo($other);
       });
 
@@ -433,6 +440,7 @@
       var src = String($(video).attr('data-src') || '');
       var mime = String($(video).attr('data-mime') || '');
       if (src && !video.getAttribute('src')) {
+        video.setAttribute('data-ready', '0');
         video.src = src;
         if (mime) {
           video.setAttribute('type', mime);
@@ -442,6 +450,12 @@
       video.defaultMuted = true;
       video.playsInline = true;
       video.loop = false;
+
+      if (String(video.getAttribute('data-ready') || '0') === '1') {
+        $card.addClass(PREVIEW_READY_CLASS);
+      } else {
+        $card.removeClass(PREVIEW_READY_CLASS);
+      }
 
       var playPromise = video.play();
       if (playPromise && typeof playPromise.catch === 'function') {
@@ -457,14 +471,28 @@
       }
       $card.removeClass('is-hover-active');
       clearEdgeClasses($card);
+      clearPreviewReady($card);
       stopCardVideo($card);
     }
 
     $cards.each(function () {
-      var video = $(this).find('.js-card-hover-video').get(0);
+      var $card = $(this);
+      var video = $card.find('.js-card-hover-video').get(0);
       if (!video) {
         return;
       }
+
+      var markReady = function () {
+        video.setAttribute('data-ready', '1');
+        if ($card.hasClass('is-hover-active')) {
+          $card.addClass(PREVIEW_READY_CLASS);
+        }
+      };
+
+      video.addEventListener('loadeddata', markReady);
+      video.addEventListener('canplay', markReady);
+      video.addEventListener('playing', markReady);
+
       video.addEventListener('timeupdate', function () {
         if (video.currentTime >= 45) {
           video.currentTime = 0;

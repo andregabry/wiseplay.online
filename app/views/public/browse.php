@@ -154,6 +154,11 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
               $titleId = (int) $titleItem['id'];
               $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), $imageFallback);
               $playable = $firstPlayableByTitle[$titleId] ?? null;
+              $cardMeta = $browseMetaByTitle[$titleId] ?? [];
+              $cardPreviewUrl = trim((string) ($cardMeta['preview_url'] ?? ''));
+              $cardPreviewMime = trim((string) ($cardMeta['preview_mime'] ?? ''));
+              $hoverBadges = (array) ($cardMeta['hover_badges'] ?? []);
+              $hoverTags = (array) ($cardMeta['tags'] ?? []);
               $isFeaturedTitle = (int) ($titleItem['featured'] ?? 0) === 1;
               $showTop10Badge = $rowIndex <= 1 && $itemIndex < 2;
               $highlightRibbon = '';
@@ -163,27 +168,16 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
                   $highlightRibbon = 'Nova temporada';
               }
             ?>
-            <article class="wp-title-card wp-title-card--cinema">
+            <article class="wp-title-card wp-title-card--cinema<?= $cardPreviewUrl !== '' ? ' has-hover-preview' : '' ?>">
               <a href="/title/<?= $titleId ?>" class="wp-title-cover">
                 <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
+                <?php if ($cardPreviewUrl !== ''): ?>
+                  <video class="wp-title-cover-preview js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($cardPreviewUrl) ?>"<?= $cardPreviewMime !== '' ? ' data-mime="' . e($cardPreviewMime) . '"' : '' ?>></video>
+                <?php endif; ?>
                 <?php if ($showTop10Badge): ?><span class="wp-title-badge-top10">TOP 10</span><?php endif; ?>
                 <?php if ($highlightRibbon !== ''): ?><span class="wp-title-badge-ribbon"><?= e($highlightRibbon) ?></span><?php endif; ?>
               </a>
-              <?php
-                $cardMeta = $browseMetaByTitle[$titleId] ?? [];
-                $cardPreviewUrl = trim((string) ($cardMeta['preview_url'] ?? ''));
-                $cardPreviewMime = trim((string) ($cardMeta['preview_mime'] ?? ''));
-                $hoverBadges = (array) ($cardMeta['hover_badges'] ?? []);
-                $hoverTags = (array) ($cardMeta['tags'] ?? []);
-              ?>
               <div class="wp-title-hover-panel">
-                <div class="wp-title-hover-media">
-                  <?php if ($cardPreviewUrl !== ''): ?>
-                    <video class="wp-title-hover-video js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($cardPreviewUrl) ?>"<?= $cardPreviewMime !== '' ? ' data-mime="' . e($cardPreviewMime) . '"' : '' ?>></video>
-                  <?php else: ?>
-                    <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
-                  <?php endif; ?>
-                </div>
                 <div class="wp-title-hover-actions">
                   <?php if ($playable): ?>
                     <a class="wp-hover-circle wp-hover-circle--play" href="/watch/<?= (int) $playable['id'] ?>" aria-label="Assistir">&#9658;</a>

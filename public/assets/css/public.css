@@ -2395,18 +2395,43 @@ body.wp-modal-open {
 }
 
 .wp-title-card--cinema .wp-title-cover {
+  position: relative;
   aspect-ratio: 16 / 9;
   border-radius: 5px;
   overflow: hidden;
+  background: #080808;
 }
 
 .wp-title-card--cinema .wp-title-cover img {
-  transition: transform 0.28s ease;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.28s ease, opacity 0.34s ease;
+}
+
+.wp-title-cover-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.34s ease;
+  pointer-events: none;
 }
 
 .wp-title-card--cinema:hover .wp-title-cover img,
 .wp-title-card--cinema.is-hover-active .wp-title-cover img {
   transform: scale(1.06);
+}
+
+.wp-title-card--cinema.has-hover-preview.is-preview-ready.is-hover-active .wp-title-cover img {
+  opacity: 0;
+}
+
+.wp-title-card--cinema.has-hover-preview.is-preview-ready.is-hover-active .wp-title-cover-preview {
+  opacity: 1;
 }
 
 .wp-title-card--cinema.is-hover-active {
@@ -2474,21 +2499,6 @@ body.wp-modal-open {
 
 .wp-title-card--cinema.is-hover-active .wp-title-meta--cinema {
   display: none;
-}
-
-.wp-title-hover-media {
-  aspect-ratio: 16 / 9;
-  border-radius: 0;
-  overflow: hidden;
-  background: #080808;
-}
-
-.wp-title-hover-media img,
-.wp-title-hover-video {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
 }
 
 .wp-title-hover-actions {
