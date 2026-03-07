@@ -2348,6 +2348,7 @@ body.wp-modal-open {
   margin-top: -122px;
   position: relative;
   z-index: 2;
+  overflow: visible;
 }
 
 .wp-row-section.is-first {
@@ -2355,8 +2356,14 @@ body.wp-modal-open {
 }
 
 .wp-row-section {
+  position: relative;
+  overflow: visible;
   padding: 0 52px;
   margin-top: 32px;
+}
+
+.wp-row-section.is-hover-context {
+  z-index: 40;
 }
 
 .wp-row-head h2 {
@@ -2365,6 +2372,7 @@ body.wp-modal-open {
 }
 
 .wp-row-rail--cinema {
+  overflow-x: auto;
   grid-auto-columns: minmax(308px, 308px);
   gap: 7px;
   overflow-y: visible;
@@ -2441,7 +2449,7 @@ body.wp-modal-open {
 }
 
 .wp-title-card--cinema.is-hover-active {
-  transform: scale(1.22) translateY(-18px);
+  transform: scale(1.16) translateY(-14px);
   z-index: 28;
 }
 

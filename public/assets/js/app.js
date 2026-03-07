@@ -362,6 +362,7 @@
     var EDGE_CLASS_RIGHT = 'is-edge-right';
     var EDGE_CLASS_CENTER = 'is-edge-center';
     var PREVIEW_READY_CLASS = 'is-preview-ready';
+    var ROW_HOVER_CLASS = 'is-hover-context';
 
     function clearEdgeClasses($card) {
       $card.removeClass(EDGE_CLASS_LEFT + ' ' + EDGE_CLASS_RIGHT + ' ' + EDGE_CLASS_CENTER);
@@ -422,6 +423,11 @@
       }
 
       applyEdgeClass($card);
+      var $rowSection = $card.closest('.wp-row-section');
+      $('.wp-row-section').removeClass(ROW_HOVER_CLASS);
+      if ($rowSection.length) {
+        $rowSection.addClass(ROW_HOVER_CLASS);
+      }
 
       $cards.not($card).each(function () {
         var $other = $(this);
@@ -473,6 +479,7 @@
       clearEdgeClasses($card);
       clearPreviewReady($card);
       stopCardVideo($card);
+      $card.closest('.wp-row-section').removeClass(ROW_HOVER_CLASS);
     }
 
     $cards.each(function () {
