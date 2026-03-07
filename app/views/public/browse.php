@@ -142,13 +142,10 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
       <section class="wp-row-section<?= $rowIndex === 0 ? ' is-first' : '' ?>" id="<?= e($rowId) ?>">
         <div class="wp-row-head">
           <h2><?= e($heading) ?></h2>
-          <div class="wp-row-nav">
-            <button type="button" data-row-prev="<?= e($railId) ?>" aria-label="Rolar para esquerda">&#10094;</button>
-            <button type="button" data-row-next="<?= e($railId) ?>" aria-label="Rolar para direita">&#10095;</button>
-          </div>
         </div>
 
-        <div class="wp-row-rail-scroll" id="<?= e($railId) ?>">
+        <div class="wp-row-rail-scroll js-row-carousel" id="<?= e($railId) ?>" data-carousel-track=".wp-row-rail">
+          <button type="button" class="wp-row-edge-btn wp-row-edge-btn--prev" data-row-prev="<?= e($railId) ?>" aria-label="Rolar para esquerda">&#10094;</button>
           <div class="wp-row-rail wp-row-rail--cinema">
             <?php foreach ($items as $itemIndex => $titleItem): ?>
             <?php
@@ -226,17 +223,20 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
               </article>
             <?php endforeach; ?>
           </div>
+          <button type="button" class="wp-row-edge-btn wp-row-edge-btn--next" data-row-next="<?= e($railId) ?>" aria-label="Rolar para direita">&#10095;</button>
         </div>
       </section>
       <?php $rowIndex++; ?>
     <?php endforeach; ?>
 
     <?php if ($continueWatching !== []): ?>
+      <?php $continueRailId = 'wp-row-continue'; ?>
       <section class="wp-row-section" id="row-continue">
         <div class="wp-row-head">
           <h2>Continue assistindo</h2>
         </div>
-        <div class="wp-continue-scroll">
+        <div class="wp-continue-scroll js-row-carousel" id="<?= e($continueRailId) ?>" data-carousel-track=".wp-continue-grid">
+          <button type="button" class="wp-row-edge-btn wp-row-edge-btn--prev" data-row-prev="<?= e($continueRailId) ?>" aria-label="Rolar para esquerda">&#10094;</button>
           <div class="wp-continue-grid">
             <?php foreach ($continueWatching as $item): ?>
             <?php
@@ -298,6 +298,7 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
               </article>
             <?php endforeach; ?>
           </div>
+          <button type="button" class="wp-row-edge-btn wp-row-edge-btn--next" data-row-next="<?= e($continueRailId) ?>" aria-label="Rolar para direita">&#10095;</button>
         </div>
       </section>
     <?php endif; ?>

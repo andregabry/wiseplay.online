@@ -30,20 +30,234 @@
   }
 
   function bindRowNavigation() {
-    $(document).on('click', '[data-row-prev], [data-row-next]', function () {
-      var rowId = $(this).data('rowPrev') || $(this).data('rowNext');
-      if (!rowId) {
+    var CAROUSEL_SELECTOR = '.js-row-carousel[id]';
+    var EDGE_TRIGGER_PX = 116;
+    var TRANSITION_MS = 420;
+    var registry = {};
+    var resizeTimer = null;
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function resolveTrack($viewport) {
+      var selector = String($viewport.data('carouselTrack') || '').trim();
+      if (selector !== '') {
+        return $viewport.find(selector).first();
+      }
+      return $viewport.children('.wp-row-rail, .wp-continue-grid').first();
+    }
+
+    function applyOffset(state, immediate) {
+      if (!state || !state.$track.length) {
         return;
       }
 
-      var $rail = $('#' + rowId);
-      if (!$rail.length) {
+      var x = -Math.round(state.offset);
+      if (immediate) {
+        state.$track.css('transition', 'none');
+        state.$track.css('transform', 'translate3d(' + x + 'px, 0, 0)');
+        window.requestAnimationFrame(function () {
+          state.$track.css('transition', '');
+        });
         return;
       }
 
-      var distance = Math.max(260, Math.floor($rail.outerWidth() * 0.8));
+      state.$track.css('transform', 'translate3d(' + x + 'px, 0, 0)');
+    }
+
+    function updateButtons(state) {
+      if (!state || !state.$prev.length || !state.$next.length) {
+        return;
+      }
+
+      var canPrev = state.offset > 1;
+      var canNext = state.offset < (state.maxOffset - 1);
+      var showPrev = false;
+      var showNext = false;
+
+      if (state.hover && state.maxOffset > 1) {
+        if (state.side === 'left' && canPrev) {
+          showPrev = true;
+        } else if (state.side === 'right' && canNext) {
+          showNext = true;
+        }
+      }
+
+      state.$prev.toggleClass('is-visible', showPrev);
+      state.$next.toggleClass('is-visible', showNext);
+    }
+
+    function measure(state) {
+      if (!state || !state.$viewport.length || !state.$track.length) {
+        return;
+      }
+
+      var viewportEl = state.$viewport.get(0);
+      var trackEl = state.$track.get(0);
+      if (!viewportEl || !trackEl) {
+        return;
+      }
+
+      state.viewportWidth = Math.round(state.$viewport.innerWidth() || viewportEl.clientWidth || 0);
+      state.trackWidth = Math.round(trackEl.scrollWidth || state.$track.outerWidth() || 0);
+      state.maxOffset = Math.max(0, state.trackWidth - state.viewportWidth);
+      state.offset = clamp(state.offset, 0, state.maxOffset);
+
+      applyOffset(state, true);
+      updateButtons(state);
+    }
+
+    function stepSize(state) {
+      var $first = state.$track.children().first();
+      var cardWidth = Math.round($first.outerWidth(true) || 0);
+      if (cardWidth <= 0) {
+        return Math.max(260, Math.floor(state.viewportWidth * 0.9));
+      }
+
+      var visibleCards = Math.max(1, Math.floor(state.viewportWidth / cardWidth));
+      var cardsPerMove = Math.max(1, visibleCards - 1);
+      return Math.max(cardWidth, cardsPerMove * cardWidth);
+    }
+
+    function move(state, direction) {
+      if (!state || state.maxOffset <= 0) {
+        return;
+      }
+
+      var target = clamp(state.offset + (stepSize(state) * direction), 0, state.maxOffset);
+      if (Math.abs(target - state.offset) < 1) {
+        return;
+      }
+
+      state.offset = target;
+      applyOffset(state, false);
+      updateButtons(state);
+
+      window.setTimeout(function () {
+        measure(state);
+      }, TRANSITION_MS + 40);
+    }
+
+    function updateSideByPointer(state, clientX) {
+      if (!state || !state.$viewport.length) {
+        return;
+      }
+
+      var rect = state.$viewport.get(0).getBoundingClientRect();
+      var localX = clientX - rect.left;
+      var zone = Math.min(EDGE_TRIGGER_PX, Math.floor(rect.width * 0.22));
+
+      if (localX <= zone) {
+        state.side = 'left';
+      } else if (localX >= (rect.width - zone)) {
+        state.side = 'right';
+      } else {
+        state.side = '';
+      }
+      updateButtons(state);
+    }
+
+    function setupCarousel($viewport) {
+      var rowId = String($viewport.attr('id') || '');
+      if (rowId === '') {
+        return;
+      }
+
+      var $track = resolveTrack($viewport);
+      if (!$track.length) {
+        return;
+      }
+
+      var state = {
+        rowId: rowId,
+        $viewport: $viewport,
+        $track: $track,
+        $prev: $viewport.find('[data-row-prev="' + rowId + '"]').first(),
+        $next: $viewport.find('[data-row-next="' + rowId + '"]').first(),
+        hover: false,
+        side: '',
+        offset: 0,
+        maxOffset: 0,
+        viewportWidth: 0,
+        trackWidth: 0
+      };
+
+      registry[rowId] = state;
+      measure(state);
+
+      var viewportEl = $viewport.get(0);
+      if (viewportEl) {
+        viewportEl.scrollLeft = 0;
+        viewportEl.scrollTop = 0;
+      }
+
+      $viewport.on('mouseenter', function () {
+        state.hover = true;
+        updateButtons(state);
+      });
+
+      $viewport.on('mouseleave', function () {
+        state.hover = false;
+        state.side = '';
+        updateButtons(state);
+      });
+
+      $viewport.on('mousemove', function (event) {
+        if (state.maxOffset <= 0) {
+          return;
+        }
+        updateSideByPointer(state, event.clientX);
+      });
+
+      $viewport.on('focusin', '.wp-row-edge-btn', function () {
+        state.hover = true;
+        state.side = $(this).is('[data-row-prev]') ? 'left' : 'right';
+        updateButtons(state);
+      });
+
+      $viewport.find('img').on('load', function () {
+        measure(state);
+      });
+
+      // Hard-stop any residual native scrolling inside the row viewport.
+      $viewport.on('scroll wheel touchmove', function () {
+        this.scrollLeft = 0;
+        this.scrollTop = 0;
+      });
+    }
+
+    $(CAROUSEL_SELECTOR).each(function () {
+      setupCarousel($(this));
+    });
+
+    $(document).on('click', '[data-row-prev], [data-row-next]', function (event) {
+      var rowId = String($(this).data('rowPrev') || $(this).data('rowNext') || '');
+      if (rowId === '') {
+        return;
+      }
+
+      var state = registry[rowId];
+      if (!state) {
+        return;
+      }
+
+      event.preventDefault();
       var direction = $(this).is('[data-row-prev]') ? -1 : 1;
-      $rail[0].scrollBy({ left: distance * direction, behavior: 'smooth' });
+      state.hover = true;
+      state.side = direction < 0 ? 'left' : 'right';
+      move(state, direction);
+    });
+
+    $(window).on('resize orientationchange', function () {
+      if (resizeTimer) {
+        window.clearTimeout(resizeTimer);
+      }
+      resizeTimer = window.setTimeout(function () {
+        Object.keys(registry).forEach(function (key) {
+          measure(registry[key]);
+        });
+      }, 140);
     });
   }
 
