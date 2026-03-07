@@ -2486,15 +2486,26 @@ body.wp-modal-open {
 }
 
 .wp-title-hover-panel {
-  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - 1px);
   border-radius: 0 0 5px 5px;
   background: #181818;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 20px 54px rgba(0, 0, 0, 0.66);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
 }
 
 .wp-title-card--cinema.is-hover-active .wp-title-hover-panel {
-  display: block;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .wp-title-card--cinema.is-hover-active .wp-title-meta--cinema {
