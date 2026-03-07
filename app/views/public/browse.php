@@ -236,16 +236,56 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
             <?php
               $cover = $assetOrFallback((string) ($item['cover_image'] ?? ''), $imageFallback);
               $progress = max(0, min(100, (int) ($item['progress_percent'] ?? 0)));
+              $titleId = (int) ($item['title_id'] ?? 0);
+              $mediaId = (int) ($item['media_item_id'] ?? 0);
+              $continueMeta = $browseMetaByTitle[$titleId] ?? [];
+              $continuePreviewUrl = trim((string) ($continueMeta['preview_url'] ?? ''));
+              $continuePreviewMime = trim((string) ($continueMeta['preview_mime'] ?? ''));
+              $continueBadges = array_values(array_filter((array) ($continueMeta['hover_badges'] ?? []), static fn ($v) => trim((string) $v) !== ''));
             ?>
-            <article class="wp-continue-card wp-continue-card--cinema">
-              <a href="/watch/<?= (int) $item['media_item_id'] ?>">
+            <article class="wp-continue-card wp-continue-card--cinema wp-title-card wp-title-card--cinema<?= $continuePreviewUrl !== '' ? ' has-hover-preview' : '' ?>">
+              <a href="/watch/<?= $mediaId ?>" class="wp-title-cover">
                 <img src="<?= e($cover) ?>" alt="<?= e((string) $item['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
-                <div class="wp-continue-body">
-                  <h3><?= e((string) $item['title_name']) ?></h3>
-                  <p><?= e((string) $item['item_label']) ?></p>
-                  <div class="wp-progress"><span style="width: <?= $progress ?>%"></span></div>
-                </div>
+                <?php if ($continuePreviewUrl !== ''): ?>
+                  <video class="wp-title-cover-preview js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($continuePreviewUrl) ?>"<?= $continuePreviewMime !== '' ? ' data-mime="' . e($continuePreviewMime) . '"' : '' ?>></video>
+                <?php endif; ?>
               </a>
+              <div class="wp-continue-body">
+                <h3><?= e((string) $item['title_name']) ?></h3>
+                <p><?= e((string) $item['item_label']) ?></p>
+                <div class="wp-progress"><span style="width: <?= $progress ?>%"></span></div>
+              </div>
+              <div class="wp-title-hover-panel wp-title-hover-panel--continue">
+                <div class="wp-title-hover-actions">
+                  <a class="wp-hover-circle wp-hover-circle--play" href="/watch/<?= $mediaId ?>" aria-label="Assistir">&#9658;</a>
+                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
+                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Remover da lista" aria-label="Remover da minha lista">&times;</button>
+                  <button type="button" class="wp-hover-circle js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
+                  <button
+                    type="button"
+                    class="wp-hover-circle wp-hover-circle--chevron js-open-title-modal"
+                    data-title-id="<?= $titleId ?>"
+                    <?= $continuePreviewUrl !== '' ? 'data-preview-url="' . e($continuePreviewUrl) . '"' : '' ?>
+                    <?= $continuePreviewMime !== '' ? 'data-preview-mime="' . e($continuePreviewMime) . '"' : '' ?>
+                    aria-label="Mais informacoes">&#709;</button>
+                </div>
+                <?php if ($continueBadges !== []): ?>
+                  <div class="wp-title-hover-badges">
+                    <?php foreach ($continueBadges as $badge): ?>
+                      <span><?= e((string) $badge) ?></span>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+                <div class="wp-continue-hover-copy">
+                  <p><?= e((string) $item['item_label']) ?></p>
+                  <div class="wp-continue-hover-progress-meta">
+                    <div class="wp-continue-hover-progress-line">
+                      <span class="bar" style="width: <?= $progress ?>%"></span>
+                    </div>
+                    <span><?= $progress ?>%</span>
+                  </div>
+                </div>
+              </div>
             </article>
           <?php endforeach; ?>
         </div>
