@@ -50,6 +50,21 @@ final class EmailService
         return ['ok' => true, 'message' => 'Email de verificacao registrado em log local.'];
     }
 
+    public function sendTestEmail(string $toEmail, string $subject, string $bodyText): array
+    {
+        $recipient = trim($toEmail);
+        if ($recipient === '') {
+            return ['ok' => false, 'message' => 'Destinatario de teste invalido.'];
+        }
+
+        $smtpResult = $this->sendViaSmtp($recipient, trim($subject), trim($bodyText));
+        if (($smtpResult['ok'] ?? false) !== true) {
+            return $smtpResult;
+        }
+
+        return ['ok' => true, 'message' => 'Email de teste enviado via SMTP.'];
+    }
+
     private function sendViaSmtp(string $toEmail, string $subject, string $bodyText): array
     {
         $host = trim($this->settingOrEnv('smtp.host', 'SMTP_HOST', ''));

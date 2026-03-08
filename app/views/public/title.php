@@ -55,14 +55,14 @@ $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), '/assets/i
     <img class="wp-title-poster" src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='/assets/img/avatar-library/avatar-01.svg'">
 
     <div class="wp-title-hero-body">
-      <h1><?= e((string) $titleItem['title_name']) ?></h1>
+      <h1 class="wp-title-hero-heading"><?= e((string) $titleItem['title_name']) ?></h1>
       <div class="wp-title-hero-meta">
         <span><?= e((string) ($titleItem['type'] ?? 'TITLE')) ?></span>
         <span><?= e((string) ($titleItem['genre'] ?? 'General')) ?></span>
         <span><?= e((string) (($titleItem['year'] ?? '') !== '' ? $titleItem['year'] : '-')) ?></span>
         <span><?= e((string) ($titleItem['maturity_rating'] ?? '16')) ?></span>
       </div>
-      <p><?= e((string) (($titleItem['description'] ?? '') !== '' ? $titleItem['description'] : 'Sem descricao cadastrada.')) ?></p>
+      <p class="wp-title-hero-description"><?= e((string) (($titleItem['description'] ?? '') !== '' ? $titleItem['description'] : 'Sem descricao cadastrada.')) ?></p>
 
       <div class="wp-title-hero-actions">
         <?php if ($firstPlayable): ?>

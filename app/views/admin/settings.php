@@ -4,6 +4,7 @@ $filters = $filters ?? ['q' => '', 'category' => ''];
 $categories = $categories ?? [];
 $categoryItemsMap = $categoryItemsMap ?? [];
 $onedrive = $onedrive ?? [];
+$smtp = $smtp ?? [];
 $oneDriveQuota = $oneDriveQuota ?? [];
 $canManageSettings = $canManageSettings ?? false;
 
@@ -57,6 +58,13 @@ $showAuthRow = ($categoryFilter === '' && $searchFilter === '')
     || ($searchFilter !== '' && str_contains('auth password verification code', $searchFilter));
 if ($showAuthRow && !isset($groupedItems['auth'])) {
     $groupedItems['auth'] = [];
+}
+
+$showSmtpRow = ($categoryFilter === '' && $searchFilter === '')
+    || $categoryFilter === 'smtp'
+    || ($searchFilter !== '' && str_contains('smtp imap pop email hostinger', $searchFilter));
+if ($showSmtpRow && !isset($groupedItems['smtp'])) {
+    $groupedItems['smtp'] = [];
 }
 
 $categoryRows = [];
@@ -152,6 +160,8 @@ $hasCategoryRows = $categoryRows !== [];
             <div class="d-flex align-items-center gap-1">
               <?php if (($row['is_onedrive'] ?? false) === true): ?>
                 <button type="button" class="btn btn-sm btn-outline-primary js-edit-onedrive" title="Editar OneDrive"><i class="ri ri-pencil-line"></i></button>
+              <?php elseif ((string) ($row['category'] ?? '') === 'smtp'): ?>
+                <button type="button" class="btn btn-sm btn-outline-primary js-edit-smtp" title="Editar SMTP"><i class="ri ri-mail-settings-line"></i></button>
               <?php else: ?>
                 <button type="button" class="btn btn-sm btn-outline-primary js-edit-setting" data-category="<?= e((string) $row['category']) ?>" title="Editar categoria"><i class="ri ri-pencil-line"></i></button>
               <?php endif; ?>
@@ -291,6 +301,138 @@ $hasCategoryRows = $categoryRows !== [];
   <div class="modal-footer">
     <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
     <button class="btn btn-primary js-submit-form" data-form="#onedrive-save-form">Salvar OneDrive</button>
+  </div>
+</div></div></div>
+
+<div class="modal fade" id="smtp-edit-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Configurar SMTP / Email</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="form-errors text-danger small mb-2" data-form-errors="smtp-save"></div>
+    <form id="smtp-save-form" class="js-ajax-form" data-endpoint="/admin/settings/smtp/save" data-errors-key="smtp-save">
+      <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <label class="form-label">SMTP habilitado</label>
+          <select class="form-select" name="enabled" <?= $canManageSettings ? '' : 'disabled' ?>>
+            <option value="1" <?= ((string) ($smtp['enabled'] ?? '1') === '1') ? 'selected' : '' ?>>Sim</option>
+            <option value="0" <?= ((string) ($smtp['enabled'] ?? '1') === '0') ? 'selected' : '' ?>>Nao</option>
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">Email de autenticacao</label>
+          <input class="form-control" name="username" value="<?= e((string) ($smtp['username'] ?? 'noreply@wiseplay.online')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Senha</label>
+          <input class="form-control" type="password" name="password" value="" placeholder="<?= e($mask((string) ($smtp['password'] ?? ''))) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+      </div>
+
+      <h6 class="mb-2">Outgoing server (SMTP)</h6>
+      <div class="row g-3 mb-3">
+        <div class="col-md-5">
+          <label class="form-label">Servidor</label>
+          <input class="form-control" name="host" value="<?= e((string) ($smtp['host'] ?? 'smtp.hostinger.com')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Porta</label>
+          <input class="form-control" type="number" name="port" min="1" max="65535" value="<?= e((string) ($smtp['port'] ?? '465')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Criptografia</label>
+          <select class="form-select" name="encryption" <?= $canManageSettings ? '' : 'disabled' ?>>
+            <?php $smtpEncryption = strtolower((string) ($smtp['encryption'] ?? 'ssl')); ?>
+            <option value="ssl" <?= $smtpEncryption === 'ssl' ? 'selected' : '' ?>>SSL</option>
+            <option value="tls" <?= $smtpEncryption === 'tls' ? 'selected' : '' ?>>TLS</option>
+            <option value="none" <?= $smtpEncryption === 'none' ? 'selected' : '' ?>>None</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Protocolo</label>
+          <input class="form-control" value="SMTP" readonly>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">From email</label>
+          <input class="form-control" name="from_email" value="<?= e((string) ($smtp['from_email'] ?? 'noreply@wiseplay.online')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">From name</label>
+          <input class="form-control" name="from_name" value="<?= e((string) ($smtp['from_name'] ?? 'WisePlay')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+      </div>
+
+      <h6 class="mb-2">Incoming server (IMAP)</h6>
+      <div class="row g-3 mb-3">
+        <div class="col-md-5">
+          <label class="form-label">Servidor</label>
+          <input class="form-control" name="incoming_imap_host" value="<?= e((string) ($smtp['incoming_imap_host'] ?? 'imap.hostinger.com')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Porta</label>
+          <input class="form-control" type="number" name="incoming_imap_port" min="1" max="65535" value="<?= e((string) ($smtp['incoming_imap_port'] ?? '993')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Criptografia</label>
+          <?php $imapEncryption = strtolower((string) ($smtp['incoming_imap_encryption'] ?? 'ssl')); ?>
+          <select class="form-select" name="incoming_imap_encryption" <?= $canManageSettings ? '' : 'disabled' ?>>
+            <option value="ssl" <?= $imapEncryption === 'ssl' ? 'selected' : '' ?>>SSL</option>
+            <option value="tls" <?= $imapEncryption === 'tls' ? 'selected' : '' ?>>TLS</option>
+            <option value="none" <?= $imapEncryption === 'none' ? 'selected' : '' ?>>None</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Protocolo</label>
+          <input class="form-control" value="IMAP" readonly>
+        </div>
+      </div>
+
+      <h6 class="mb-2">Incoming server (POP)</h6>
+      <div class="row g-3 mb-3">
+        <div class="col-md-5">
+          <label class="form-label">Servidor</label>
+          <input class="form-control" name="incoming_pop_host" value="<?= e((string) ($smtp['incoming_pop_host'] ?? 'pop.hostinger.com')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Porta</label>
+          <input class="form-control" type="number" name="incoming_pop_port" min="1" max="65535" value="<?= e((string) ($smtp['incoming_pop_port'] ?? '995')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Criptografia</label>
+          <?php $popEncryption = strtolower((string) ($smtp['incoming_pop_encryption'] ?? 'ssl')); ?>
+          <select class="form-select" name="incoming_pop_encryption" <?= $canManageSettings ? '' : 'disabled' ?>>
+            <option value="ssl" <?= $popEncryption === 'ssl' ? 'selected' : '' ?>>SSL</option>
+            <option value="tls" <?= $popEncryption === 'tls' ? 'selected' : '' ?>>TLS</option>
+            <option value="none" <?= $popEncryption === 'none' ? 'selected' : '' ?>>None</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Protocolo</label>
+          <input class="form-control" value="POP" readonly>
+        </div>
+      </div>
+
+    </form>
+
+    <div class="row g-2 mt-2">
+      <div class="col-md-8">
+        <label class="form-label">Email para teste</label>
+        <input class="form-control" id="smtp-test-email" value="<?= e((string) ($smtp['username'] ?? 'noreply@wiseplay.online')) ?>" <?= $canManageSettings ? '' : 'readonly' ?>>
+      </div>
+      <div class="col-md-4 d-grid">
+        <label class="form-label invisible">Testar</label>
+        <button class="btn btn-outline-secondary js-smtp-test <?= $canManageSettings ? '' : 'disabled' ?>" <?= $canManageSettings ? '' : 'disabled' ?>>
+          <i class="ri ri-mail-send-line me-1"></i>Testar envio
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+    <button class="btn btn-primary js-submit-form" data-form="#smtp-save-form">Salvar SMTP</button>
   </div>
 </div></div></div>
 

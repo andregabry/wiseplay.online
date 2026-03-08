@@ -2647,6 +2647,12 @@
       openModal('#onedrive-edit-modal');
     });
 
+    $(document).on('click', '.js-edit-smtp', function (event) {
+      event.preventDefault();
+      clearErrors('smtp-save');
+      openModal('#smtp-edit-modal');
+    });
+
     $(document).on('click', '.js-view-setting', function (event) {
       event.preventDefault();
       var item = parsePayload($(this).attr('data-setting'));
@@ -2710,6 +2716,46 @@
         .fail(function (xhr) {
           var json = xhr.responseJSON || {};
           sweetError(json.message || 'Falha no teste OneDrive.');
+        });
+    });
+
+    $(document).on('click', '.js-smtp-test', function (event) {
+      event.preventDefault();
+      var $button = $(this);
+      if ($button.is(':disabled')) {
+        return;
+      }
+
+      var toEmail = String($('#smtp-test-email').val() || '').trim();
+      if (toEmail === '') {
+        sweetError('Informe um email de teste.');
+        return;
+      }
+
+      $button.prop('disabled', true);
+
+      request('/admin/settings/smtp/test', 'POST', $.param({
+        _csrf: csrfToken(),
+        to_email: toEmail
+      }), false)
+        .done(function (response) {
+          if (!response || response.ok !== true) {
+            sweetError((response && response.message) || 'Falha no teste SMTP.');
+            return;
+          }
+
+          swalFire({
+            icon: 'success',
+            title: 'SMTP OK',
+            text: response.message || 'Email de teste enviado com sucesso.'
+          });
+        })
+        .fail(function (xhr) {
+          var json = xhr.responseJSON || {};
+          sweetError(json.message || 'Falha no teste SMTP.');
+        })
+        .always(function () {
+          $button.prop('disabled', false);
         });
     });
 

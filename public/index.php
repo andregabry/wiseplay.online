@@ -89,6 +89,8 @@ $router->post('/admin/settings/update', [AdminSettingsController::class, 'update
 $router->post('/admin/settings/update-category', [AdminSettingsController::class, 'updateCategory']);
 $router->post('/admin/settings/delete', [AdminSettingsController::class, 'delete']);
 $router->post('/admin/settings/onedrive/save', [AdminSettingsController::class, 'saveOneDrive']);
+$router->post('/admin/settings/smtp/save', [AdminSettingsController::class, 'saveSmtp']);
+$router->post('/admin/settings/smtp/test', [AdminSettingsController::class, 'testSmtpConnection']);
 $router->get('/admin/settings/onedrive/connect', [AdminSettingsController::class, 'connectOneDrive']);
 $router->get('/admin/settings/onedrive/callback', [AdminSettingsController::class, 'oneDriveCallback']);
 $router->post('/admin/settings/onedrive/test', [AdminSettingsController::class, 'testOneDriveConnection']);

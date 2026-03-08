@@ -24,7 +24,7 @@ final class Media extends BaseModel
 
     public function findPlayableById(int $id): ?array
     {
-        $sql = "SELECT m.*, t.title_name, t.type, t.slug, t.maturity_rating, t.cover_image
+        $sql = "SELECT m.*, t.title_name, t.type, t.slug, t.maturity_rating, t.cover_image, t.description AS title_description
                   FROM media_items m
                   INNER JOIN titles t ON t.id = m.title_id
                  WHERE m.id = :id

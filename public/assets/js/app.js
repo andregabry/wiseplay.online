@@ -490,6 +490,339 @@
     }, 18000);
   }
 
+  function bindWatchPlayerOverlay() {
+    var $box = $('.wp-player-box');
+    if (!$box.length) {
+      return;
+    }
+
+    var $video = $('#wp-video-element');
+    if (!$video.length) {
+      return;
+    }
+
+    var $episodesToggle = $('.js-watch-episodes-toggle');
+    var $episodesPanel = $('.wp-watch-episodes-panel');
+    var $settingsToggle = $('.js-player-settings-toggle');
+    var $settingsPanel = $('.wp-player-settings-panel');
+    var $audioSelect = $('.js-player-audio-select');
+    var $subtitleSelect = $('.js-player-subtitle-select');
+    var $speedSelect = $('.js-player-speed-select');
+    var $playToggle = $('.js-player-play');
+    var $playIcon = $('.js-player-play-icon');
+    var $muteToggle = $('.js-player-mute');
+    var $muteIcon = $('.js-player-mute-icon');
+    var $seekToggle = $('.js-player-seek');
+    var $fullscreenToggle = $('.js-player-fullscreen');
+    var video = $video.get(0);
+    var controlsHideTimer = null;
+    var CONTROL_HIDE_DELAY = 3000;
+
+    if (!video) {
+      return;
+    }
+
+    function clearHideTimer() {
+      if (controlsHideTimer) {
+        window.clearTimeout(controlsHideTimer);
+        controlsHideTimer = null;
+      }
+    }
+
+    function closeSettingsPanel() {
+      $settingsPanel.attr('hidden', 'hidden');
+      $settingsToggle.attr('aria-expanded', 'false').removeClass('is-active');
+    }
+
+    function openSettingsPanel() {
+      $settingsPanel.removeAttr('hidden');
+      $settingsToggle.attr('aria-expanded', 'true').addClass('is-active');
+    }
+
+    function hideControls() {
+      $box.removeClass('is-controls-visible');
+      closeSettingsPanel();
+      clearHideTimer();
+    }
+
+    function showControls() {
+      $box.addClass('is-controls-visible');
+    }
+
+    function scheduleControlsHide() {
+      clearHideTimer();
+      controlsHideTimer = window.setTimeout(function () {
+        hideControls();
+      }, CONTROL_HIDE_DELAY);
+    }
+
+    function userActivity() {
+      showControls();
+      scheduleControlsHide();
+    }
+
+    function updatePlayState() {
+      var isPaused = video.paused || video.ended;
+      $playToggle.toggleClass('is-active', !isPaused);
+      $playToggle.attr('aria-label', isPaused ? 'Reproduzir' : 'Pausar');
+      $playIcon.html(isPaused ? '&#9654;' : '&#10074;&#10074;');
+    }
+
+    function updateMuteState() {
+      var isMuted = video.muted || video.volume === 0;
+      $muteToggle.toggleClass('is-active', isMuted);
+      $muteToggle.attr('aria-label', isMuted ? 'Ativar som' : 'Silenciar');
+      $muteIcon.html(isMuted ? '&#128263;' : '&#128266;');
+    }
+
+    function togglePlay() {
+      if (video.paused || video.ended) {
+        var playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(function () {});
+        }
+      } else {
+        video.pause();
+      }
+    }
+
+    function closeEpisodesPanel() {
+      $episodesPanel.removeClass('is-open').attr('hidden', 'hidden');
+      $episodesToggle.attr('aria-expanded', 'false');
+    }
+
+    function openEpisodesPanel() {
+      $episodesPanel.removeAttr('hidden').addClass('is-open');
+      $episodesToggle.attr('aria-expanded', 'true');
+    }
+
+    function populateSubtitleOptions() {
+      if (!$subtitleSelect.length) {
+        return;
+      }
+
+      $subtitleSelect.find('option:not([value="off"])').remove();
+
+      var tracks = [];
+      try {
+        if (video.textTracks && video.textTracks.length) {
+          for (var i = 0; i < video.textTracks.length; i += 1) {
+            tracks.push(video.textTracks[i]);
+          }
+        }
+      } catch (error) {
+        tracks = [];
+      }
+
+      tracks.forEach(function (track, index) {
+        var label = String(track.label || track.language || ('Legenda ' + (index + 1)));
+        $subtitleSelect.append(
+          $('<option></option>').val('track-' + index).text(label)
+        );
+      });
+
+      var activeValue = 'off';
+      tracks.forEach(function (track, index) {
+        if (track.mode === 'showing') {
+          activeValue = 'track-' + index;
+        }
+      });
+
+      $subtitleSelect.prop('disabled', tracks.length === 0);
+      $subtitleSelect.val(activeValue);
+    }
+
+    function applySubtitleSelection(value) {
+      if (!video.textTracks || !video.textTracks.length) {
+        return;
+      }
+
+      for (var i = 0; i < video.textTracks.length; i += 1) {
+        video.textTracks[i].mode = 'disabled';
+      }
+
+      if (typeof value === 'string' && value.indexOf('track-') === 0) {
+        var index = parseInt(value.replace('track-', ''), 10);
+        if (!Number.isNaN(index) && video.textTracks[index]) {
+          video.textTracks[index].mode = 'showing';
+        }
+      }
+    }
+
+    function setupAudioSelector() {
+      if (!$audioSelect.length) {
+        return;
+      }
+
+      var nativeAudioTracks = video.audioTracks || video.webkitAudioTracks || null;
+      if (!nativeAudioTracks || !nativeAudioTracks.length) {
+        $audioSelect.prop('disabled', $audioSelect.find('option').length <= 1);
+        return;
+      }
+
+      $audioSelect.empty();
+      var selectedValue = '0';
+
+      for (var i = 0; i < nativeAudioTracks.length; i += 1) {
+        var track = nativeAudioTracks[i];
+        var trackLang = String(track.language || ('track-' + i));
+        var trackLabel = String(track.label || track.language || ('Idioma ' + (i + 1)));
+        var $option = $('<option></option>').val(String(i)).text(trackLabel + ' (' + trackLang + ')');
+        $audioSelect.append($option);
+        if (track.enabled) {
+          selectedValue = String(i);
+        }
+      }
+
+      $audioSelect.prop('disabled', false).val(selectedValue);
+      $audioSelect.off('change.nativeAudio').on('change.nativeAudio', function () {
+        var nextIndex = parseInt($(this).val(), 10);
+        if (Number.isNaN(nextIndex)) {
+          return;
+        }
+        for (var idx = 0; idx < nativeAudioTracks.length; idx += 1) {
+          nativeAudioTracks[idx].enabled = idx === nextIndex;
+        }
+      });
+    }
+
+    $episodesToggle.on('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      userActivity();
+      if ($episodesPanel.hasClass('is-open')) {
+        closeEpisodesPanel();
+      } else {
+        openEpisodesPanel();
+        closeSettingsPanel();
+      }
+    });
+
+    $settingsToggle.on('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      userActivity();
+      if ($settingsPanel.is(':hidden')) {
+        openSettingsPanel();
+        closeEpisodesPanel();
+      } else {
+        closeSettingsPanel();
+      }
+    });
+
+    $subtitleSelect.on('change', function () {
+      userActivity();
+      applySubtitleSelection(String($(this).val() || 'off'));
+    });
+
+    $speedSelect.on('change', function () {
+      userActivity();
+      var nextRate = parseFloat($(this).val());
+      if (!Number.isNaN(nextRate) && nextRate > 0) {
+        video.playbackRate = nextRate;
+      }
+    });
+
+    $audioSelect.on('change', function () {
+      userActivity();
+    });
+
+    $playToggle.on('click', function (event) {
+      event.preventDefault();
+      userActivity();
+      togglePlay();
+    });
+
+    $video.on('click', function () {
+      userActivity();
+      togglePlay();
+    });
+
+    $muteToggle.on('click', function (event) {
+      event.preventDefault();
+      userActivity();
+      video.muted = !video.muted;
+      updateMuteState();
+    });
+
+    $seekToggle.on('click', function (event) {
+      event.preventDefault();
+      userActivity();
+      var offset = parseInt($(this).data('seek'), 10) || 0;
+      if (!Number.isFinite(video.duration)) {
+        video.currentTime = Math.max(0, video.currentTime + offset);
+        return;
+      }
+      var target = Math.max(0, Math.min(video.duration, video.currentTime + offset));
+      video.currentTime = target;
+    });
+
+    $fullscreenToggle.on('click', function (event) {
+      event.preventDefault();
+      userActivity();
+      if (!document.fullscreenElement) {
+        if (typeof $box.get(0).requestFullscreen === 'function') {
+          $box.get(0).requestFullscreen().catch(function () {});
+        }
+        return;
+      }
+      if (typeof document.exitFullscreen === 'function') {
+        document.exitFullscreen().catch(function () {});
+      }
+    });
+
+    $(document).on('click', function (event) {
+      if (!$(event.target).closest('.wp-watch-episodes-panel, .js-watch-episodes-toggle').length) {
+        closeEpisodesPanel();
+      }
+      if (!$(event.target).closest('.wp-player-settings-panel, .js-player-settings-toggle').length) {
+        closeSettingsPanel();
+      }
+    });
+
+    $(document).on('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeEpisodesPanel();
+        closeSettingsPanel();
+      }
+    });
+
+    $box.on('mouseenter mousemove', function () {
+      userActivity();
+    });
+
+    $box.on('mouseleave', function () {
+      hideControls();
+    });
+
+    $box.on('touchstart click keydown', function () {
+      userActivity();
+    });
+
+    $video.on('play pause ended', updatePlayState);
+    $video.on('volumechange loadedmetadata', updateMuteState);
+    $video.on('loadedmetadata', populateSubtitleOptions);
+    $video.on('ratechange', function () {
+      if (!$speedSelect.length) {
+        return;
+      }
+      var currentRate = String(video.playbackRate || 1);
+      if ($speedSelect.find('option[value="' + currentRate + '"]').length) {
+        $speedSelect.val(currentRate);
+      }
+    });
+
+    document.addEventListener('fullscreenchange', function () {
+      $fullscreenToggle.toggleClass('is-active', !!document.fullscreenElement);
+    });
+
+    setupAudioSelector();
+    populateSubtitleOptions();
+    updatePlayState();
+    updateMuteState();
+    hideControls();
+  }
+
   function bindLoopVideos(selector, forceMuted) {
     var $videos = $(selector);
     if (!$videos.length) {
@@ -545,6 +878,58 @@
 
   function bindHeroPreviews() {
     bindLoopVideos('.js-hero-preview, .js-title-hero-preview', true);
+
+    $('.js-hero-preview, .js-title-hero-preview').each(function () {
+      var video = this;
+      var $video = $(video);
+      var $hero = $video.closest('.wp-hero--cinema, .wp-title-hero');
+      if (!$hero.length) {
+        return;
+      }
+
+      var engageTimer = null;
+
+      function clearEngageTimer() {
+        if (engageTimer) {
+          window.clearTimeout(engageTimer);
+          engageTimer = null;
+        }
+      }
+
+      function armEngageState() {
+        clearEngageTimer();
+        engageTimer = window.setTimeout(function () {
+          engageTimer = null;
+          if (!video.paused && !video.ended && video.readyState >= 2) {
+            $hero.addClass('is-trailer-engaged');
+          }
+        }, 2000);
+      }
+
+      function releaseEngageStateBeforeStart() {
+        if (video.currentTime < 1.5) {
+          $hero.removeClass('is-trailer-engaged');
+        }
+      }
+
+      video.addEventListener('play', armEngageState);
+      video.addEventListener('playing', armEngageState);
+
+      video.addEventListener('pause', function () {
+        clearEngageTimer();
+        releaseEngageStateBeforeStart();
+      });
+
+      video.addEventListener('ended', function () {
+        clearEngageTimer();
+        releaseEngageStateBeforeStart();
+      });
+
+      video.addEventListener('emptied', function () {
+        clearEngageTimer();
+        $hero.removeClass('is-trailer-engaged');
+      });
+    });
 
     $(document).on('click', '.js-hero-sound-toggle', function (event) {
       event.preventDefault();
@@ -1138,10 +1523,10 @@
       renderMedia(meta, previewOverride);
       $heading.text(String(meta.title_name || 'Titulo'));
       $description.text(String(meta.description || 'Sem descricao disponivel.'));
-      $details.attr('href', '/title/' + normalized);
+      $details.attr('href', '/browse');
 
       var watchMediaId = parseInt(meta.watch_media_id, 10) || 0;
-      $watch.attr('href', watchMediaId > 0 ? '/watch/' + watchMediaId : '/title/' + normalized);
+      $watch.attr('href', watchMediaId > 0 ? '/watch/' + watchMediaId : '/browse');
       $watch.toggleClass('disabled', watchMediaId <= 0);
       $watch.attr('aria-disabled', watchMediaId <= 0 ? 'true' : 'false');
 
@@ -1618,6 +2003,7 @@
     bindOnboardingPaymentForm();
     bindRowNavigation();
     bindWatchProgress();
+    bindWatchPlayerOverlay();
     bindSeasonTrailers();
     bindHeroPreviews();
     bindBrowseHoverPreview();

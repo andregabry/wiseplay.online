@@ -85,7 +85,7 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
         <h1><?= e((string) ($featured['title_name'] ?? 'Catalogo WisePlay')) ?></h1>
         <span><?= e($heroTypeLabel) ?></span>
       </div>
-      <p><?= e($heroCompactDescription) ?></p>
+      <p class="wp-hero-description"><?= e($heroCompactDescription) ?></p>
 
       <div class="wp-hero-meta wp-hero-meta--cinema">
         <?php if ($featured): ?>
@@ -168,7 +168,12 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
             ?>
               <article class="wp-title-card wp-title-card--cinema<?= $cardPreviewUrl !== '' ? ' has-hover-preview' : '' ?>">
                 <div class="wp-title-card-surface">
-                  <a href="/title/<?= $titleId ?>" class="wp-title-cover">
+                  <a
+                    href="#"
+                    class="wp-title-cover js-open-title-modal"
+                    data-title-id="<?= $titleId ?>"
+                    <?= $cardPreviewUrl !== '' ? 'data-preview-url="' . e($cardPreviewUrl) . '"' : '' ?>
+                    <?= $cardPreviewMime !== '' ? 'data-preview-mime="' . e($cardPreviewMime) . '"' : '' ?>>
                     <img src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='<?= e($imageFallback) ?>'">
                     <?php if ($cardPreviewUrl !== ''): ?>
                       <video class="wp-title-cover-preview js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($cardPreviewUrl) ?>"<?= $cardPreviewMime !== '' ? ' data-mime="' . e($cardPreviewMime) . '"' : '' ?>></video>
@@ -318,7 +323,7 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
           <a class="wp-btn light" id="wp-title-modal-watch" href="/browse">Assistir</a>
           <button type="button" class="wp-hover-circle wp-hover-circle--light js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
           <button type="button" class="wp-hover-circle wp-hover-circle--light js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
-          <a class="wp-btn ghost" id="wp-title-modal-details" href="/browse">Pagina do titulo</a>
+          <a class="wp-btn ghost" id="wp-title-modal-details" href="/browse">Voltar ao catalogo</a>
         </div>
         <div class="wp-title-modal-badges" id="wp-title-modal-badges"></div>
       </div>

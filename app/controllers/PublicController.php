@@ -747,6 +747,7 @@ final class PublicController extends BaseController
         $media['playback_from_cache'] = (bool) ($resolved['from_cache'] ?? false);
         $media['playback_mime_type'] = (string) ($resolved['mime_type'] ?? ($media['mime_type'] ?? ''));
 
+        $episodeQueue = (new Media())->listForTitle((int) $media['title_id'], true);
         $suggestions = (new Media())->suggestionsForTitle((int) $media['title_id'], $mediaId, 8);
 
         View::render('public/watch', [
@@ -756,6 +757,7 @@ final class PublicController extends BaseController
             'availableProfiles' => (new Profile())->findByUser((int) (Auth::user()['id'] ?? 0)),
             'selectedProfileId' => (int) ($_SESSION['profile_id'] ?? 0),
             'mediaItem' => $media,
+            'episodeQueue' => $episodeQueue,
             'suggestions' => $suggestions,
         ], 'public');
     }

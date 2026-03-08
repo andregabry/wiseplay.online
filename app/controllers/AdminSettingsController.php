@@ -7,6 +7,7 @@ namespace App\controllers;
 use App\core\Response;
 use App\core\Validator;
 use App\models\Setting;
+use App\services\EmailService;
 use App\services\OneDriveService;
 
 final class AdminSettingsController extends AdminBaseController
@@ -55,6 +56,26 @@ final class AdminSettingsController extends AdminBaseController
             'access_token_expires_at' => $model->value('onedrive.access_token_expires_at', ''),
         ];
 
+        $smtp = [
+            'enabled' => $model->value('smtp.enabled', '1'),
+            'host' => $model->value('smtp.host', 'smtp.hostinger.com'),
+            'port' => $model->value('smtp.port', '465'),
+            'username' => $model->value('smtp.username', 'noreply@wiseplay.online'),
+            'password' => $model->value('smtp.password', ''),
+            'encryption' => strtolower((string) $model->value('smtp.encryption', 'ssl')),
+            'from_email' => $model->value('smtp.from_email', 'noreply@wiseplay.online'),
+            'from_name' => $model->value('smtp.from_name', 'WisePlay'),
+            'incoming_imap_host' => $model->value('smtp.incoming_imap_host', 'imap.hostinger.com'),
+            'incoming_imap_port' => $model->value('smtp.incoming_imap_port', '993'),
+            'incoming_imap_encryption' => strtolower((string) $model->value('smtp.incoming_imap_encryption', 'ssl')),
+            'incoming_pop_host' => $model->value('smtp.incoming_pop_host', 'pop.hostinger.com'),
+            'incoming_pop_port' => $model->value('smtp.incoming_pop_port', '995'),
+            'incoming_pop_encryption' => strtolower((string) $model->value('smtp.incoming_pop_encryption', 'ssl')),
+            'outgoing_host' => $model->value('smtp.outgoing_host', 'smtp.hostinger.com'),
+            'outgoing_port' => $model->value('smtp.outgoing_port', '465'),
+            'outgoing_encryption' => strtolower((string) $model->value('smtp.outgoing_encryption', 'ssl')),
+        ];
+
         $quotaResult = $oneDriveService->fetchDriveQuota(false);
         $quotaCard = $oneDriveService->presentQuota($quotaResult);
         $canManageSettings = in_array((string) (($_SESSION['auth_user']['role'] ?? '')), self::MANAGE_ROLES, true);
@@ -62,8 +83,11 @@ final class AdminSettingsController extends AdminBaseController
         $categories = $model->categories();
         if (!in_array('auth', $categories, true)) {
             $categories[] = 'auth';
-            sort($categories);
         }
+        if (!in_array('smtp', $categories, true)) {
+            $categories[] = 'smtp';
+        }
+        sort($categories);
 
         $this->render('admin/settings', [
             'title' => 'Settings | WisePlay Admin',
@@ -79,6 +103,7 @@ final class AdminSettingsController extends AdminBaseController
             'categories' => $categories,
             'categoryItemsMap' => $this->buildCategoryItemsMap($model->grouped()),
             'onedrive' => $onedrive,
+            'smtp' => $smtp,
             'oneDriveQuota' => $quotaCard,
             'canManageSettings' => $canManageSettings,
         ]);
@@ -526,6 +551,157 @@ final class AdminSettingsController extends AdminBaseController
                 ? 'Quota OneDrive carregado do cache.'
                 : 'Quota OneDrive atualizado com sucesso.',
             'quota' => $card,
+        ]);
+    }
+
+    public function saveSmtp(): void
+    {
+        $this->authorize(self::MANAGE_ROLES);
+        $this->requireCsrf();
+
+        $enabled = (int) ($_POST['enabled'] ?? 1) === 1 ? '1' : '0';
+        $host = trim((string) ($_POST['host'] ?? 'smtp.hostinger.com'));
+        $port = (int) ($_POST['port'] ?? 465);
+        $username = trim((string) ($_POST['username'] ?? 'noreply@wiseplay.online'));
+        $password = trim((string) ($_POST['password'] ?? ''));
+        $encryption = strtolower(trim((string) ($_POST['encryption'] ?? 'ssl')));
+        $fromEmail = trim((string) ($_POST['from_email'] ?? $username));
+        $fromName = trim((string) ($_POST['from_name'] ?? 'WisePlay'));
+
+        $incomingImapHost = trim((string) ($_POST['incoming_imap_host'] ?? 'imap.hostinger.com'));
+        $incomingImapPort = (int) ($_POST['incoming_imap_port'] ?? 993);
+        $incomingImapEncryption = strtolower(trim((string) ($_POST['incoming_imap_encryption'] ?? 'ssl')));
+
+        $incomingPopHost = trim((string) ($_POST['incoming_pop_host'] ?? 'pop.hostinger.com'));
+        $incomingPopPort = (int) ($_POST['incoming_pop_port'] ?? 995);
+        $incomingPopEncryption = strtolower(trim((string) ($_POST['incoming_pop_encryption'] ?? 'ssl')));
+
+        $outgoingHost = $host;
+        $outgoingPort = $port;
+        $outgoingEncryption = $encryption;
+
+        $errors = [];
+        if ($host === '') {
+            $errors['host'] = 'Servidor SMTP obrigatorio.';
+        }
+        if (!Validator::integer($port, 1, 65535)) {
+            $errors['port'] = 'Porta SMTP invalida.';
+        }
+        if ($username === '' || !Validator::email($username)) {
+            $errors['username'] = 'Email de autenticacao SMTP invalido.';
+        }
+        if ($fromEmail === '' || !Validator::email($fromEmail)) {
+            $errors['from_email'] = 'Email remetente invalido.';
+        }
+        if ($fromName === '' || !Validator::maxLength($fromName, 120)) {
+            $errors['from_name'] = 'Nome do remetente invalido.';
+        }
+        if (!in_array($encryption, ['none', 'tls', 'ssl'], true)) {
+            $errors['encryption'] = 'Criptografia SMTP invalida.';
+        }
+
+        if ($incomingImapHost === '') {
+            $errors['incoming_imap_host'] = 'Servidor IMAP obrigatorio.';
+        }
+        if (!Validator::integer($incomingImapPort, 1, 65535)) {
+            $errors['incoming_imap_port'] = 'Porta IMAP invalida.';
+        }
+        if (!in_array($incomingImapEncryption, ['none', 'tls', 'ssl'], true)) {
+            $errors['incoming_imap_encryption'] = 'Criptografia IMAP invalida.';
+        }
+
+        if ($incomingPopHost === '') {
+            $errors['incoming_pop_host'] = 'Servidor POP obrigatorio.';
+        }
+        if (!Validator::integer($incomingPopPort, 1, 65535)) {
+            $errors['incoming_pop_port'] = 'Porta POP invalida.';
+        }
+        if (!in_array($incomingPopEncryption, ['none', 'tls', 'ssl'], true)) {
+            $errors['incoming_pop_encryption'] = 'Criptografia POP invalida.';
+        }
+
+        if ($outgoingHost === '') {
+            $errors['outgoing_host'] = 'Servidor de saida obrigatorio.';
+        }
+        if (!Validator::integer($outgoingPort, 1, 65535)) {
+            $errors['outgoing_port'] = 'Porta de saida invalida.';
+        }
+        if (!in_array($outgoingEncryption, ['none', 'tls', 'ssl'], true)) {
+            $errors['outgoing_encryption'] = 'Criptografia de saida invalida.';
+        }
+
+        if ($errors !== []) {
+            Response::json(['ok' => false, 'message' => 'Verifique os campos SMTP.', 'errors' => $errors], 422);
+        }
+
+        $model = new Setting();
+        $model->upsert('smtp', 'smtp.enabled', $enabled, false);
+        $model->upsert('smtp', 'smtp.host', $host, false);
+        $model->upsert('smtp', 'smtp.port', (string) $port, false);
+        $model->upsert('smtp', 'smtp.username', $username, false);
+        if ($password !== '') {
+            $model->upsert('smtp', 'smtp.password', $password, true);
+        }
+        $model->upsert('smtp', 'smtp.encryption', $encryption, false);
+        $model->upsert('smtp', 'smtp.from_email', $fromEmail, false);
+        $model->upsert('smtp', 'smtp.from_name', $fromName, false);
+
+        $model->upsert('smtp', 'smtp.incoming_imap_host', $incomingImapHost, false);
+        $model->upsert('smtp', 'smtp.incoming_imap_port', (string) $incomingImapPort, false);
+        $model->upsert('smtp', 'smtp.incoming_imap_encryption', $incomingImapEncryption, false);
+        $model->upsert('smtp', 'smtp.incoming_pop_host', $incomingPopHost, false);
+        $model->upsert('smtp', 'smtp.incoming_pop_port', (string) $incomingPopPort, false);
+        $model->upsert('smtp', 'smtp.incoming_pop_encryption', $incomingPopEncryption, false);
+        $model->upsert('smtp', 'smtp.outgoing_host', $outgoingHost, false);
+        $model->upsert('smtp', 'smtp.outgoing_port', (string) $outgoingPort, false);
+        $model->upsert('smtp', 'smtp.outgoing_encryption', $outgoingEncryption, false);
+
+        $this->audit('smtp.settings.save', 'setting', null, [
+            'enabled' => $enabled,
+            'host' => $host,
+            'port' => $port,
+            'username' => $username,
+            'password_updated' => $password !== '',
+            'encryption' => $encryption,
+            'from_email' => $fromEmail,
+        ]);
+
+        Response::json(['ok' => true, 'message' => 'Configuracoes SMTP salvas.']);
+    }
+
+    public function testSmtpConnection(): void
+    {
+        $this->authorize(self::MANAGE_ROLES);
+        $this->requireCsrf();
+
+        $toEmail = trim((string) ($_POST['to_email'] ?? ''));
+        $setting = new Setting();
+        if ($toEmail === '') {
+            $toEmail = (string) $setting->value('smtp.username', (string) $setting->value('smtp.from_email', ''));
+        }
+
+        if ($toEmail === '' || !Validator::email($toEmail)) {
+            Response::json(['ok' => false, 'message' => 'Email de destino de teste invalido.'], 422);
+        }
+
+        $service = new EmailService($setting);
+        $result = $service->sendTestEmail(
+            $toEmail,
+            'WisePlay SMTP test',
+            "Este e um email de teste enviado pelo painel Admin do WisePlay.\n\nSe voce recebeu esta mensagem, o SMTP esta configurado corretamente."
+        );
+
+        if (($result['ok'] ?? false) !== true) {
+            Response::json(['ok' => false, 'message' => (string) ($result['message'] ?? 'Falha no teste SMTP.')], 500);
+        }
+
+        $this->audit('smtp.test.success', 'setting', null, [
+            'to' => $toEmail,
+        ]);
+
+        Response::json([
+            'ok' => true,
+            'message' => (string) ($result['message'] ?? 'Email de teste enviado com sucesso.'),
         ]);
     }
 
