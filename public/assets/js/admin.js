@@ -2590,57 +2590,163 @@
   }
 
   function bindSettingsModule() {
-    function getSettingsCategoryMap() {
-      var $source = $('#settings-category-data');
-      if (!$source.length) {
-        return {};
-      }
-      var parsed = parsePayload($source.attr('data-categories'));
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    }
+    var settingProfileFieldTemplates = {
+      api_connect: [
+        { name: 'api_name', label: 'Nome da API', type: 'text', placeholder: 'Ex: WisePlay API' },
+        { name: 'endpoint_url', label: 'Endpoint URL', type: 'url', placeholder: 'https://api.exemplo.com' },
+        { name: 'auth_type', label: 'Autenticação', type: 'select', options: [{ value: 'none', label: 'Nenhuma' }, { value: 'api_key', label: 'API Key' }, { value: 'bearer', label: 'Bearer Token' }, { value: 'basic', label: 'Basic Auth' }] },
+        { name: 'api_key', label: 'API Key', type: 'text', placeholder: 'Chave pública' },
+        { name: 'api_secret', label: 'API Secret', type: 'password', placeholder: 'Segredo da API' },
+        { name: 'timeout_seconds', label: 'Timeout (s)', type: 'number', min: 1, max: 120, placeholder: '15' }
+      ],
+      email: [
+        { name: 'smtp_host', label: 'Servidor SMTP', type: 'text', placeholder: 'smtp.hostinger.com' },
+        { name: 'smtp_port', label: 'Porta SMTP', type: 'number', min: 1, max: 65535, placeholder: '465' },
+        { name: 'smtp_encryption', label: 'Criptografia', type: 'select', options: [{ value: 'ssl', label: 'SSL' }, { value: 'tls', label: 'TLS' }, { value: 'none', label: 'Nenhuma' }] },
+        { name: 'smtp_username', label: 'Usuário SMTP', type: 'email', placeholder: 'noreply@wiseplay.online' },
+        { name: 'smtp_password', label: 'Senha SMTP', type: 'password', placeholder: 'Senha SMTP' },
+        { name: 'sender_email', label: 'Email remetente', type: 'email', placeholder: 'noreply@wiseplay.online' },
+        { name: 'sender_name', label: 'Nome remetente', type: 'text', placeholder: 'WisePlay' }
+      ],
+      general: [
+        { name: 'app_name', label: 'Nome da aplicação', type: 'text', placeholder: 'WisePlay' },
+        { name: 'app_url', label: 'URL da aplicação', type: 'url', placeholder: 'https://wiseplay.online' },
+        { name: 'default_language', label: 'Idioma padrão', type: 'text', placeholder: 'pt-PT' },
+        { name: 'timezone', label: 'Timezone', type: 'text', placeholder: 'Europe/Lisbon' },
+        { name: 'maintenance_mode', label: 'Manutenção', type: 'select', options: [{ value: '0', label: 'Desativada' }, { value: '1', label: 'Ativada' }] }
+      ],
+      payment: [
+        { name: 'provider', label: 'Provider', type: 'text', placeholder: 'stripe' },
+        { name: 'mode', label: 'Modo', type: 'select', options: [{ value: 'test', label: 'Test' }, { value: 'live', label: 'Live' }] },
+        { name: 'currency', label: 'Moeda', type: 'text', placeholder: 'BRL' },
+        { name: 'public_key', label: 'Public Key', type: 'text', placeholder: 'pk_live_...' },
+        { name: 'secret_key', label: 'Secret Key', type: 'password', placeholder: 'sk_live_...' },
+        { name: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://wiseplay.online/webhooks/payment' }
+      ]
+    };
 
-    function renderCategorySettingsFields(items) {
-      var $container = $('#s-c-e-items');
-      if (!$container.length) {
-        return;
-      }
+    function renderSettingProfileFields(category, values) {
+      var defs = settingProfileFieldTemplates[category] || settingProfileFieldTemplates.general;
+      var html = defs.map(function (field) {
+        var value = String((values && values[field.name]) || '');
+        var safeValue = $('<div>').text(value).html();
+        var safeLabel = $('<div>').text(field.label).html();
+        var placeholder = $('<div>').text(String(field.placeholder || '')).html();
 
-      if (!Array.isArray(items) || !items.length) {
-        $container.html('<div class="text-body-secondary small">Nenhuma configuracao nesta categoria.</div>');
-        return;
-      }
+        if (field.type === 'select') {
+          var options = (field.options || []).map(function (option) {
+            var selected = String(option.value) === value ? ' selected' : '';
+            return '<option value="' + $('<div>').text(String(option.value)).html() + '"' + selected + '>' + $('<div>').text(String(option.label)).html() + '</option>';
+          }).join('');
 
-      var html = items.map(function (item, index) {
-        var id = parseInt(item.id, 10) || 0;
-        var keyName = $('<div>').text(String(item.key_name || '')).html();
-        var valueText = $('<div>').text(String(item.value_text || '')).html();
-        var isSecret = parseInt(item.is_secret, 10) === 1 ? 1 : 0;
+          return '' +
+            '<div class="mb-2">' +
+              '<label class="form-label">' + safeLabel + '</label>' +
+              '<select class="form-select" name="fields[' + field.name + ']">' + options + '</select>' +
+            '</div>';
+        }
+
+        var min = typeof field.min !== 'undefined' ? ' min="' + field.min + '"' : '';
+        var max = typeof field.max !== 'undefined' ? ' max="' + field.max + '"' : '';
 
         return '' +
-          '<div class="border rounded p-3">' +
-            '<input type="hidden" name="ids[' + index + ']" value="' + id + '">' +
-            '<input type="hidden" name="key_names[' + index + ']" value="' + keyName + '">' +
-            '<div class="mb-2">' +
-              '<label class="form-label">Chave</label>' +
-              '<input class="form-control" value="' + keyName + '" readonly>' +
-            '</div>' +
-            '<div class="mb-2">' +
-              '<label class="form-label">Valor</label>' +
-              '<textarea class="form-control" name="values[' + index + ']" rows="2">' + valueText + '</textarea>' +
-            '</div>' +
-            '<div class="mb-0">' +
-              '<label class="form-label">Secreta</label>' +
-              '<select class="form-select" name="secrets[' + index + ']">' +
-                '<option value="0"' + (isSecret === 0 ? ' selected' : '') + '>Nao</option>' +
-                '<option value="1"' + (isSecret === 1 ? ' selected' : '') + '>Sim</option>' +
-              '</select>' +
-            '</div>' +
+          '<div class="mb-2">' +
+            '<label class="form-label">' + safeLabel + '</label>' +
+            '<input class="form-control" type="' + field.type + '" name="fields[' + field.name + ']" value="' + safeValue + '" placeholder="' + placeholder + '"' + min + max + '>' +
           '</div>';
       }).join('');
 
-      $container.html(html);
+      $('#scp-dynamic-fields').html(html);
     }
 
+    function resetSettingProfileForm() {
+      var $form = $('#setting-config-profile-form');
+      if (!$form.length) {
+        return;
+      }
+
+      $form.get(0).reset();
+      $form.attr('data-endpoint', '/admin/settings/configs/create');
+      $('#scp-id').val('');
+      $('#scp-is-default').val('0');
+      $('#scp-is-active').val('1');
+      renderSettingProfileFields(String($('#scp-category').val() || 'general'), {});
+      clearErrors('setting-config-profile');
+    }
+
+    $(document).on('click', '.js-open-config-profile-create', function (event) {
+      event.preventDefault();
+      resetSettingProfileForm();
+      openModal('#setting-config-profile-modal');
+    });
+
+    $(document).on('change', '#scp-category', function () {
+      var category = String($(this).val() || 'general');
+      renderSettingProfileFields(category, {});
+    });
+
+    $(document).on('click', '.js-edit-config-profile', function (event) {
+      event.preventDefault();
+      var config = parsePayload($(this).attr('data-config'));
+      if (!config || !config.id) {
+        return;
+      }
+
+      var $form = $('#setting-config-profile-form');
+      $form.attr('data-endpoint', '/admin/settings/configs/update');
+
+      $('#scp-id').val(config.id || '');
+      $('#scp-category').val(config.category || 'general');
+      $('#scp-config-name').val(config.config_name || '');
+      $('#scp-description').val(config.description || '');
+      $('#scp-is-default').val(parseInt(config.is_default, 10) === 1 ? '1' : '0');
+      $('#scp-is-active').val(parseInt(config.is_active, 10) === 1 ? '1' : '0');
+
+      renderSettingProfileFields(String(config.category || 'general'), config.payload || {});
+      clearErrors('setting-config-profile');
+      openModal('#setting-config-profile-modal');
+    });
+
+    $(document).on('click', '.js-default-config-profile', function (event) {
+      event.preventDefault();
+      var id = parseInt($(this).data('id'), 10) || 0;
+      var description = String($(this).data('description') || 'configuração');
+      if (id <= 0) {
+        return;
+      }
+
+      confirmAction('Definir como padrão', 'Deseja definir "' + description + '" como padrão para esta categoria?', 'Definir padrão')
+        .then(function (result) {
+          if (!result.isConfirmed) {
+            return;
+          }
+
+          request('/admin/settings/configs/default', 'POST', $.param({ id: id, _csrf: csrfToken() }), false)
+            .done(function (response) {
+              if (!response || response.ok !== true) {
+                sweetError((response && response.message) || 'Falha ao definir padrão.');
+                return;
+              }
+
+              swalFire({ icon: 'success', title: 'Atualizado', text: response.message || 'Configuração padrão atualizada.' })
+                .then(function () { window.location.reload(); });
+            })
+            .fail(function (xhr) {
+              var json = xhr.responseJSON || {};
+              sweetError(json.message || 'Falha ao definir padrão.');
+            });
+        });
+    });
+
+    $(document).on('click', '.js-delete-config-profile', function (event) {
+      event.preventDefault();
+      var id = parseInt($(this).data('id'), 10) || 0;
+      var name = String($(this).data('name') || 'configuração');
+      if (id <= 0) {
+        return;
+      }
+      deleteByEndpoint('/admin/settings/configs/delete', id, name, 'a configuração');
+    });
     $(document).on('click', '.js-edit-onedrive', function (event) {
       event.preventDefault();
       clearErrors('onedrive-save');
@@ -2653,46 +2759,6 @@
       openModal('#smtp-edit-modal');
     });
 
-    $(document).on('click', '.js-view-setting', function (event) {
-      event.preventDefault();
-      var item = parsePayload($(this).attr('data-setting'));
-      if (!item) {
-        return;
-      }
-
-      $('#s-v-category').val(item.category || 'general');
-      $('#s-v-key-name').val(item.key_name || '');
-      $('#s-v-value-text').val(item.value_text || '');
-      $('#s-v-is-secret').val((item.is_secret || 0) === 1 ? 'Sim' : 'Nao');
-
-      openModal('#setting-view-modal');
-    });
-
-    $(document).on('click', '.js-edit-setting', function (event) {
-      event.preventDefault();
-      var category = String($(this).data('category') || 'general');
-      if (!category) {
-        return;
-      }
-      var categoryMap = getSettingsCategoryMap();
-      var categoryItems = Array.isArray(categoryMap[category]) ? categoryMap[category] : [];
-
-      $('#s-c-e-category').val(category);
-      renderCategorySettingsFields(categoryItems);
-
-      clearErrors('setting-category-edit');
-      openModal('#setting-category-edit-modal');
-    });
-
-    $(document).on('click', '.js-delete-setting', function (event) {
-      event.preventDefault();
-      var id = parseInt($(this).data('id'), 10) || 0;
-      var name = String($(this).data('name') || 'chave');
-      if (id <= 0) {
-        return;
-      }
-      deleteByEndpoint('/admin/settings/delete', id, name, 'a configuracao');
-    });
 
     $(document).on('click', '.js-onedrive-test', function (event) {
       event.preventDefault();

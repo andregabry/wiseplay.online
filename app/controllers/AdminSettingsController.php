@@ -7,6 +7,7 @@ namespace App\controllers;
 use App\core\Response;
 use App\core\Validator;
 use App\models\Setting;
+use App\models\SettingProfile;
 use App\services\EmailService;
 use App\services\OneDriveService;
 
@@ -80,6 +81,15 @@ final class AdminSettingsController extends AdminBaseController
         $quotaCard = $oneDriveService->presentQuota($quotaResult);
         $canManageSettings = in_array((string) (($_SESSION['auth_user']['role'] ?? '')), self::MANAGE_ROLES, true);
 
+        $settingProfileModel = new SettingProfile();
+        $configProfiles = [];
+        try {
+            $configProfiles = $settingProfileModel->all($filters);
+        } catch (\Throwable) {
+            $configProfiles = [];
+        }
+        $configProfileCategories = SettingProfile::CATEGORIES;
+
         $categories = $model->categories();
         if (!in_array('auth', $categories, true)) {
             $categories[] = 'auth';
@@ -106,6 +116,8 @@ final class AdminSettingsController extends AdminBaseController
             'smtp' => $smtp,
             'oneDriveQuota' => $quotaCard,
             'canManageSettings' => $canManageSettings,
+            'configProfiles' => $configProfiles,
+            'configProfileCategories' => $configProfileCategories,
         ]);
     }
 
@@ -703,6 +715,267 @@ final class AdminSettingsController extends AdminBaseController
             'ok' => true,
             'message' => (string) ($result['message'] ?? 'Email de teste enviado com sucesso.'),
         ]);
+    }
+
+    public function createProfileConfig(): void
+    {
+        $this->authorize(self::MANAGE_ROLES);
+        $this->requireCsrf();
+
+        $model = new SettingProfile();
+        $payload = $this->readProfilePayload();
+        $errors = $this->validateProfilePayload($payload);
+        if ($errors !== []) {
+            Response::json(['ok' => false, 'message' => 'Verifique os campos da configuracao.', 'errors' => $errors], 422);
+        }
+
+        try {
+            $id = $model->create($payload);
+        } catch (\Throwable) {
+            Response::json(['ok' => false, 'message' => 'Falha ao criar configuracao de categoria.'], 500);
+        }
+
+        $this->audit('setting_profile.create', 'setting_profile', (string) $id, [
+            'category' => $payload['category'],
+            'is_default' => $payload['is_default'],
+            'description' => $payload['description'],
+        ]);
+
+        Response::json(['ok' => true, 'message' => 'Configuracao criada com sucesso.', 'id' => $id]);
+    }
+
+    public function updateProfileConfig(): void
+    {
+        $this->authorize(self::MANAGE_ROLES);
+        $this->requireCsrf();
+
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            Response::json(['ok' => false, 'message' => 'ID invalido.'], 422);
+        }
+
+        $model = new SettingProfile();
+        if (!$model->findById($id)) {
+            Response::json(['ok' => false, 'message' => 'Configuracao nao encontrada.'], 404);
+        }
+
+        $payload = $this->readProfilePayload();
+        $errors = $this->validateProfilePayload($payload);
+        if ($errors !== []) {
+            Response::json(['ok' => false, 'message' => 'Verifique os campos da configuracao.', 'errors' => $errors], 422);
+        }
+
+        try {
+            $model->update($id, $payload);
+        } catch (\Throwable) {
+            Response::json(['ok' => false, 'message' => 'Falha ao atualizar configuracao de categoria.'], 500);
+        }
+
+        $this->audit('setting_profile.update', 'setting_profile', (string) $id, [
+            'category' => $payload['category'],
+            'is_default' => $payload['is_default'],
+            'description' => $payload['description'],
+        ]);
+
+        Response::json(['ok' => true, 'message' => 'Configuracao atualizada com sucesso.']);
+    }
+
+    public function setDefaultProfileConfig(): void
+    {
+        $this->authorize(self::MANAGE_ROLES);
+        $this->requireCsrf();
+
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            Response::json(['ok' => false, 'message' => 'ID invalido.'], 422);
+        }
+
+        $model = new SettingProfile();
+        $item = $model->findById($id);
+        if (!$item) {
+            Response::json(['ok' => false, 'message' => 'Configuracao nao encontrada.'], 404);
+        }
+
+        try {
+            $model->setDefault($id);
+        } catch (\Throwable) {
+            Response::json(['ok' => false, 'message' => 'Falha ao definir configuracao padrao.'], 500);
+        }
+
+        $this->audit('setting_profile.default', 'setting_profile', (string) $id, [
+            'category' => (string) ($item['category'] ?? ''),
+        ]);
+
+        Response::json(['ok' => true, 'message' => 'Configuracao padrao atualizada.']);
+    }
+
+    public function deleteProfileConfig(): void
+    {
+        $this->authorize(self::MANAGE_ROLES);
+        $this->requireCsrf();
+
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            Response::json(['ok' => false, 'message' => 'ID invalido.'], 422);
+        }
+
+        $model = new SettingProfile();
+        $item = $model->findById($id);
+        if (!$item) {
+            Response::json(['ok' => false, 'message' => 'Configuracao nao encontrada.'], 404);
+        }
+
+        try {
+            $model->delete($id);
+        } catch (\Throwable) {
+            Response::json(['ok' => false, 'message' => 'Falha ao excluir configuracao.'], 500);
+        }
+
+        $this->audit('setting_profile.delete', 'setting_profile', (string) $id, [
+            'category' => (string) ($item['category'] ?? ''),
+            'description' => (string) ($item['description'] ?? ''),
+        ]);
+
+        Response::json(['ok' => true, 'message' => 'Configuracao excluida com sucesso.']);
+    }
+
+    private function readProfilePayload(): array
+    {
+        $category = trim((string) ($_POST['category'] ?? 'general'));
+        $fields = $_POST['fields'] ?? [];
+        if (!is_array($fields)) {
+            $fields = [];
+        }
+
+        $normalizedFields = [];
+        foreach ($fields as $key => $value) {
+            $fieldKey = trim((string) $key);
+            if ($fieldKey === '' || is_array($value)) {
+                continue;
+            }
+            $normalizedFields[$fieldKey] = trim((string) $value);
+        }
+
+        $payloadData = $this->buildProfileConfigByCategory($category, $normalizedFields);
+
+        return [
+            'category' => $category,
+            'config_name' => trim((string) ($_POST['config_name'] ?? '')),
+            'description' => trim((string) ($_POST['description'] ?? '')),
+            'payload_json' => json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'is_default' => (int) ($_POST['is_default'] ?? 0) === 1 ? 1 : 0,
+            'is_active' => (int) ($_POST['is_active'] ?? 1) === 1 ? 1 : 0,
+        ];
+    }
+
+    private function validateProfilePayload(array $payload): array
+    {
+        $errors = [];
+        $category = (string) ($payload['category'] ?? '');
+
+        if (!isset(SettingProfile::CATEGORIES[$category])) {
+            $errors['category'] = 'Categoria invalida.';
+        }
+
+        if (!Validator::required((string) ($payload['description'] ?? '')) || !Validator::maxLength((string) ($payload['description'] ?? ''), 255)) {
+            $errors['description'] = 'Descricao obrigatoria (max 255).';
+        }
+
+        if (!Validator::maxLength((string) ($payload['config_name'] ?? ''), 120)) {
+            $errors['config_name'] = 'Nome da configuracao muito longo.';
+        }
+
+        $payloadData = json_decode((string) ($payload['payload_json'] ?? '{}'), true);
+        if (!is_array($payloadData)) {
+            $errors['fields'] = 'Campos da configuracao invalidos.';
+            return $errors;
+        }
+
+        if ($category === 'api_connect') {
+            if (!Validator::required((string) ($payloadData['endpoint_url'] ?? '')) || !Validator::url((string) ($payloadData['endpoint_url'] ?? ''))) {
+                $errors['fields.endpoint_url'] = 'Endpoint URL invalido.';
+            }
+            if (!in_array((string) ($payloadData['auth_type'] ?? 'none'), ['none', 'api_key', 'bearer', 'basic'], true)) {
+                $errors['fields.auth_type'] = 'Tipo de autenticacao invalido.';
+            }
+        }
+
+        if ($category === 'email') {
+            if (!Validator::required((string) ($payloadData['smtp_host'] ?? ''))) {
+                $errors['fields.smtp_host'] = 'Servidor SMTP obrigatorio.';
+            }
+            if (!Validator::integer((int) ($payloadData['smtp_port'] ?? 0), 1, 65535)) {
+                $errors['fields.smtp_port'] = 'Porta SMTP invalida.';
+            }
+            if (!Validator::email((string) ($payloadData['sender_email'] ?? ''))) {
+                $errors['fields.sender_email'] = 'Email remetente invalido.';
+            }
+        }
+
+        if ($category === 'general') {
+            if (!Validator::required((string) ($payloadData['app_name'] ?? ''))) {
+                $errors['fields.app_name'] = 'Nome da aplicacao obrigatorio.';
+            }
+            if (!Validator::required((string) ($payloadData['app_url'] ?? '')) || !Validator::url((string) ($payloadData['app_url'] ?? ''))) {
+                $errors['fields.app_url'] = 'URL da aplicacao invalida.';
+            }
+        }
+
+        if ($category === 'payment') {
+            if (!Validator::required((string) ($payloadData['provider'] ?? ''))) {
+                $errors['fields.provider'] = 'Provider obrigatorio.';
+            }
+            if (!in_array((string) ($payloadData['mode'] ?? 'test'), ['test', 'live'], true)) {
+                $errors['fields.mode'] = 'Modo de pagamento invalido.';
+            }
+        }
+
+        return $errors;
+    }
+
+    private function buildProfileConfigByCategory(string $category, array $input): array
+    {
+        if ($category === 'api_connect') {
+            return [
+                'api_name' => (string) ($input['api_name'] ?? ''),
+                'endpoint_url' => (string) ($input['endpoint_url'] ?? ''),
+                'auth_type' => (string) ($input['auth_type'] ?? 'none'),
+                'api_key' => (string) ($input['api_key'] ?? ''),
+                'api_secret' => (string) ($input['api_secret'] ?? ''),
+                'timeout_seconds' => (string) ($input['timeout_seconds'] ?? '15'),
+            ];
+        }
+
+        if ($category === 'email') {
+            return [
+                'smtp_host' => (string) ($input['smtp_host'] ?? ''),
+                'smtp_port' => (string) ($input['smtp_port'] ?? '465'),
+                'smtp_encryption' => (string) ($input['smtp_encryption'] ?? 'ssl'),
+                'smtp_username' => (string) ($input['smtp_username'] ?? ''),
+                'smtp_password' => (string) ($input['smtp_password'] ?? ''),
+                'sender_email' => (string) ($input['sender_email'] ?? ''),
+                'sender_name' => (string) ($input['sender_name'] ?? ''),
+            ];
+        }
+
+        if ($category === 'payment') {
+            return [
+                'provider' => (string) ($input['provider'] ?? ''),
+                'mode' => (string) ($input['mode'] ?? 'test'),
+                'currency' => (string) ($input['currency'] ?? 'BRL'),
+                'public_key' => (string) ($input['public_key'] ?? ''),
+                'secret_key' => (string) ($input['secret_key'] ?? ''),
+                'webhook_url' => (string) ($input['webhook_url'] ?? ''),
+            ];
+        }
+
+        return [
+            'app_name' => (string) ($input['app_name'] ?? 'WisePlay'),
+            'app_url' => (string) ($input['app_url'] ?? (string) config('app.url', '')),
+            'default_language' => (string) ($input['default_language'] ?? 'pt-PT'),
+            'timezone' => (string) ($input['timezone'] ?? 'Europe/Lisbon'),
+            'maintenance_mode' => (string) ($input['maintenance_mode'] ?? '0'),
+        ];
     }
 
     private function readPayload(): array

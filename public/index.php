@@ -91,6 +91,10 @@ $router->post('/admin/settings/delete', [AdminSettingsController::class, 'delete
 $router->post('/admin/settings/onedrive/save', [AdminSettingsController::class, 'saveOneDrive']);
 $router->post('/admin/settings/smtp/save', [AdminSettingsController::class, 'saveSmtp']);
 $router->post('/admin/settings/smtp/test', [AdminSettingsController::class, 'testSmtpConnection']);
+$router->post('/admin/settings/configs/create', [AdminSettingsController::class, 'createProfileConfig']);
+$router->post('/admin/settings/configs/update', [AdminSettingsController::class, 'updateProfileConfig']);
+$router->post('/admin/settings/configs/default', [AdminSettingsController::class, 'setDefaultProfileConfig']);
+$router->post('/admin/settings/configs/delete', [AdminSettingsController::class, 'deleteProfileConfig']);
 $router->get('/admin/settings/onedrive/connect', [AdminSettingsController::class, 'connectOneDrive']);
 $router->get('/admin/settings/onedrive/callback', [AdminSettingsController::class, 'oneDriveCallback']);
 $router->post('/admin/settings/onedrive/test', [AdminSettingsController::class, 'testOneDriveConnection']);

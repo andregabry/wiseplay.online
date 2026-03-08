@@ -1,12 +1,19 @@
 <?php
-$items = $items ?? [];
-$filters = $filters ?? ['q' => '', 'category' => ''];
-$categories = $categories ?? [];
-$categoryItemsMap = $categoryItemsMap ?? [];
 $onedrive = $onedrive ?? [];
 $smtp = $smtp ?? [];
 $oneDriveQuota = $oneDriveQuota ?? [];
 $canManageSettings = $canManageSettings ?? false;
+$configProfiles = $configProfiles ?? [];
+$configProfileCategories = $configProfileCategories ?? [];
+
+if (!is_array($configProfileCategories) || $configProfileCategories === []) {
+    $configProfileCategories = [
+        'api_connect' => 'API Connect',
+        'email' => 'Email',
+        'general' => 'General',
+        'payment' => 'Payment',
+    ];
+}
 
 $mask = static function (string $value): string {
     if ($value === '') {
@@ -20,150 +27,111 @@ $mask = static function (string $value): string {
     return substr($value, 0, 3) . str_repeat('*', strlen($value) - 6) . substr($value, -3);
 };
 
-$searchFilter = strtolower(trim((string) ($filters['q'] ?? '')));
-$categoryFilter = strtolower(trim((string) ($filters['category'] ?? '')));
-$targetsOneDriveCategory = in_array($categoryFilter, ['onedrive', 'integration', 'integrations'], true);
-$targetsOneDriveSearch = $searchFilter !== '' && str_contains('onedrive personal onedrive.personal', $searchFilter);
-$showOneDriveRow = ($categoryFilter === '' && $searchFilter === '')
-    || $targetsOneDriveCategory
-    || $targetsOneDriveSearch;
 $oneDriveStatus = (string) ($onedrive['last_connection_status'] ?? 'Not connected');
 $oneDriveLastConnected = (string) (($onedrive['last_connected_at'] ?? '') !== '' ? $onedrive['last_connected_at'] : '-');
 $oneDriveQuotaSummary = (string) ($oneDriveQuota['used_human'] ?? '-') . ' / ' . (string) ($oneDriveQuota['total_human'] ?? '-');
-$groupedItems = [];
 
-if ($showOneDriveRow) {
-    $groupedItems['integration'][] = [
-        '_kind' => 'onedrive',
-        'category' => 'integration',
-        'key_name' => 'onedrive.personal',
-        'value_text' => 'Status: ' . $oneDriveStatus . ' | Quota: ' . $oneDriveQuotaSummary . ' | Ultima conexao: ' . $oneDriveLastConnected,
-        'is_secret' => 0,
-    ];
-}
+$configProfilesDisplay = is_array($configProfiles) ? $configProfiles : [];
+array_unshift($configProfilesDisplay, [
+    '__kind' => 'onedrive',
+    'id' => 0,
+    'category' => 'api_connect',
+    'config_name' => 'OneDrive Personal',
+    'description' => 'Integracao com OneDrive para uploads e streaming. Status: ' . $oneDriveStatus . ' | Quota: ' . $oneDriveQuotaSummary,
+    'is_default' => 1,
+    'is_active' => 1,
+    'payload_json' => (string) json_encode([
+        'authority' => (string) ($onedrive['authority'] ?? 'consumers'),
+        'root_folder' => (string) ($onedrive['root_folder'] ?? 'WisePlay'),
+        'status' => $oneDriveStatus,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+]);
 
-foreach ($items as $item) {
-    $categoryName = trim((string) ($item['category'] ?? ''));
-    if ($categoryName === '') {
-        $categoryName = 'uncategorized';
-    }
-    if (!isset($groupedItems[$categoryName])) {
-        $groupedItems[$categoryName] = [];
-    }
-    $groupedItems[$categoryName][] = $item;
-}
-
-$showAuthRow = ($categoryFilter === '' && $searchFilter === '')
-    || $categoryFilter === 'auth'
-    || ($searchFilter !== '' && str_contains('auth password verification code', $searchFilter));
-if ($showAuthRow && !isset($groupedItems['auth'])) {
-    $groupedItems['auth'] = [];
-}
-
-$showSmtpRow = ($categoryFilter === '' && $searchFilter === '')
-    || $categoryFilter === 'smtp'
-    || ($searchFilter !== '' && str_contains('smtp imap pop email hostinger', $searchFilter));
-if ($showSmtpRow && !isset($groupedItems['smtp'])) {
-    $groupedItems['smtp'] = [];
-}
-
-$categoryRows = [];
-foreach ($groupedItems as $categoryName => $groupItems) {
-    if ($categoryName === 'integration' && $showOneDriveRow) {
-        $categoryRows[] = [
-            'category' => 'integration',
-            'count' => 1,
-            'preview' => 'onedrive.personal',
-            'is_onedrive' => true,
-            'onedrive_summary' => 'Status: ' . $oneDriveStatus . ' | Quota: ' . $oneDriveQuotaSummary . ' | Ultima conexao: ' . $oneDriveLastConnected,
-        ];
-        continue;
+$profileCategoryLabel = static function (string $category) use ($configProfileCategories): string {
+    if (isset($configProfileCategories[$category])) {
+        return (string) $configProfileCategories[$category];
     }
 
-    $categoryItems = $categoryItemsMap[$categoryName] ?? $groupItems;
-    $keyNames = [];
-    foreach ($categoryItems as $categoryItem) {
-        $key = trim((string) ($categoryItem['key_name'] ?? ''));
-        if ($key !== '') {
-            $keyNames[] = $key;
-        }
-    }
-
-    $categoryRows[] = [
-        'category' => $categoryName,
-        'count' => count($categoryItems),
-        'key_names' => $keyNames,
-        'is_onedrive' => false,
-        'onedrive_summary' => '',
-    ];
-}
-
-$hasCategoryRows = $categoryRows !== [];
+    return ucfirst(str_replace('_', ' ', $category));
+};
 ?>
 
 <div class="card mb-4">
   <div class="card-header d-flex justify-content-between align-items-center">
     <div class="wp-card-heading">
-      <span class="wp-card-heading-icon"><i class="ri ri-settings-4-line"></i></span>
+      <span class="wp-card-heading-icon"><i class="ri ri-list-settings-line"></i></span>
       <div class="wp-card-heading-copy">
-        <h5 class="mb-0">Configuracoes gerais</h5>
-        <small class="text-body-secondary">Lista de configuracoes em tabela com acoes por linha.</small>
+        <h5 class="mb-0">Settings por categoria</h5>
+        <small class="text-body-secondary">Defina multiplas configuracoes por categoria e marque qual sera a padrao de producao.</small>
       </div>
     </div>
     <?php if ($canManageSettings): ?>
-      <button class="btn btn-primary btn-sm js-open-modal" data-target="#setting-create-modal"><i class="ri ri-add-circle-line me-1"></i>Adicionar setting</button>
+      <button type="button" class="btn btn-primary btn-sm js-open-config-profile-create"><i class="ri ri-add-circle-line me-1"></i>Adicionar settings</button>
     <?php endif; ?>
   </div>
-  <div class="card-body border-bottom">
-    <form method="get" action="/admin/settings" class="row g-3">
-      <div class="col-md-6"><input class="form-control" name="q" value="<?= e((string) $filters['q']) ?>" placeholder="Buscar por chave ou valor"></div>
-      <div class="col-md-4"><select class="form-select" name="category"><option value="">Todas as categorias</option><?php foreach ($categories as $category): ?><option value="<?= e((string) $category) ?>" <?= ((string) $filters['category'] === (string) $category) ? 'selected' : '' ?>><?= e((string) $category) ?></option><?php endforeach; ?></select></div>
-      <div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Filtrar</button></div>
-    </form>
-  </div>
+
   <div class="table-responsive">
     <table class="table">
       <thead>
         <tr>
           <th>Categoria</th>
-          <th>Itens</th>
-          <th>Nome das configuracoes</th>
+          <th>Descricao</th>
+          <th>Padrao</th>
           <?php if ($canManageSettings): ?><th>Acoes</th><?php endif; ?>
         </tr>
       </thead>
       <tbody>
-      <?php if (!$hasCategoryRows): ?>
-        <tr><td colspan="<?= $canManageSettings ? '4' : '3' ?>" class="text-center text-body-secondary">Nenhuma configuracao encontrada.</td></tr>
+      <?php if ($configProfilesDisplay === []): ?>
+        <tr><td colspan="<?= $canManageSettings ? '4' : '3' ?>" class="text-center text-body-secondary">Nenhuma config cadastrada para categorias.</td></tr>
       <?php endif; ?>
-      <?php foreach ($categoryRows as $row): ?>
+
+      <?php foreach ($configProfilesDisplay as $profile): ?>
+        <?php
+        $profilePayload = json_decode((string) ($profile['payload_json'] ?? '{}'), true);
+        if (!is_array($profilePayload)) {
+            $profilePayload = [];
+        }
+
+        $profileJson = [
+            'id' => (int) ($profile['id'] ?? 0),
+            'category' => (string) ($profile['category'] ?? ''),
+            'config_name' => (string) ($profile['config_name'] ?? ''),
+            'description' => (string) ($profile['description'] ?? ''),
+            'is_default' => (int) ($profile['is_default'] ?? 0),
+            'is_active' => (int) ($profile['is_active'] ?? 1),
+            'payload' => $profilePayload,
+        ];
+        ?>
         <tr>
-          <td><span class="badge bg-label-secondary"><?= e((string) $row['category']) ?></span></td>
-          <td><?= (int) ($row['count'] ?? 0) ?></td>
+          <td>
+            <span class="badge bg-label-secondary"><?= e($profileCategoryLabel((string) ($profile['category'] ?? 'general'))) ?></span>
+          </td>
           <td class="setting-value-cell">
-            <?php if (($row['is_onedrive'] ?? false) === true): ?>
-              <?= e((string) ($row['onedrive_summary'] ?? '-')) ?>
-            <?php else: ?>
-              <?php $names = $row['key_names'] ?? []; ?>
-              <?php if (!is_array($names) || $names === []): ?>
-                <span class="text-body-secondary">-</span>
-              <?php else: ?>
-                <div class="wp-setting-names-list">
-                  <?php foreach ($names as $name): ?>
-                    <span class="wp-setting-name-item"><?= e((string) $name) ?></span>
-                  <?php endforeach; ?>
-                </div>
-              <?php endif; ?>
+            <div class="fw-medium"><?= e((string) ($profile['description'] ?? '-')) ?></div>
+            <?php if ((string) ($profile['config_name'] ?? '') !== ''): ?>
+              <small class="text-body-secondary">Nome: <?= e((string) $profile['config_name']) ?></small>
+            <?php endif; ?>
+            <?php if ((string) ($profile['__kind'] ?? '') === 'onedrive'): ?>
+              <div class="small text-body-secondary mt-1">Ultima conexao: <?= e($oneDriveLastConnected) ?></div>
             <?php endif; ?>
           </td>
+          <td>
+            <?php if ((int) ($profile['is_default'] ?? 0) === 1): ?>
+              <span class="badge bg-success">Padrao</span>
+            <?php else: ?>
+              <span class="badge bg-label-secondary">Alternativa</span>
+            <?php endif; ?>
+          </td>
+
           <?php if ($canManageSettings): ?>
           <td>
             <div class="d-flex align-items-center gap-1">
-              <?php if (($row['is_onedrive'] ?? false) === true): ?>
-                <button type="button" class="btn btn-sm btn-outline-primary js-edit-onedrive" title="Editar OneDrive"><i class="ri ri-pencil-line"></i></button>
-              <?php elseif ((string) ($row['category'] ?? '') === 'smtp'): ?>
-                <button type="button" class="btn btn-sm btn-outline-primary js-edit-smtp" title="Editar SMTP"><i class="ri ri-mail-settings-line"></i></button>
+              <?php if ((string) ($profile['__kind'] ?? '') === 'onedrive'): ?>
+                <button type="button" class="btn btn-sm btn-outline-primary js-edit-onedrive" title="Editar OneDrive"><i class="ri ri-cloud-line"></i></button>
               <?php else: ?>
-                <button type="button" class="btn btn-sm btn-outline-primary js-edit-setting" data-category="<?= e((string) $row['category']) ?>" title="Editar categoria"><i class="ri ri-pencil-line"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-primary js-edit-config-profile" data-config='<?= e((string) json_encode($profileJson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>' title="Editar"><i class="ri ri-pencil-line"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-success js-default-config-profile" data-id="<?= (int) ($profile['id'] ?? 0) ?>" data-description="<?= e((string) ($profile['description'] ?? 'config')) ?>" title="Definir padrao" <?= ((int) ($profile['is_default'] ?? 0) === 1) ? 'disabled' : '' ?>><i class="ri ri-check-line"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger js-delete-config-profile" data-id="<?= (int) ($profile['id'] ?? 0) ?>" data-name="<?= e((string) ($profile['description'] ?? 'config')) ?>" title="Excluir"><i class="ri ri-delete-bin-line"></i></button>
               <?php endif; ?>
             </div>
           </td>
@@ -176,35 +144,56 @@ $hasCategoryRows = $categoryRows !== [];
 </div>
 
 <?php if ($canManageSettings): ?>
-<div class="modal fade" id="setting-create-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content">
-  <div class="modal-header"><h5 class="modal-title">Nova configuracao</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal fade" id="setting-config-profile-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Configuracao por categoria</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
-    <div class="form-errors text-danger small mb-2" data-form-errors="setting-create"></div>
-    <form id="setting-create-form" class="js-ajax-form" data-endpoint="/admin/settings/create" data-errors-key="setting-create">
+    <div class="form-errors text-danger small mb-2" data-form-errors="setting-config-profile"></div>
+    <form id="setting-config-profile-form" class="js-ajax-form" data-endpoint="/admin/settings/configs/create" data-errors-key="setting-config-profile">
       <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
-      <div class="mb-3"><label class="form-label">Categoria</label><input class="form-control" name="category" value="general" required></div>
-      <div class="mb-3"><label class="form-label">Chave</label><input class="form-control" name="key_name" required></div>
-      <div class="mb-3"><label class="form-label">Valor</label><textarea class="form-control" name="value_text" rows="3"></textarea></div>
-      <div class="mb-0"><label class="form-label">Secreta</label><select class="form-select" name="is_secret"><option value="0">Nao</option><option value="1">Sim</option></select></div>
+      <input type="hidden" name="id" id="scp-id" value="">
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Categoria</label>
+          <select class="form-select" name="category" id="scp-category" required>
+            <?php foreach ($configProfileCategories as $value => $label): ?>
+              <option value="<?= e((string) $value) ?>"><?= e((string) $label) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Nome da config (opcional)</label>
+          <input class="form-control" name="config_name" id="scp-config-name" maxlength="120" placeholder="Ex: Producao principal">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Padrao</label>
+          <select class="form-select" name="is_default" id="scp-is-default">
+            <option value="0">Nao</option>
+            <option value="1">Sim</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Ativa</label>
+          <select class="form-select" name="is_active" id="scp-is-active">
+            <option value="1">Sim</option>
+            <option value="0">Nao</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Descricao</label>
+        <textarea class="form-control" name="description" id="scp-description" rows="2" maxlength="255" required placeholder="Explique para que essa configuracao sera usada"></textarea>
+      </div>
+
+      <div id="scp-dynamic-fields" class="d-grid gap-3"></div>
     </form>
   </div>
-  <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary js-submit-form" data-form="#setting-create-form">Criar</button></div>
-</div></div></div>
-
-<div class="modal fade" id="setting-category-edit-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl"><div class="modal-content">
-  <div class="modal-header"><h5 class="modal-title">Editar categoria</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-  <div class="modal-body">
-    <div class="form-errors text-danger small mb-2" data-form-errors="setting-category-edit"></div>
-    <form id="setting-category-edit-form" class="js-ajax-form" data-endpoint="/admin/settings/update-category" data-errors-key="setting-category-edit">
-      <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
-      <div class="mb-3"><label class="form-label">Categoria</label><input class="form-control" name="category" id="s-c-e-category" readonly></div>
-      <div id="s-c-e-items" class="d-grid gap-3"></div>
-    </form>
+  <div class="modal-footer">
+    <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button class="btn btn-primary js-submit-form" data-form="#setting-config-profile-form">Salvar configuracao</button>
   </div>
-  <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary js-submit-form" data-form="#setting-category-edit-form">Salvar categoria</button></div>
 </div></div></div>
-
-<div id="settings-category-data" data-categories='<?= e((string) json_encode($categoryItemsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>' hidden></div>
 
 <div class="modal fade" id="onedrive-edit-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl"><div class="modal-content">
   <div class="modal-header"><h5 class="modal-title">Editar OneDrive Personal</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
@@ -414,7 +403,6 @@ $hasCategoryRows = $categoryRows !== [];
           <input class="form-control" value="POP" readonly>
         </div>
       </div>
-
     </form>
 
     <div class="row g-2 mt-2">
@@ -434,16 +422,5 @@ $hasCategoryRows = $categoryRows !== [];
     <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
     <button class="btn btn-primary js-submit-form" data-form="#smtp-save-form">Salvar SMTP</button>
   </div>
-</div></div></div>
-
-<div class="modal fade" id="setting-view-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content">
-  <div class="modal-header"><h5 class="modal-title">Visualizar configuracao</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-  <div class="modal-body">
-    <div class="mb-3"><label class="form-label">Categoria</label><input class="form-control" id="s-v-category" readonly></div>
-    <div class="mb-3"><label class="form-label">Chave</label><input class="form-control" id="s-v-key-name" readonly></div>
-    <div class="mb-3"><label class="form-label">Valor</label><textarea class="form-control" id="s-v-value-text" rows="4" readonly></textarea></div>
-    <div class="mb-0"><label class="form-label">Secreta</label><input class="form-control" id="s-v-is-secret" readonly></div>
-  </div>
-  <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button></div>
 </div></div></div>
 <?php endif; ?>

@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS payment_methods;
 DROP TABLE IF EXISTS integration_credentials;
 DROP TABLE IF EXISTS email_verification_codes;
 DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS setting_profiles;
 DROP TABLE IF EXISTS subscriptions;
 DROP TABLE IF EXISTS billing_plans;
 DROP TABLE IF EXISTS media_items;
@@ -273,6 +274,21 @@ CREATE TABLE settings (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   INDEX idx_settings_category (category)
+) ENGINE=InnoDB;
+
+CREATE TABLE setting_profiles (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  category VARCHAR(60) NOT NULL,
+  config_name VARCHAR(120) NULL,
+  description VARCHAR(255) NOT NULL,
+  payload_json LONGTEXT NULL,
+  is_default TINYINT(1) NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_setting_profiles_category (category),
+  INDEX idx_setting_profiles_default (category, is_default),
+  INDEX idx_setting_profiles_active (is_active)
 ) ENGINE=InnoDB;
 
 CREATE TABLE integration_credentials (

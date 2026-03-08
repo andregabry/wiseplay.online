@@ -180,6 +180,11 @@ INSERT INTO settings (id, category, key_name, value_text, is_secret, created_at,
 (53, 'smtp', 'smtp.outgoing_port', '465', 0, NOW(), NOW()),
 (54, 'smtp', 'smtp.outgoing_encryption', 'ssl', 0, NOW(), NOW());
 
+INSERT INTO setting_profiles (id, category, config_name, description, payload_json, is_default, is_active, created_at, updated_at) VALUES
+(1, 'general', 'Production', 'Configuracao geral padrao da aplicacao', JSON_OBJECT('app_name','WisePlay','app_url','https://wiseplay.online','default_language','pt-PT','timezone','Europe/Lisbon','maintenance_mode','0'), 1, 1, NOW(), NOW()),
+(2, 'email', 'Hostinger SMTP', 'Canal principal de envio de emails transacionais', JSON_OBJECT('smtp_host','smtp.hostinger.com','smtp_port','465','smtp_encryption','ssl','smtp_username','noreply@wiseplay.online','smtp_password','','sender_email','noreply@wiseplay.online','sender_name','WisePlay'), 1, 1, NOW(), NOW()),
+(3, 'payment', 'Stripe Sandbox', 'Gateway de pagamento para ambiente de testes', JSON_OBJECT('provider','stripe','mode','test','currency','BRL','public_key','','secret_key','','webhook_url',''), 1, 1, NOW(), NOW());
+
 INSERT INTO watch_history (id, profile_id, title_id, media_item_id, progress_percent, duration_seconds, last_position_seconds, completed, completed_at, last_watched_at, created_at, updated_at) VALUES
 (1, 13, 4, 5, 72, 2760, 1980, 0, NULL, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY), NOW()),
 (2, 13, 6, 10, 21, 2520, 540, 0, NULL, DATE_SUB(NOW(), INTERVAL 12 HOUR), DATE_SUB(NOW(), INTERVAL 12 HOUR), NOW()),
