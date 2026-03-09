@@ -2747,6 +2747,75 @@
       }
       deleteByEndpoint('/admin/settings/configs/delete', id, name, 'a configuração');
     });
+
+    $(document).on('click', '.js-test-config-profile', function (event) {
+      event.preventDefault();
+      var id = parseInt($(this).data('id'), 10) || 0;
+      var category = String($(this).data('category') || '');
+      var configName = String($(this).data('name') || 'configuração');
+
+      if (id <= 0) {
+        sweetError('ID de configuração inválido.');
+        return;
+      }
+
+      var runConfigTest = function (toEmail) {
+        var payload = {
+          id: id,
+          _csrf: csrfToken()
+        };
+
+        if (toEmail) {
+          payload.to_email = toEmail;
+        }
+
+        request('/admin/settings/configs/test', 'POST', $.param(payload), false)
+          .done(function (response) {
+            if (!response || response.ok !== true) {
+              sweetError((response && response.message) || 'Teste da configuração falhou.');
+              return;
+            }
+
+            swalFire({
+              icon: 'success',
+              title: 'Teste concluído',
+              text: response.message || ('Configuração "' + configName + '" validada com sucesso.')
+            });
+          })
+          .fail(function (xhr) {
+            var json = xhr.responseJSON || {};
+            sweetError(json.message || 'Teste da configuração falhou.');
+          });
+      };
+
+      if (category === 'email') {
+        swalFire({
+          icon: 'question',
+          title: 'Testar configuração de Email',
+          input: 'email',
+          inputLabel: 'Enviar email de teste para',
+          inputPlaceholder: 'destino@exemplo.com',
+          showCancelButton: true,
+          confirmButtonText: 'Enviar teste',
+          cancelButtonText: 'Cancelar',
+          inputValidator: function (value) {
+            if (!value) {
+              return 'Informe um email destino.';
+            }
+            return null;
+          }
+        }).then(function (result) {
+          if (!result.isConfirmed) {
+            return;
+          }
+          runConfigTest(String(result.value || '').trim());
+        });
+
+        return;
+      }
+
+      runConfigTest('');
+    });
     $(document).on('click', '.js-edit-onedrive', function (event) {
       event.preventDefault();
       clearErrors('onedrive-save');

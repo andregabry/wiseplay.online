@@ -131,6 +131,7 @@ $profileCategoryLabel = static function (string $category) use ($configProfileCa
               <?php else: ?>
                 <button type="button" class="btn btn-sm btn-outline-primary js-edit-config-profile" data-config='<?= e((string) json_encode($profileJson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>' title="Editar"><i class="ri ri-pencil-line"></i></button>
                 <button type="button" class="btn btn-sm btn-outline-success js-default-config-profile" data-id="<?= (int) ($profile['id'] ?? 0) ?>" data-description="<?= e((string) ($profile['description'] ?? 'config')) ?>" title="Definir padrao" <?= ((int) ($profile['is_default'] ?? 0) === 1) ? 'disabled' : '' ?>><i class="ri ri-check-line"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-info js-test-config-profile" data-id="<?= (int) ($profile["id"] ?? 0) ?>" data-category="<?= e((string) ($profile["category"] ?? "")) ?>" data-name="<?= e((string) ((($profile["config_name"] ?? "") !== "") ? $profile["config_name"] : ($profile["description"] ?? "config"))) ?>" title="Testar"><i class="ri ri-flask-line"></i></button>
                 <button type="button" class="btn btn-sm btn-outline-danger js-delete-config-profile" data-id="<?= (int) ($profile['id'] ?? 0) ?>" data-name="<?= e((string) ($profile['description'] ?? 'config')) ?>" title="Excluir"><i class="ri ri-delete-bin-line"></i></button>
               <?php endif; ?>
             </div>

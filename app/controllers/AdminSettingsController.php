@@ -839,6 +839,270 @@ final class AdminSettingsController extends AdminBaseController
         Response::json(['ok' => true, 'message' => 'Configuracao excluida com sucesso.']);
     }
 
+    public function testProfileConfig(): void
+    {
+        $this->authorize(self::MANAGE_ROLES);
+        $this->requireCsrf();
+
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            Response::json(['ok' => false, 'message' => 'ID invalido.'], 422);
+        }
+
+        $model = new SettingProfile();
+        $item = $model->findById($id);
+        if (!$item) {
+            Response::json(['ok' => false, 'message' => 'Configuracao nao encontrada.'], 404);
+        }
+
+        $category = (string) ($item['category'] ?? '');
+        $payloadData = json_decode((string) ($item['payload_json'] ?? '{}'), true);
+        if (!is_array($payloadData)) {
+            Response::json(['ok' => false, 'message' => 'Payload da configuracao invalido.'], 422);
+        }
+
+        $result = $this->testConfigByCategory($category, $payloadData);
+
+        $this->audit('setting_profile.test', 'setting_profile', (string) $id, [
+            'category' => $category,
+            'ok' => (bool) ($result['ok'] ?? false),
+            'message' => (string) ($result['message'] ?? ''),
+        ]);
+
+        if (($result['ok'] ?? false) !== true) {
+            Response::json(['ok' => false, 'message' => (string) ($result['message'] ?? 'Teste falhou.')], 422);
+        }
+
+        Response::json([
+            'ok' => true,
+            'message' => (string) ($result['message'] ?? 'Teste executado com sucesso.'),
+            'details' => $result['details'] ?? [],
+        ]);
+    }
+
+    private function testConfigByCategory(string $category, array $payloadData): array
+    {
+        if ($category === 'email') {
+            return $this->testEmailProfile($payloadData);
+        }
+
+        if ($category === 'api_connect') {
+            return $this->testApiProfile($payloadData);
+        }
+
+        if ($category === 'general') {
+            return $this->testGeneralProfile($payloadData);
+        }
+
+        if ($category === 'payment') {
+            return $this->testPaymentProfile($payloadData);
+        }
+
+        return ['ok' => false, 'message' => 'Categoria sem rotina de teste.'];
+    }
+
+    private function testEmailProfile(array $payloadData): array
+    {
+        $toEmail = trim((string) ($_POST['to_email'] ?? (string) ($payloadData['sender_email'] ?? $payloadData['smtp_username'] ?? '')));
+        if (!Validator::email($toEmail)) {
+            return ['ok' => false, 'message' => 'Email de destino para teste invalido.'];
+        }
+
+        $smtpConfig = [
+            'host' => trim((string) ($payloadData['smtp_host'] ?? '')),
+            'port' => (string) ($payloadData['smtp_port'] ?? '465'),
+            'encryption' => strtolower(trim((string) ($payloadData['smtp_encryption'] ?? 'ssl'))),
+            'username' => trim((string) ($payloadData['smtp_username'] ?? '')),
+            'password' => (string) ($payloadData['smtp_password'] ?? ''),
+            'from_email' => trim((string) ($payloadData['sender_email'] ?? '')),
+            'from_name' => trim((string) ($payloadData['sender_name'] ?? 'WisePlay')),
+        ];
+
+        if ($smtpConfig['host'] === '') {
+            return ['ok' => false, 'message' => 'Servidor SMTP obrigatorio para teste.'];
+        }
+
+        $result = (new EmailService())->sendTestEmailWithSmtpConfig(
+            $smtpConfig,
+            $toEmail,
+            'WisePlay - teste de configuracao de email',
+            'Este e um teste enviado a partir de uma configuracao de categoria no Admin WisePlay.'
+        );
+
+        if (($result['ok'] ?? false) !== true) {
+            return ['ok' => false, 'message' => (string) ($result['message'] ?? 'Teste SMTP falhou.')];
+        }
+
+        return ['ok' => true, 'message' => 'Email teste enviado com sucesso para ' . $toEmail . '.'];
+    }
+
+    private function testApiProfile(array $payloadData): array
+    {
+        $endpointUrl = trim((string) ($payloadData['endpoint_url'] ?? ''));
+        if (!Validator::url($endpointUrl)) {
+            return ['ok' => false, 'message' => 'Endpoint URL invalido.'];
+        }
+
+        $authType = strtolower(trim((string) ($payloadData['auth_type'] ?? 'none')));
+        $apiKey = trim((string) ($payloadData['api_key'] ?? ''));
+        $apiSecret = trim((string) ($payloadData['api_secret'] ?? ''));
+        $headers = ['Accept: application/json'];
+        $userpwd = null;
+
+        if ($authType === 'api_key') {
+            if ($apiKey === '') {
+                return ['ok' => false, 'message' => 'API Key obrigatoria para autenticacao api_key.'];
+            }
+            $headers[] = 'X-API-Key: ' . $apiKey;
+        }
+
+        if ($authType === 'bearer') {
+            $token = $apiSecret !== '' ? $apiSecret : $apiKey;
+            if ($token === '') {
+                return ['ok' => false, 'message' => 'Token Bearer nao informado.'];
+            }
+            $headers[] = 'Authorization: Bearer ' . $token;
+        }
+
+        if ($authType === 'basic') {
+            if ($apiKey === '') {
+                return ['ok' => false, 'message' => 'Usuario/API Key obrigatorio para auth basic.'];
+            }
+            $userpwd = $apiKey . ':' . $apiSecret;
+        }
+
+        $response = $this->httpRequest($endpointUrl, [
+            'headers' => $headers,
+            'userpwd' => $userpwd,
+            'timeout' => 12,
+        ]);
+
+        if (($response['ok'] ?? false) !== true) {
+            return ['ok' => false, 'message' => (string) ($response['message'] ?? 'Falha ao testar endpoint API.')];
+        }
+
+        return [
+            'ok' => true,
+            'message' => 'Endpoint respondeu com HTTP ' . (string) ($response['status'] ?? 0) . '.',
+            'details' => ['status' => (int) ($response['status'] ?? 0)],
+        ];
+    }
+
+    private function testGeneralProfile(array $payloadData): array
+    {
+        $appUrl = trim((string) ($payloadData['app_url'] ?? ''));
+        $timezone = trim((string) ($payloadData['timezone'] ?? 'Europe/Lisbon'));
+
+        if (!Validator::url($appUrl)) {
+            return ['ok' => false, 'message' => 'URL da aplicacao invalida.'];
+        }
+
+        if ($timezone !== '' && !in_array($timezone, timezone_identifiers_list(), true)) {
+            return ['ok' => false, 'message' => 'Timezone invalida.'];
+        }
+
+        $response = $this->httpRequest($appUrl, ['timeout' => 10]);
+        if (($response['ok'] ?? false) !== true) {
+            return ['ok' => false, 'message' => (string) ($response['message'] ?? 'Falha ao testar URL da aplicacao.')];
+        }
+
+        return [
+            'ok' => true,
+            'message' => 'App URL respondeu com HTTP ' . (string) ($response['status'] ?? 0) . '.',
+            'details' => ['status' => (int) ($response['status'] ?? 0), 'timezone' => $timezone],
+        ];
+    }
+
+    private function testPaymentProfile(array $payloadData): array
+    {
+        $provider = strtolower(trim((string) ($payloadData['provider'] ?? '')));
+        $mode = strtolower(trim((string) ($payloadData['mode'] ?? 'test')));
+        $webhookUrl = trim((string) ($payloadData['webhook_url'] ?? ''));
+
+        if ($provider === '') {
+            return ['ok' => false, 'message' => 'Provider de pagamento obrigatorio.'];
+        }
+
+        if ($provider === 'stripe') {
+            $secretKey = trim((string) ($payloadData['secret_key'] ?? ''));
+            if ($secretKey === '') {
+                return ['ok' => false, 'message' => 'Secret Key do Stripe obrigatoria para teste.'];
+            }
+
+            if ($mode === 'test' && !str_starts_with($secretKey, 'sk_test_')) {
+                return ['ok' => false, 'message' => 'Modo TEST requer secret key iniciando com sk_test_.'];
+            }
+
+            if ($mode === 'live' && !str_starts_with($secretKey, 'sk_live_')) {
+                return ['ok' => false, 'message' => 'Modo LIVE requer secret key iniciando com sk_live_.'];
+            }
+
+            $response = $this->httpRequest('https://api.stripe.com/v1/account', [
+                'userpwd' => $secretKey . ':',
+                'headers' => ['Accept: application/json'],
+                'timeout' => 12,
+            ]);
+
+            if (($response['ok'] ?? false) !== true) {
+                return ['ok' => false, 'message' => (string) ($response['message'] ?? 'Falha ao validar chave Stripe.')];
+            }
+
+            return [
+                'ok' => true,
+                'message' => 'Stripe autenticado com sucesso (HTTP ' . (string) ($response['status'] ?? 0) . ').',
+                'details' => ['status' => (int) ($response['status'] ?? 0)],
+            ];
+        }
+
+        if ($webhookUrl !== '' && !Validator::url($webhookUrl)) {
+            return ['ok' => false, 'message' => 'Webhook URL invalida.'];
+        }
+
+        return ['ok' => true, 'message' => 'Configuracao de pagamento validada para provider ' . strtoupper($provider) . '.'];
+    }
+
+    private function httpRequest(string $url, array $options = []): array
+    {
+        if (!function_exists('curl_init')) {
+            return ['ok' => false, 'message' => 'cURL nao disponivel no servidor.'];
+        }
+
+        $timeout = max(3, (int) ($options['timeout'] ?? 10));
+        $headers = $options['headers'] ?? [];
+        $userpwd = $options['userpwd'] ?? null;
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTPGET => true,
+            CURLOPT_HEADER => false,
+            CURLOPT_HTTPHEADER => is_array($headers) ? $headers : [],
+        ]);
+
+        if (is_string($userpwd) && $userpwd !== '') {
+            curl_setopt($ch, CURLOPT_USERPWD, $userpwd);
+        }
+
+        $body = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError !== '') {
+            return ['ok' => false, 'message' => 'Erro de rede: ' . $curlError];
+        }
+
+        if ($status < 200 || $status >= 400) {
+            $preview = is_string($body) ? trim(substr($body, 0, 200)) : '';
+            $suffix = $preview !== '' ? ' Resposta: ' . $preview : '';
+            return ['ok' => false, 'message' => 'HTTP ' . $status . ' ao testar endpoint.' . $suffix, 'status' => $status];
+        }
+
+        return ['ok' => true, 'status' => $status, 'body' => is_string($body) ? $body : ''];
+    }
+
     private function readProfilePayload(): array
     {
         $category = trim((string) ($_POST['category'] ?? 'general'));

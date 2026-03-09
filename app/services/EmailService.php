@@ -57,23 +57,46 @@ final class EmailService
             return ['ok' => false, 'message' => 'Destinatario de teste invalido.'];
         }
 
-        $smtpResult = $this->sendViaSmtp($recipient, trim($subject), trim($bodyText));
+        $smtpResult = $this->sendViaSmtp($recipient, trim($subject), trim($bodyText), []);
         if (($smtpResult['ok'] ?? false) !== true) {
             return $smtpResult;
         }
 
         return ['ok' => true, 'message' => 'Email de teste enviado via SMTP.'];
     }
-
-    private function sendViaSmtp(string $toEmail, string $subject, string $bodyText): array
+    public function sendTestEmailWithSmtpConfig(array $smtpConfig, string $toEmail, string $subject, string $bodyText): array
     {
-        $host = trim($this->settingOrEnv('smtp.host', 'SMTP_HOST', ''));
-        $port = (int) $this->settingOrEnv('smtp.port', 'SMTP_PORT', '587');
-        $username = trim($this->settingOrEnv('smtp.username', 'SMTP_USERNAME', ''));
-        $password = $this->settingOrEnv('smtp.password', 'SMTP_PASSWORD', '');
-        $encryption = strtolower(trim($this->settingOrEnv('smtp.encryption', 'SMTP_ENCRYPTION', 'tls')));
-        $fromEmail = trim($this->settingOrEnv('smtp.from_email', 'SMTP_FROM_EMAIL', 'no-reply@wiseplay.local'));
-        $fromName = trim($this->settingOrEnv('smtp.from_name', 'SMTP_FROM_NAME', 'WisePlay'));
+        $recipient = trim($toEmail);
+        if ($recipient === "") {
+            return ["ok" => false, "message" => "Destinatario de teste invalido."];
+        }
+
+        $smtpResult = $this->sendViaSmtp($recipient, trim($subject), trim($bodyText), $smtpConfig);
+        if (($smtpResult["ok"] ?? false) !== true) {
+            return $smtpResult;
+        }
+
+        return ["ok" => true, "message" => "Email de teste enviado via SMTP."];
+    }
+
+    private function sendViaSmtp(string $toEmail, string $subject, string $bodyText, array $override = []): array
+    {
+        $override = is_array($override) ? $override : [];
+
+        $resolve = function (string $overrideKey, string $settingKey, string $envKey, string $default) use ($override): string {
+            if (array_key_exists($overrideKey, $override)) {
+                return trim((string) $override[$overrideKey]);
+            }
+            return trim($this->settingOrEnv($settingKey, $envKey, $default));
+        };
+
+        $host = $resolve('host', 'smtp.host', 'SMTP_HOST', '');
+        $port = (int) $resolve('port', 'smtp.port', 'SMTP_PORT', '587');
+        $username = $resolve('username', 'smtp.username', 'SMTP_USERNAME', '');
+        $password = $resolve('password', 'smtp.password', 'SMTP_PASSWORD', '');
+        $encryption = strtolower($resolve('encryption', 'smtp.encryption', 'SMTP_ENCRYPTION', 'tls'));
+        $fromEmail = $resolve('from_email', 'smtp.from_email', 'SMTP_FROM_EMAIL', 'no-reply@wiseplay.local');
+        $fromName = $resolve('from_name', 'smtp.from_name', 'SMTP_FROM_NAME', 'WisePlay');
 
         if ($host === '' || $port <= 0 || $fromEmail === '') {
             return ['ok' => false, 'message' => 'SMTP nao configurado corretamente.'];
