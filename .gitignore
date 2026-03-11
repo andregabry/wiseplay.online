@@ -11,3 +11,5 @@ public/assets/uploads/tmp/*
 
 src/materialize-admin/design-files/figma/materialize-figma-admin-dashboard-uikit-v4.fig.zip
 src/materialize-admin/
+
+database/wiseplay_php.sql

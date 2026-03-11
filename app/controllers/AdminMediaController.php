@@ -11,6 +11,7 @@ use App\models\Media;
 use App\models\Setting;
 use App\models\Title;
 use App\services\OneDriveGraphService;
+use App\services\PublicNotificationService;
 use App\services\OneDriveService;
 use App\services\UploadDebugLogger;
 
@@ -155,6 +156,15 @@ final class AdminMediaController extends AdminBaseController
             $id = $mediaModel->create($payload);
         } catch (\Throwable) {
             Response::json(['ok' => false, 'message' => 'Falha ao criar midia.'], 500);
+        }
+
+        try {
+            $createdMedia = $mediaModel->findById($id);
+            if (is_array($createdMedia) && is_array($title)) {
+                (new PublicNotificationService())->notifyMediaCreated($title, $createdMedia);
+            }
+        } catch (\Throwable) {
+            // notification must not block admin media flow
         }
 
         $this->audit('media.create', 'media', (string) $id, [

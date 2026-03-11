@@ -1,9 +1,9 @@
-# Migration Notes (Next/Node -> PHP Core)
+# Migration Notes
 
-## Referencias mapeadas no repositorio antigo
+## Referencias funcionais mapeadas da base anterior
 - Rotas publicas: `/login`, `/browse`, `/title/:id`, `/manage`
 - Rotas admin: `/admin`, `/admin/users`, `/admin/profiles`, `/admin/titles`, `/admin/media`, `/admin/billing`, `/admin/settings`
-- Entidades de dados vindas do Prisma: users, profiles, titles, seasons, episodes, media_assets, plans, subscriptions, settings, audit_logs
+- Entidades de dados reconstruidas em SQL manual: users, profiles, titles, seasons, episodes, media_assets, plans, subscriptions, settings, audit_logs
 - Fluxo OneDrive Personal: authority `consumers`, OAuth v2.0
 
 ## Rebuild strategy
@@ -35,6 +35,6 @@
 Esse mesmo padrao sera replicado para `profiles`, `titles`, `media`, `billing` e `settings`.
 
 ## Diferencas esperadas
-- NextAuth substituido por sessao PHP
-- Server actions substituidas por controllers/rotas POST
-- Prisma substituido por PDO + SQL manual
+- Sessao PHP no lugar de autenticacao acoplada a framework
+- Controllers e rotas POST no lugar de actions proprietarias
+- PDO + SQL manual no lugar de ORM gerado

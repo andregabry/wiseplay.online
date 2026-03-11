@@ -11,12 +11,15 @@ use App\core\View;
 use App\models\AuditLog;
 use App\models\BillingPlan;
 use App\models\Media;
+use App\models\PaymentMethod;
+use App\models\PublicNotification;
 use App\models\PaymentEvent;
 use App\models\PaymentTransaction;
 use App\models\Profile;
 use App\models\Setting;
 use App\models\Subscription;
 use App\models\Title;
+use App\models\User;
 use App\models\WatchHistory;
 use App\services\MediaSourceResolver;
 use App\services\OnboardingService;
@@ -762,6 +765,382 @@ final class PublicController extends BaseController
         ], 'public');
     }
 
+
+    public function account(): void
+    {
+        Auth::requireLogin(false);
+        $this->ensureOnboardingAllowed([OnboardingService::STEP_COMPLETE]);
+
+        $userId = (int) (Auth::user()['id'] ?? 0);
+        $userModel = new User();
+        $profileModel = new Profile();
+
+        $userRow = $userModel->findById($userId);
+        if (!$userRow) {
+            Auth::logout();
+            flash('error', 'Sessao invalida. Entre novamente.');
+            Response::redirect('/login');
+        }
+
+        $selectedProfile = $this->requireSelectedProfile(false);
+        $availableProfiles = $profileModel->findByUser($userId);
+        if (!$selectedProfile && $availableProfiles !== []) {
+            $selectedProfile = $availableProfiles[0];
+            $_SESSION['profile_id'] = (int) ($selectedProfile['id'] ?? 0);
+        }
+
+        $subscription = (new Subscription())->latestByUser($userId);
+        $plans = array_values(array_filter((new BillingPlan())->listPublicPlans(), static function (array $plan): bool {
+            return (int) ($plan['active'] ?? 0) === 1 && (int) ($plan['is_selectable'] ?? 0) === 1;
+        }));
+
+        // Account page aggregates subscription, billing and profile management.
+        $paymentMethods = (new PaymentMethod())->listByUser($userId);
+
+        View::render('public/account', [
+            'title' => 'Conta | WisePlay',
+            'currentPath' => current_path(),
+            'profile' => $selectedProfile,
+            'availableProfiles' => $availableProfiles,
+            'selectedProfileId' => (int) ($_SESSION['profile_id'] ?? 0),
+            'userAccount' => $userRow,
+            'subscription' => $subscription,
+            'plans' => $plans,
+            'paymentMethods' => $paymentMethods,
+            'profiles' => $availableProfiles,
+        ], 'public');
+    }
+
+    public function changePlan(): void
+    {
+        Auth::requireLogin(false);
+        $this->requireCsrf();
+        $this->ensureOnboardingAllowed([OnboardingService::STEP_COMPLETE]);
+
+        $userId = (int) (Auth::user()['id'] ?? 0);
+        $planId = (int) ($_POST['plan_id'] ?? 0);
+        if ($planId <= 0) {
+            flash('error', 'Selecione um plano valido.');
+            Response::redirect('/account#subscription');
+        }
+
+        $planModel = new BillingPlan();
+        $plan = $planModel->findById($planId);
+        if (!$plan || (int) ($plan['active'] ?? 0) !== 1 || (int) ($plan['is_selectable'] ?? 0) !== 1) {
+            flash('error', 'Plano indisponivel no momento.');
+            Response::redirect('/account#subscription');
+        }
+
+        $methodModel = new PaymentMethod();
+        $hasPaymentMethod = $methodModel->countByUser($userId) > 0;
+        $requiresPayment = (int) ($plan['requires_payment_method'] ?? 0) === 1;
+
+        if ($requiresPayment && !$hasPaymentMethod) {
+            flash('error', 'Adicione um meio de pagamento antes de migrar para esse plano.');
+            Response::redirect('/account#payment');
+        }
+
+        $subscriptionModel = new Subscription();
+        $current = $subscriptionModel->latestByUser($userId);
+        $status = 'ACTIVE';
+        if ($current && in_array((string) ($current['status'] ?? ''), Subscription::STATUSES, true)) {
+            $currentStatus = (string) $current['status'];
+            $status = in_array($currentStatus, ['CANCELED', 'EXPIRED'], true) ? 'ACTIVE' : $currentStatus;
+        }
+
+        $paymentRequired = $requiresPayment;
+        $paymentStatus = $requiresPayment ? 'PAID' : 'NOT_REQUIRED';
+
+        try {
+            $subscriptionId = $subscriptionModel->assignOrUpdate(
+                $userId,
+                (int) $plan['id'],
+                $status,
+                null,
+                true,
+                $paymentRequired,
+                $paymentStatus,
+                $requiresPayment ? 'manual' : null,
+                null
+            );
+        } catch (\Throwable) {
+            flash('error', 'Nao foi possivel alterar o plano agora.');
+            Response::redirect('/account#subscription');
+        }
+
+        $this->auditPublic('account.plan.change', 'subscription', (string) $subscriptionId, [
+            'plan_id' => (int) $plan['id'],
+            'plan_slug' => (string) ($plan['slug'] ?? ''),
+            'requires_payment' => $requiresPayment ? 1 : 0,
+        ]);
+
+        flash('success', 'Plano atualizado para ' . (string) ($plan['plan_name'] ?? 'novo plano') . '.');
+        Response::redirect('/account#subscription');
+    }
+
+    public function addPaymentMethod(): void
+    {
+        Auth::requireLogin(false);
+        $this->requireCsrf();
+        $this->ensureOnboardingAllowed([OnboardingService::STEP_COMPLETE]);
+
+        $userId = (int) (Auth::user()['id'] ?? 0);
+        $holder = trim((string) ($_POST['card_holder'] ?? ''));
+        $cardNumber = preg_replace('/\D+/', '', (string) ($_POST['card_number'] ?? ''));
+        $expMonth = (int) ($_POST['exp_month'] ?? 0);
+        $expYear = (int) ($_POST['exp_year'] ?? 0);
+        $setDefault = (int) ($_POST['set_default'] ?? 0) === 1;
+
+        if (!Validator::required($holder) || !Validator::minLength($holder, 3)) {
+            flash('error', 'Nome do titular invalido.');
+            Response::redirect('/account#payment');
+        }
+
+        if (!is_string($cardNumber) || strlen($cardNumber) < 13 || strlen($cardNumber) > 19) {
+            flash('error', 'Numero do cartao invalido.');
+            Response::redirect('/account#payment');
+        }
+
+        if ($expMonth < 1 || $expMonth > 12) {
+            flash('error', 'Mes de expiracao invalido.');
+            Response::redirect('/account#payment');
+        }
+
+        $currentYear = (int) date('Y');
+        if ($expYear < $currentYear || $expYear > ($currentYear + 20)) {
+            flash('error', 'Ano de expiracao invalido.');
+            Response::redirect('/account#payment');
+        }
+
+        $model = new PaymentMethod();
+        $isFirstMethod = $model->countByUser($userId) === 0;
+        $brand = $this->detectCardBrand($cardNumber);
+
+        try {
+            $methodId = $model->create([
+                'user_id' => $userId,
+                'provider' => 'CARD',
+                'token_ref' => 'pm_' . bin2hex(random_bytes(8)),
+                'brand' => $brand,
+                'last4' => substr($cardNumber, -4),
+                'exp_month' => $expMonth,
+                'exp_year' => $expYear,
+                'is_default' => ($setDefault || $isFirstMethod) ? 1 : 0,
+            ]);
+        } catch (\Throwable) {
+            flash('error', 'Falha ao salvar meio de pagamento.');
+            Response::redirect('/account#payment');
+        }
+
+        if ($setDefault || $isFirstMethod) {
+            $model->setDefault($methodId, $userId);
+        }
+
+        $this->auditPublic('account.payment_method.add', 'payment_method', (string) $methodId, [
+            'brand' => $brand,
+            'last4' => substr($cardNumber, -4),
+        ]);
+
+        flash('success', 'Meio de pagamento adicionado com sucesso.');
+        Response::redirect('/account#payment');
+    }
+
+    public function setDefaultPaymentMethod(): void
+    {
+        Auth::requireLogin(false);
+        $this->requireCsrf();
+        $this->ensureOnboardingAllowed([OnboardingService::STEP_COMPLETE]);
+
+        $userId = (int) (Auth::user()['id'] ?? 0);
+        $methodId = (int) ($_POST['method_id'] ?? 0);
+        if ($methodId <= 0) {
+            flash('error', 'Metodo de pagamento invalido.');
+            Response::redirect('/account#payment');
+        }
+
+        $model = new PaymentMethod();
+        $method = $model->findByIdForUser($methodId, $userId);
+        if (!$method) {
+            flash('error', 'Metodo de pagamento nao encontrado.');
+            Response::redirect('/account#payment');
+        }
+
+        $model->setDefault($methodId, $userId);
+
+        $this->auditPublic('account.payment_method.default', 'payment_method', (string) $methodId, [
+            'brand' => (string) ($method['brand'] ?? ''),
+            'last4' => (string) ($method['last4'] ?? ''),
+        ]);
+
+        flash('success', 'Metodo de pagamento padrao atualizado.');
+        Response::redirect('/account#payment');
+    }
+
+    public function deletePaymentMethod(): void
+    {
+        Auth::requireLogin(false);
+        $this->requireCsrf();
+        $this->ensureOnboardingAllowed([OnboardingService::STEP_COMPLETE]);
+
+        $userId = (int) (Auth::user()['id'] ?? 0);
+        $methodId = (int) ($_POST['method_id'] ?? 0);
+        if ($methodId <= 0) {
+            flash('error', 'Metodo de pagamento invalido.');
+            Response::redirect('/account#payment');
+        }
+
+        $model = new PaymentMethod();
+        $method = $model->findByIdForUser($methodId, $userId);
+        if (!$method) {
+            flash('error', 'Metodo de pagamento nao encontrado.');
+            Response::redirect('/account#payment');
+        }
+
+        $requiredPlan = (new Subscription())->latestByUser($userId);
+        $requiresPayment = (int) ($requiredPlan['requires_payment_method'] ?? 0) === 1;
+        if ($requiresPayment && $model->countByUser($userId) <= 1) {
+            flash('error', 'Seu plano atual exige ao menos um meio de pagamento ativo.');
+            Response::redirect('/account#payment');
+        }
+
+        $model->delete($methodId, $userId);
+
+        $this->auditPublic('account.payment_method.delete', 'payment_method', (string) $methodId, [
+            'brand' => (string) ($method['brand'] ?? ''),
+            'last4' => (string) ($method['last4'] ?? ''),
+        ]);
+
+        flash('success', 'Meio de pagamento removido.');
+        Response::redirect('/account#payment');
+    }
+
+    public function updatePassword(): void
+    {
+        Auth::requireLogin(false);
+        $this->requireCsrf();
+        $this->ensureOnboardingAllowed([OnboardingService::STEP_COMPLETE]);
+
+        $userId = (int) (Auth::user()['id'] ?? 0);
+        $currentPassword = (string) ($_POST['current_password'] ?? '');
+        $nextPassword = (string) ($_POST['new_password'] ?? '');
+        $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
+
+        if (!Validator::minLength($nextPassword, 8)) {
+            flash('error', 'A nova senha precisa ter pelo menos 8 caracteres.');
+            Response::redirect('/account#security');
+        }
+
+        if ($nextPassword !== $confirmPassword) {
+            flash('error', 'Confirmacao de senha nao confere.');
+            Response::redirect('/account#security');
+        }
+
+        $userModel = new User();
+        $user = $userModel->findById($userId);
+        if (!$user || !password_verify($currentPassword, (string) ($user['password_hash'] ?? ''))) {
+            flash('error', 'Senha atual invalida.');
+            Response::redirect('/account#security');
+        }
+
+        if (password_verify($nextPassword, (string) ($user['password_hash'] ?? ''))) {
+            flash('error', 'A nova senha deve ser diferente da senha atual.');
+            Response::redirect('/account#security');
+        }
+
+        $hashed = password_hash($nextPassword, PASSWORD_DEFAULT);
+
+        try {
+            $userModel->update($userId, [
+                'name' => (string) ($user['name'] ?? ''),
+                'email' => (string) ($user['email'] ?? ''),
+                'account_avatar' => (string) ($user['account_avatar'] ?? ''),
+                'role' => (string) ($user['role'] ?? 'VIEWER'),
+                'status' => (string) ($user['status'] ?? 'ACTIVE'),
+                'password_hash' => $hashed,
+                'password_set_at' => date('Y-m-d H:i:s'),
+                'email_verified_at' => $user['email_verified_at'] ?? null,
+                'onboarding_completed_at' => $user['onboarding_completed_at'] ?? null,
+            ]);
+            $updated = $userModel->findById($userId);
+            if ($updated) {
+                Auth::login($updated);
+            }
+        } catch (\Throwable) {
+            flash('error', 'Nao foi possivel atualizar a senha agora.');
+            Response::redirect('/account#security');
+        }
+
+        $this->auditPublic('account.password.update', 'user', (string) $userId, null);
+
+        flash('success', 'Senha atualizada com sucesso.');
+        Response::redirect('/account#security');
+    }
+
+    public function deleteAccount(): void
+    {
+        Auth::requireLogin(false);
+        $this->requireCsrf();
+
+        $userId = (int) (Auth::user()['id'] ?? 0);
+        $confirmation = strtoupper(trim((string) ($_POST['confirmation_text'] ?? '')));
+        $password = (string) ($_POST['current_password'] ?? '');
+
+        if ($confirmation !== 'EXCLUIR') {
+            flash('error', 'Digite EXCLUIR para confirmar.');
+            Response::redirect('/account#danger');
+        }
+
+        $userModel = new User();
+        $user = $userModel->findById($userId);
+        if (!$user || !password_verify($password, (string) ($user['password_hash'] ?? ''))) {
+            flash('error', 'Senha invalida para excluir conta.');
+            Response::redirect('/account#danger');
+        }
+
+        $this->auditPublic('account.delete', 'user', (string) $userId, [
+            'email' => (string) ($user['email'] ?? ''),
+        ]);
+
+        try {
+            $userModel->delete($userId);
+        } catch (\Throwable) {
+            flash('error', 'Nao foi possivel excluir a conta agora.');
+            Response::redirect('/account#danger');
+        }
+
+        Auth::logout();
+        unset($_SESSION['profile_id']);
+
+        flash('success', 'Sua conta foi removida.');
+        Response::redirect('/');
+    }
+
+    public function markNotificationsRead(): void
+    {
+        Auth::requireLogin(false);
+        $this->requireCsrf();
+
+        $userId = (int) (Auth::user()['id'] ?? 0);
+        $marked = 0;
+
+        try {
+            $marked = (new PublicNotification())->markAllAsRead($userId);
+        } catch (\Throwable) {
+            if ($this->isAjaxRequest()) {
+                Response::json(['ok' => false, 'message' => 'Falha ao atualizar notificacoes.'], 500);
+            }
+            flash('error', 'Falha ao atualizar notificacoes.');
+            Response::redirect('/browse');
+        }
+
+        if ($this->isAjaxRequest()) {
+            Response::json(['ok' => true, 'marked' => $marked]);
+        }
+
+        flash('success', 'Notificacoes marcadas como lidas.');
+        Response::redirect($_SERVER['HTTP_REFERER'] ?? '/browse');
+    }
+
     public function titlePreview(array $params): void
     {
         Auth::requireLogin(false);
@@ -1195,6 +1574,36 @@ final class PublicController extends BaseController
             'poster' => (string) (($media['backdrop_url'] ?? '') !== '' ? $media['backdrop_url'] : ($media['thumbnail_url'] ?? '')),
             'item_label' => (string) ($media['item_label'] ?? ''),
         ];
+    }
+
+
+    private function detectCardBrand(string $cardNumber): string
+    {
+        if (preg_match('/^4\d{12}(?:\d{3})?(?:\d{3})?$/', $cardNumber) === 1) {
+            return 'VISA';
+        }
+
+        if (preg_match('/^(?:5[1-5]\d{14}|2(?:2[2-9]|[3-6]\d|7[01])\d{12})$/', $cardNumber) === 1) {
+            return 'MASTERCARD';
+        }
+
+        if (preg_match('/^3[47]\d{13}$/', $cardNumber) === 1) {
+            return 'AMEX';
+        }
+
+        if (preg_match('/^3(?:0[0-5]|[68]\d)\d{11}$/', $cardNumber) === 1) {
+            return 'DINERS';
+        }
+
+        if (preg_match('/^(?:6011\d{12}|65\d{14}|64[4-9]\d{13})$/', $cardNumber) === 1) {
+            return 'DISCOVER';
+        }
+
+        if (preg_match('/^(?:2131|1800|35\d{3})\d{11}$/', $cardNumber) === 1) {
+            return 'JCB';
+        }
+
+        return 'CARD';
     }
 
     private function redirectByOnboardingStep(string $step): never

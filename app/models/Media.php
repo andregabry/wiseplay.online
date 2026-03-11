@@ -372,6 +372,22 @@ final class Media extends BaseModel
         return $grouped;
     }
 
+    public function countByTitleSeason(int $titleId, int $seasonNumber): int
+    {
+        $stmt = $this->db()->prepare(
+            'SELECT COUNT(*)
+               FROM media_items
+              WHERE title_id = :title_id
+                AND COALESCE(season_number, 1) = :season_number'
+        );
+        $stmt->execute([
+            ':title_id' => $titleId,
+            ':season_number' => max(1, $seasonNumber),
+        ]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
     public function firstPlayableByTitle(int $titleId): ?array
     {
         $sql = "SELECT

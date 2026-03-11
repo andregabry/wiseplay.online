@@ -1,6 +1,6 @@
 # WisePlay PHP (Docker-First)
 
-Projeto novo em PHP puro para substituir a versao Next.js/Node, mantendo o comportamento de produto.
+Projeto em PHP puro, sem framework, com frontend publico estilo streaming e painel admin separado.
 
 ## Estado atual
 - Runtime Docker com `php-apache` + `mysql` + `phpmyadmin`.

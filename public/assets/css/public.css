@@ -3953,3 +3953,352 @@ body.wp-modal-open {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* Public notifications + account page */
+.wp-stream-notifications {
+  position: relative;
+}
+
+.wp-stream-notification-menu {
+  position: absolute;
+  top: calc(100% + 16px);
+  right: -18px;
+  width: min(420px, 86vw);
+  max-height: 74vh;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  z-index: 120;
+}
+
+.wp-stream-notification-menu__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wp-stream-notification-menu__head strong {
+  font-size: 0.95rem;
+}
+
+.wp-stream-notification-read-all-form {
+  margin: 0;
+}
+
+.wp-stream-notification-read-all-form button {
+  border: 0;
+  background: transparent;
+  color: #e5e5e5;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.wp-stream-notification-menu__list {
+  max-height: 58vh;
+  overflow-y: auto;
+}
+
+.wp-stream-notification-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  color: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wp-stream-notification-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.wp-stream-notification-item.is-unread {
+  background: rgba(229, 9, 20, 0.11);
+}
+
+.wp-stream-notification-item.is-empty {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.wp-stream-notification-item__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.wp-stream-notification-item__desc {
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.wp-stream-notification-item__meta {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.wp-account-page {
+  background: #f4f5f7;
+  color: #111;
+  min-height: 100vh;
+  padding: 96px 28px 48px;
+}
+
+.wp-account-shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(190px, 270px) minmax(0, 1fr);
+  gap: 34px;
+}
+
+.wp-account-sidebar {
+  position: sticky;
+  top: 108px;
+  align-self: start;
+}
+
+.wp-account-back {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: #333;
+  font-weight: 600;
+}
+
+.wp-account-side-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.wp-account-side-nav a {
+  color: #202020;
+  font-weight: 600;
+  padding: 8px 0;
+}
+
+.wp-account-main {
+  display: grid;
+  gap: 16px;
+}
+
+.wp-account-header h1 {
+  margin: 0;
+  font-size: 2.4rem;
+  color: #101010;
+}
+
+.wp-account-header p {
+  margin: 8px 0 0;
+  color: #5b5b5b;
+}
+
+.wp-account-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.wp-account-card.is-danger {
+  border-color: rgba(229, 9, 20, 0.4);
+}
+
+.wp-account-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.wp-account-card__head h2 {
+  margin: 0;
+  font-size: 1.62rem;
+  color: #121212;
+}
+
+.wp-account-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  background: #efefef;
+  color: #333;
+}
+
+.wp-account-pill.is-default,
+.wp-account-pill.status-active,
+.wp-account-pill.status-trialing {
+  background: rgba(28, 172, 62, 0.18);
+  color: #1b5e20;
+}
+
+.wp-account-pill.status-payment_failed,
+.wp-account-pill.status-canceled,
+.wp-account-pill.status-expired {
+  background: rgba(229, 9, 20, 0.15);
+  color: #a30810;
+}
+
+.wp-account-subscription-summary h3 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.wp-account-subscription-summary p {
+  margin: 4px 0;
+  color: #4f4f4f;
+}
+
+.wp-account-inline-form label {
+  display: block;
+  font-size: 0.86rem;
+  color: #5c5c5c;
+  margin-bottom: 8px;
+}
+
+.wp-account-inline-form__row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.wp-account-inline-form__row select {
+  min-width: 300px;
+  flex: 1;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid #cbcbcb;
+  padding: 0 10px;
+  font: inherit;
+}
+
+.wp-account-payment-list {
+  display: grid;
+  gap: 10px;
+}
+
+.wp-account-payment-item {
+  border: 1px solid #e1e1e1;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.wp-account-payment-item strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.wp-account-payment-item small {
+  color: #575757;
+}
+
+.wp-account-payment-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.wp-account-form-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.wp-account-form-grid h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.wp-account-form-grid label {
+  font-size: 0.86rem;
+  color: #555;
+  display: grid;
+  gap: 6px;
+}
+
+.wp-account-form-grid input,
+.wp-account-form-grid select {
+  height: 44px;
+  border: 1px solid #cbcbcb;
+  border-radius: 10px;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.wp-account-checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.wp-account-checkbox input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.wp-account-form-actions {
+  margin-top: 4px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.wp-account-empty {
+  margin: 0;
+  color: #5f5f5f;
+}
+
+@media (max-width: 1024px) {
+  .wp-account-shell {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .wp-account-sidebar {
+    position: static;
+  }
+
+  .wp-account-side-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .wp-account-side-nav a {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    text-align: center;
+    padding: 9px 8px;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .wp-account-page {
+    padding: 86px 14px 28px;
+  }
+
+  .wp-account-side-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wp-account-inline-form__row select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .wp-account-payment-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

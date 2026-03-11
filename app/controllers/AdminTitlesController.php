@@ -8,6 +8,7 @@ use App\core\Auth;
 use App\core\Response;
 use App\core\Validator;
 use App\models\Title;
+use App\services\PublicNotificationService;
 use App\services\UploadService;
 
 final class AdminTitlesController extends AdminBaseController
@@ -116,6 +117,15 @@ final class AdminTitlesController extends AdminBaseController
             ]);
         } catch (\Throwable) {
             Response::json(['ok' => false, 'message' => 'Falha ao criar titulo.'], 500);
+        }
+
+        try {
+            $createdTitle = $model->findById($id);
+            if (is_array($createdTitle)) {
+                (new PublicNotificationService())->notifyTitleCreated($createdTitle);
+            }
+        } catch (\Throwable) {
+            // notification must not block admin create flow
         }
 
         $this->audit('title.create', 'title', (string) $id, [

@@ -1,10 +1,10 @@
 # WisePlay
 
-WisePlay is a Docker-first streaming platform skeleton built with plain PHP, MySQL, jQuery, and a split UI strategy:
+WisePlay is a Docker-first streaming platform built with plain PHP, MySQL, jQuery, and a split UI strategy:
 - public app at `/` with a Netflix-like onboarding and browsing experience
 - admin panel at `/admin` using Materialize Admin assets integrated into the PHP app
 
-The project is intentionally framework-free and organized in a simple controller/model/view/core structure.
+The codebase is intentionally framework-free and organized in a simple controller/model/view/core structure.
 
 ## Current Status
 
@@ -66,7 +66,6 @@ docker/
   php/
 public/
   assets/
-src/
 storage/
 ```
 
@@ -329,8 +328,8 @@ Implemented baseline rules in the current codebase:
 
 ## Repository Notes
 
-This repository intentionally does **not** version the bundled upstream source package under `src/materialize-admin/`.
-The app keeps only the assets and code required to run WisePlay.
+The runtime application uses only the PHP code under `app/`, the public assets under `public/`, and the SQL bootstrap files under `database/`.
+Legacy migration references remain only when they still help explain business rules that were already rebuilt in PHP.
 
 ## Development Notes
 

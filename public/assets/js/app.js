@@ -1902,6 +1902,9 @@
     var $user = $('.js-stream-user');
     var $trigger = $('.js-stream-user-trigger');
     var $menu = $('.wp-stream-user-menu');
+    var $notificationRoot = $('.js-stream-notifications');
+    var $notificationTrigger = $('.js-stream-notification-trigger');
+    var $notificationMenu = $('.wp-stream-notification-menu');
     var $hero = $('.wp-hero--cinema, .wp-title-hero').first();
     var solidThreshold = 36;
 
@@ -1921,7 +1924,9 @@
     }
 
     function syncHeaderState() {
-      $header.toggleClass('is-solid', $(window).scrollTop() > solidThreshold || $menu.is(':visible'));
+      var menuOpen = $menu.is(':visible');
+      var notificationOpen = $notificationMenu.is(':visible');
+      $header.toggleClass('is-solid', $(window).scrollTop() > solidThreshold || menuOpen || notificationOpen);
     }
 
     function closeMenu() {
@@ -1932,9 +1937,25 @@
     }
 
     function openMenu() {
+      closeNotifications();
       $user.addClass('is-open');
       $trigger.attr('aria-expanded', 'true');
       $menu.removeAttr('hidden');
+      syncHeaderState();
+    }
+
+    function closeNotifications() {
+      $notificationTrigger.attr('aria-expanded', 'false');
+      $notificationMenu.attr('hidden', 'hidden');
+      $notificationRoot.removeClass('is-open');
+      syncHeaderState();
+    }
+
+    function openNotifications() {
+      closeMenu();
+      $notificationTrigger.attr('aria-expanded', 'true');
+      $notificationMenu.removeAttr('hidden');
+      $notificationRoot.addClass('is-open');
       syncHeaderState();
     }
 
@@ -1947,9 +1968,21 @@
       openMenu();
     });
 
+    $notificationTrigger.on('click', function (event) {
+      event.preventDefault();
+      if ($notificationRoot.hasClass('is-open')) {
+        closeNotifications();
+        return;
+      }
+      openNotifications();
+    });
+
     $(document).on('click', function (event) {
       if (!$(event.target).closest('.js-stream-user').length) {
         closeMenu();
+      }
+      if (!$(event.target).closest('.js-stream-notifications').length) {
+        closeNotifications();
       }
     });
 
@@ -1970,6 +2003,37 @@
       }, 260);
     });
 
+    $(document).on('click', '.js-notification-read-all', function (event) {
+      event.preventDefault();
+      var $form = $(this).closest('form');
+      if (!$form.length) {
+        return;
+      }
+
+      var csrf = String($form.find('input[name="_csrf"]').val() || (window.WISEPLAY && window.WISEPLAY.csrf) || '');
+      if (csrf === '') {
+        $form.trigger('submit');
+        return;
+      }
+
+      $.ajax({
+        url: '/notifications/read-all',
+        method: 'POST',
+        dataType: 'json',
+        data: { _csrf: csrf },
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).done(function (response) {
+        if (!response || response.ok !== true) {
+          return;
+        }
+
+        $('.wp-stream-notification-item.is-unread').removeClass('is-unread');
+        $('.wp-stream-notifications .wp-stream-badge').remove();
+      }).fail(function () {
+        $form.trigger('submit');
+      });
+    });
+
     $(document).on('click', '.js-public-coming-soon', function (event) {
       var label = String($(this).data('label') || $(this).text() || 'Recurso');
       event.preventDefault();
@@ -1988,6 +2052,7 @@
     $(document).on('keydown', function (event) {
       if (event.key === 'Escape') {
         closeMenu();
+        closeNotifications();
       }
     });
 

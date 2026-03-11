@@ -10,6 +10,20 @@ $profileAvatar = trim((string) ($profile['avatar_path'] ?? ''));
 if ($profileAvatar === '' || str_ends_with($profileAvatar, '.gitkeep')) {
     $profileAvatar = $avatarFallback;
 }
+
+$notificationItems = [];
+$notificationUnreadCount = 0;
+$authUser = \App\core\Auth::user();
+if (is_array($authUser) && (int) ($authUser['id'] ?? 0) > 0) {
+    try {
+        $notificationModel = new \App\models\PublicNotification();
+        $notificationItems = $notificationModel->listForUser((int) $authUser['id'], 12);
+        $notificationUnreadCount = $notificationModel->unreadCountForUser((int) $authUser['id']);
+    } catch (\Throwable) {
+        $notificationItems = [];
+        $notificationUnreadCount = 0;
+    }
+}
 ?>
 <header class="wp-stream-header js-stream-header">
   <div class="wp-stream-header__inner">
@@ -19,7 +33,7 @@ if ($profileAvatar === '' || str_ends_with($profileAvatar, '.gitkeep')) {
         <a href="/browse" class="<?= $current === '/browse' ? 'active' : '' ?>">Inicio</a>
         <a href="<?= e($browseTargetPrefix) ?>#row-series" class="js-browse-jump">Series</a>
         <a href="<?= e($browseTargetPrefix) ?>#row-movie" class="js-browse-jump">Filmes</a>
-        <button type="button" class="wp-stream-link-button js-public-coming-soon" data-label="Jogos">Jogos</button>
+        <a href="<?= e($browseTargetPrefix) ?>#row-course" class="js-browse-jump">Cursos</a>
         <button type="button" class="wp-stream-link-button js-public-coming-soon" data-label="Bombando">Bombando</button>
         <button type="button" class="wp-stream-link-button js-public-coming-soon" data-label="Minha lista">Minha lista</button>
         <button type="button" class="wp-stream-link-button js-public-coming-soon" data-label="Navegar por idiomas">Navegar por idiomas</button>
@@ -37,14 +51,49 @@ if ($profileAvatar === '' || str_ends_with($profileAvatar, '.gitkeep')) {
       <button type="button" class="wp-stream-kids-link<?= $isKids ? ' active' : '' ?> js-public-coming-soon" data-label="Modo infantil">
         Infantil
       </button>
-      <button type="button" class="wp-stream-icon-btn js-public-coming-soon has-badge" data-label="Notificacoes" aria-label="Notificacoes">
-        <span class="wp-stream-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" focusable="false">
-            <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22zm6.4-6.1v-4.5c0-3.4-1.8-6.2-5.1-6.9v-.7a1.3 1.3 0 1 0-2.6 0v.7C7.4 5.2 5.6 8 5.6 11.4v4.5L4 17.5v1.2h16v-1.2l-1.6-1.6z"></path>
-          </svg>
-        </span>
-        <span class="wp-stream-badge">3</span>
-      </button>
+
+      <div class="wp-stream-notifications js-stream-notifications">
+        <button type="button" class="wp-stream-icon-btn has-badge js-stream-notification-trigger" aria-label="Notificacoes" aria-expanded="false" aria-haspopup="true">
+          <span class="wp-stream-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22zm6.4-6.1v-4.5c0-3.4-1.8-6.2-5.1-6.9v-.7a1.3 1.3 0 1 0-2.6 0v.7C7.4 5.2 5.6 8 5.6 11.4v4.5L4 17.5v1.2h16v-1.2l-1.6-1.6z"></path>
+            </svg>
+          </span>
+          <?php if ($notificationUnreadCount > 0): ?>
+            <span class="wp-stream-badge"><?= $notificationUnreadCount > 9 ? '9+' : $notificationUnreadCount ?></span>
+          <?php endif; ?>
+        </button>
+
+        <div class="wp-stream-notification-menu" hidden>
+          <div class="wp-stream-notification-menu__head">
+            <strong>Notificacoes</strong>
+            <form method="post" action="/notifications/read-all" class="wp-stream-notification-read-all-form">
+              <input type="hidden" name="_csrf" value="<?= e(App\core\Csrf::token()) ?>">
+              <button type="submit" class="js-notification-read-all">Marcar lidas</button>
+            </form>
+          </div>
+          <div class="wp-stream-notification-menu__list">
+            <?php if ($notificationItems === []): ?>
+              <div class="wp-stream-notification-item is-empty">Nenhuma notificacao recente.</div>
+            <?php else: ?>
+              <?php foreach ($notificationItems as $notification): ?>
+                <?php
+                  $isRead = (int) ($notification['is_read'] ?? 0) === 1;
+                  $href = trim((string) ($notification['link_url'] ?? ''));
+                  if ($href === '') {
+                      $href = '/browse';
+                  }
+                ?>
+                <a href="<?= e($href) ?>" class="wp-stream-notification-item<?= $isRead ? '' : ' is-unread' ?>">
+                  <span class="wp-stream-notification-item__title"><?= e((string) ($notification['title_text'] ?? 'Atualizacao')) ?></span>
+                  <span class="wp-stream-notification-item__desc"><?= e((string) ($notification['message_text'] ?? '')) ?></span>
+                  <span class="wp-stream-notification-item__meta"><?= e((string) ($notification['created_at'] ?? '')) ?></span>
+                </a>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
 
       <div class="wp-stream-user js-stream-user">
         <button type="button" class="wp-stream-user-trigger js-stream-user-trigger" aria-haspopup="true" aria-expanded="false">
@@ -76,7 +125,7 @@ if ($profileAvatar === '' || str_ends_with($profileAvatar, '.gitkeep')) {
           <div class="wp-stream-user-menu__links">
             <a href="/profiles?manage=1">Gerenciar perfis</a>
             <button type="button" class="js-public-coming-soon" data-label="Transferir perfil">Transferir perfil</button>
-            <button type="button" class="js-public-coming-soon" data-label="Conta">Conta</button>
+            <a href="/account">Conta</a>
             <button type="button" class="js-public-coming-soon" data-label="Central de ajuda">Central de Ajuda</button>
           </div>
 

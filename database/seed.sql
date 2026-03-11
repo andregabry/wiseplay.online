@@ -30,6 +30,13 @@ INSERT INTO subscriptions (id, user_id, plan_id, status, start_at, end_at, auto_
 (8, 8, 1, 'TRIALING', DATE_SUB(NOW(), INTERVAL 12 DAY), DATE_ADD(NOW(), INTERVAL 3 DAY), 1, 0, 'NOT_REQUIRED', NULL, NULL, DATE_SUB(NOW(), INTERVAL 12 DAY), NOW()),
 (9, 9, 1, 'PAUSED', DATE_SUB(NOW(), INTERVAL 20 DAY), DATE_ADD(NOW(), INTERVAL 5 DAY), 0, 0, 'NOT_REQUIRED', NULL, NULL, DATE_SUB(NOW(), INTERVAL 20 DAY), NOW());
 
+INSERT INTO payment_methods (id, user_id, provider, token_ref, brand, last4, exp_month, exp_year, is_default, created_at, updated_at) VALUES
+(1, 1, 'CARD', 'pm_seed_admin_visa', 'VISA', '7580', 3, 2028, 1, DATE_SUB(NOW(), INTERVAL 95 DAY), NOW()),
+(2, 1, 'CARD', 'pm_seed_admin_mc', 'MASTERCARD', '1024', 9, 2029, 0, DATE_SUB(NOW(), INTERVAL 70 DAY), NOW()),
+(3, 2, 'CARD', 'pm_seed_luciana_visa', 'VISA', '8801', 12, 2027, 1, DATE_SUB(NOW(), INTERVAL 90 DAY), NOW()),
+(4, 3, 'CARD', 'pm_seed_bruno_amex', 'AMEX', '4477', 6, 2028, 1, DATE_SUB(NOW(), INTERVAL 60 DAY), NOW()),
+(5, 7, 'CARD', 'pm_seed_thiago_mc', 'MASTERCARD', '3159', 11, 2030, 1, DATE_SUB(NOW(), INTERVAL 30 DAY), NOW());
+
 -- Auto-created first adult profile for each user + optional extra profiles respecting plan limit
 INSERT INTO profiles (id, user_id, profile_name, avatar_path, is_kids, maturity_rating, language, autoplay, created_at, updated_at) VALUES
 (1, 1, 'Andre', '/assets/img/avatar-library/avatar-01.svg', 0, '18', 'pt-BR', 1, DATE_SUB(NOW(), INTERVAL 100 DAY), NOW()),
@@ -191,5 +198,17 @@ INSERT INTO watch_history (id, profile_id, title_id, media_item_id, progress_per
 (3, 12, 7, 13, 89, 1800, 1520, 0, NULL, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY), NOW()),
 (4, 16, 3, 3, 45, 5760, 1180, 0, NULL, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY), NOW());
 
+
+INSERT INTO public_notifications (id, entity_type, entity_id, title_text, message_text, link_url, created_at) VALUES
+(1, 'TITLE', 6, 'Novo titulo no catalogo', 'Rota 404', '/browse#row-series', DATE_SUB(NOW(), INTERVAL 8 DAY)),
+(2, 'COURSE', 7, 'Novo curso no catalogo', 'PHP do Zero ao Deploy', '/browse#row-course', DATE_SUB(NOW(), INTERVAL 7 DAY)),
+(3, 'SEASON', 4, 'Nova temporada liberada', 'Cidade Codificada - Temporada 2', '/browse#row-series', DATE_SUB(NOW(), INTERVAL 5 DAY)),
+(4, 'EPISODE', 11, 'Novo episodio disponivel', 'Rota 404 - Temporada 1, episodio 2', '/watch/11', DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(5, 'EPISODE', 14, 'Nova licao disponivel', 'PHP do Zero ao Deploy - Modulo 2, licao 1', '/watch/14', DATE_SUB(NOW(), INTERVAL 2 DAY));
+
+INSERT INTO public_notification_reads (notification_id, user_id, read_at) VALUES
+(1, 1, DATE_SUB(NOW(), INTERVAL 7 DAY)),
+(2, 1, DATE_SUB(NOW(), INTERVAL 6 DAY)),
+(1, 2, DATE_SUB(NOW(), INTERVAL 6 DAY));
 INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, diff_summary, ip, user_agent, created_at)
 VALUES (1, 'seed.bootstrap', 'system', NULL, '{"ok":true}', '127.0.0.1', 'seed.sql', NOW());

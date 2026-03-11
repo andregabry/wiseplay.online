@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\services;
 
 use App\models\Setting;
+use App\models\SettingProfile;
 
 final class EmailService
 {
     private Setting $settings;
+    private ?array $resolvedDefaultEmailProfile = null;
 
     public function __construct(?Setting $settings = null)
     {
@@ -64,29 +66,36 @@ final class EmailService
 
         return ['ok' => true, 'message' => 'Email de teste enviado via SMTP.'];
     }
+
     public function sendTestEmailWithSmtpConfig(array $smtpConfig, string $toEmail, string $subject, string $bodyText): array
     {
         $recipient = trim($toEmail);
-        if ($recipient === "") {
-            return ["ok" => false, "message" => "Destinatario de teste invalido."];
+        if ($recipient === '') {
+            return ['ok' => false, 'message' => 'Destinatario de teste invalido.'];
         }
 
         $smtpResult = $this->sendViaSmtp($recipient, trim($subject), trim($bodyText), $smtpConfig);
-        if (($smtpResult["ok"] ?? false) !== true) {
+        if (($smtpResult['ok'] ?? false) !== true) {
             return $smtpResult;
         }
 
-        return ["ok" => true, "message" => "Email de teste enviado via SMTP."];
+        return ['ok' => true, 'message' => 'Email de teste enviado via SMTP.'];
     }
 
     private function sendViaSmtp(string $toEmail, string $subject, string $bodyText, array $override = []): array
     {
         $override = is_array($override) ? $override : [];
+        $profileConfig = $this->defaultEmailProfileConfig();
 
-        $resolve = function (string $overrideKey, string $settingKey, string $envKey, string $default) use ($override): string {
+        $resolve = function (string $overrideKey, string $settingKey, string $envKey, string $default) use ($override, $profileConfig): string {
             if (array_key_exists($overrideKey, $override)) {
                 return trim((string) $override[$overrideKey]);
             }
+
+            if (array_key_exists($overrideKey, $profileConfig)) {
+                return trim((string) $profileConfig[$overrideKey]);
+            }
+
             return trim($this->settingOrEnv($settingKey, $envKey, $default));
         };
 
@@ -124,11 +133,12 @@ final class EmailService
             if (!in_array($code, $codes, true)) {
                 return ['ok' => false, 'response' => trim($full), 'code' => $code];
             }
+
             return ['ok' => true, 'response' => trim($full), 'code' => $code];
         };
 
-        $send = static function ($socket, string $command): void {
-            fwrite($socket, $command . "\r\n");
+        $send = static function ($socketHandle, string $command): void {
+            fwrite($socketHandle, $command . "\r\n");
         };
 
         $greet = $expect([220]);
@@ -164,25 +174,52 @@ final class EmailService
                 fclose($socket);
                 return ['ok' => false, 'message' => 'EHLO apos TLS falhou.'];
             }
+
+            $ehlo = $ehloTls;
         }
 
         if ($username !== '') {
-            $send($socket, 'AUTH LOGIN');
-            if (($expect([334])['ok'] ?? false) !== true) {
-                fclose($socket);
-                return ['ok' => false, 'message' => 'SMTP AUTH LOGIN indisponivel.'];
+            $caps = strtoupper((string) ($ehlo['response'] ?? ''));
+            $supportsLogin = str_contains($caps, 'AUTH LOGIN') || (bool) preg_match('/AUTH\\s+[^\\r\\n]*LOGIN/i', $caps);
+            $supportsPlain = str_contains($caps, 'AUTH PLAIN') || (bool) preg_match('/AUTH\\s+[^\\r\\n]*PLAIN/i', $caps);
+
+            $authLogin = function () use ($send, $expect, $socket, $username, $password): bool {
+                $send($socket, 'AUTH LOGIN');
+                if (($expect([334])['ok'] ?? false) !== true) {
+                    return false;
+                }
+
+                $send($socket, base64_encode($username));
+                if (($expect([334])['ok'] ?? false) !== true) {
+                    return false;
+                }
+
+                $send($socket, base64_encode($password));
+                return ($expect([235])['ok'] ?? false) === true;
+            };
+
+            $authPlain = function () use ($send, $expect, $socket, $username, $password): bool {
+                $payload = base64_encode("\0" . $username . "\0" . $password);
+                $send($socket, 'AUTH PLAIN ' . $payload);
+                return ($expect([235])['ok'] ?? false) === true;
+            };
+
+            $authenticated = false;
+            if ($supportsLogin || !$supportsPlain) {
+                $authenticated = $authLogin();
+                if (!$authenticated && $supportsPlain) {
+                    $authenticated = $authPlain();
+                }
+            } else {
+                $authenticated = $authPlain();
+                if (!$authenticated && $supportsLogin) {
+                    $authenticated = $authLogin();
+                }
             }
 
-            $send($socket, base64_encode($username));
-            if (($expect([334])['ok'] ?? false) !== true) {
+            if (!$authenticated) {
                 fclose($socket);
-                return ['ok' => false, 'message' => 'Usuario SMTP rejeitado.'];
-            }
-
-            $send($socket, base64_encode($password));
-            if (($expect([235])['ok'] ?? false) !== true) {
-                fclose($socket);
-                return ['ok' => false, 'message' => 'Senha SMTP rejeitada.'];
+                return ['ok' => false, 'message' => 'Falha na autenticacao SMTP (LOGIN/PLAIN).'];
             }
         }
 
@@ -268,8 +305,6 @@ final class EmailService
         $normalizedHost = strtolower(trim($host));
         $candidates = [$host];
 
-        // Local development: when using Mailpit, the app might run either inside Docker (mailpit)
-        // or directly on host machine (localhost / 127.0.0.1 with published SMTP port).
         $isLocalAlias = in_array($normalizedHost, ['mailpit', 'localhost', '127.0.0.1'], true);
         if ($isLocalAlias) {
             foreach (['mailpit', 'localhost', '127.0.0.1'] as $fallback) {
@@ -284,6 +319,16 @@ final class EmailService
 
     private function smtpEnabled(): bool
     {
+        $profileConfig = $this->defaultEmailProfileConfig();
+        if ($profileConfig !== []) {
+            $host = trim((string) ($profileConfig['host'] ?? ''));
+            $fromEmail = trim((string) ($profileConfig['from_email'] ?? ''));
+            $port = (int) ($profileConfig['port'] ?? 0);
+            if ($host !== '' && $fromEmail !== '' && $port > 0) {
+                return true;
+            }
+        }
+
         $dbValue = $this->rawSetting('smtp.enabled');
         if ($dbValue !== null && $dbValue !== '') {
             if ($this->isTruthy($dbValue)) {
@@ -301,6 +346,64 @@ final class EmailService
         }
 
         return $this->isTruthy((string) env('SMTP_ENABLED', '0'));
+    }
+
+    private function defaultEmailProfileConfig(): array
+    {
+        if ($this->resolvedDefaultEmailProfile !== null) {
+            return $this->resolvedDefaultEmailProfile;
+        }
+
+        try {
+            $profiles = (new SettingProfile())->all(['category' => 'email']);
+        } catch (\Throwable) {
+            $this->resolvedDefaultEmailProfile = [];
+            return $this->resolvedDefaultEmailProfile;
+        }
+
+        if (!is_array($profiles) || $profiles === []) {
+            $this->resolvedDefaultEmailProfile = [];
+            return $this->resolvedDefaultEmailProfile;
+        }
+
+        $selected = null;
+        foreach ($profiles as $profile) {
+            if ((int) ($profile['is_default'] ?? 0) === 1 && (int) ($profile['is_active'] ?? 1) === 1) {
+                $selected = $profile;
+                break;
+            }
+        }
+
+        if (!$selected) {
+            foreach ($profiles as $profile) {
+                if ((int) ($profile['is_active'] ?? 1) === 1) {
+                    $selected = $profile;
+                    break;
+                }
+            }
+        }
+
+        if (!$selected) {
+            $this->resolvedDefaultEmailProfile = [];
+            return $this->resolvedDefaultEmailProfile;
+        }
+
+        $payload = json_decode((string) ($selected['payload_json'] ?? '{}'), true);
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+
+        $this->resolvedDefaultEmailProfile = [
+            'host' => (string) ($payload['smtp_host'] ?? ''),
+            'port' => (string) ($payload['smtp_port'] ?? ''),
+            'encryption' => strtolower((string) ($payload['smtp_encryption'] ?? 'ssl')),
+            'username' => (string) ($payload['smtp_username'] ?? ''),
+            'password' => (string) ($payload['smtp_password'] ?? ''),
+            'from_email' => (string) ($payload['sender_email'] ?? ''),
+            'from_name' => (string) ($payload['sender_name'] ?? 'WisePlay'),
+        ];
+
+        return $this->resolvedDefaultEmailProfile;
     }
 
     private function settingOrEnv(string $settingKey, string $envKey, string $default): string

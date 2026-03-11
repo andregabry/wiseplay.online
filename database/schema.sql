@@ -1,6 +1,8 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS public_notification_reads;
+DROP TABLE IF EXISTS public_notifications;
 DROP TABLE IF EXISTS watch_history;
 DROP TABLE IF EXISTS media_materials;
 DROP TABLE IF EXISTS profile_preferences;
@@ -263,6 +265,29 @@ CREATE TABLE payment_events (
   INDEX idx_payment_events_type (event_type),
   INDEX idx_payment_events_provider (provider),
   INDEX idx_payment_events_created_at (created_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE public_notifications (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  entity_type ENUM('TITLE','COURSE','SEASON','EPISODE') NOT NULL DEFAULT 'TITLE',
+  entity_id BIGINT UNSIGNED NULL,
+  title_text VARCHAR(190) NOT NULL,
+  message_text VARCHAR(255) NOT NULL,
+  link_url VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_public_notifications_entity (entity_type, entity_id),
+  INDEX idx_public_notifications_created_at (created_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE public_notification_reads (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  notification_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  read_at DATETIME NOT NULL,
+  UNIQUE KEY uk_public_notification_reads (notification_id, user_id),
+  INDEX idx_public_notification_reads_user (user_id),
+  CONSTRAINT fk_public_notification_reads_notification FOREIGN KEY (notification_id) REFERENCES public_notifications(id) ON DELETE CASCADE,
+  CONSTRAINT fk_public_notification_reads_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE settings (
