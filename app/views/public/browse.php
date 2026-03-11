@@ -20,6 +20,73 @@ $assetOrFallback = static function (?string $value, string $fallback): string {
     return $value;
 };
 
+$splitCourseHeroTitle = static function (string $title): array {
+    $normalized = preg_replace('/\s+/u', ' ', trim($title));
+    if (!is_string($normalized) || $normalized === '') {
+        return ['Catalogo WisePlay'];
+    }
+
+    $words = preg_split('/\s+/u', $normalized) ?: [];
+    if (count($words) <= 1) {
+        return [$normalized];
+    }
+
+    $wordCount = count($words);
+    $lineCount = ($wordCount > 4 || mb_strlen($normalized) > 26) ? 3 : 2;
+    $lineCount = min($lineCount, $wordCount);
+
+    if ($lineCount === 2) {
+        $bestIndex = 1;
+        $bestScore = PHP_INT_MAX;
+        for ($index = 1; $index < $wordCount; $index++) {
+            $left = implode(' ', array_slice($words, 0, $index));
+            $right = implode(' ', array_slice($words, $index));
+            $score = abs(mb_strlen($left) - mb_strlen($right));
+            if ($score < $bestScore) {
+                $bestScore = $score;
+                $bestIndex = $index;
+            }
+        }
+
+        return [
+            implode(' ', array_slice($words, 0, $bestIndex)),
+            implode(' ', array_slice($words, $bestIndex)),
+        ];
+    }
+
+    $lines = [];
+    $remainingWords = $words;
+    $remainingLines = $lineCount;
+    while ($remainingLines > 1) {
+        $remainingText = implode(' ', $remainingWords);
+        $targetLength = (int) ceil(mb_strlen($remainingText) / $remainingLines);
+        $currentLine = [];
+        $currentLength = 0;
+
+        while (count($remainingWords) > ($remainingLines - 1)) {
+            $word = (string) $remainingWords[0];
+            $nextLength = $currentLength + ($currentLength > 0 ? 1 : 0) + mb_strlen($word);
+            if ($currentLine !== [] && $nextLength > $targetLength) {
+                break;
+            }
+
+            $currentLine[] = array_shift($remainingWords);
+            $currentLength = $nextLength;
+        }
+
+        if ($currentLine === []) {
+            $currentLine[] = array_shift($remainingWords);
+        }
+
+        $lines[] = implode(' ', $currentLine);
+        $remainingLines--;
+    }
+
+    $lines[] = implode(' ', $remainingWords);
+
+    return array_values(array_filter($lines, static fn ($line): bool => trim((string) $line) !== ''));
+};
+
 $rowLabel = static function (string $key): string {
     if ($key === 'MOVIE') {
         return 'Filmes';
@@ -54,8 +121,11 @@ $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay 
 $heroTypeLabel = $featured
     ? ((string) ($featured['type'] ?? 'MOVIE') === 'MOVIE'
         ? 'O FILME'
-        : (((string) ($featured['type'] ?? 'MOVIE') === 'COURSE' ? 'O CURSO' : 'A SERIE')))
+        : (((string) ($featured['type'] ?? 'MOVIE') === 'COURSE' ? '' : 'A SERIE')))
     : 'ORIGINAL WISEPLAY';
+$featuredTitleName = (string) ($featured['title_name'] ?? 'Catalogo WisePlay');
+$featuredIsCourse = (string) ($featured['type'] ?? 'MOVIE') === 'COURSE';
+$featuredHeroTitleLines = $featuredIsCourse ? $splitCourseHeroTitle($featuredTitleName) : [$featuredTitleName];
 $heroCompactDescription = trim((string) (($featured['description'] ?? '') !== '' ? $featured['description'] : $appTagline));
 $continueReference = $continueWatching[0]['title_name'] ?? null;
 $featuredHeroPreviewUrl = is_array($featuredHeroTrailer) ? trim((string) ($featuredHeroTrailer['url'] ?? '')) : '';
@@ -84,9 +154,15 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
 
     <div class="wp-hero-content wp-hero-content--cinema">
       <p class="eyebrow"><?= e($heroEyebrow) ?></p>
-      <div class="wp-hero-logo-stack">
-        <h1><?= e((string) ($featured['title_name'] ?? 'Catalogo WisePlay')) ?></h1>
-        <span><?= e($heroTypeLabel) ?></span>
+      <div class="wp-hero-logo-stack<?= $featuredIsCourse ? ' is-course' : '' ?>">
+        <h1>
+          <?php foreach ($featuredHeroTitleLines as $heroTitleLine): ?>
+            <span class="wp-hero-title-line"><?= e((string) $heroTitleLine) ?></span>
+          <?php endforeach; ?>
+        </h1>
+        <?php if ($heroTypeLabel !== ''): ?>
+          <span><?= e($heroTypeLabel) ?></span>
+        <?php endif; ?>
       </div>
       <p class="wp-hero-description"><?= e($heroCompactDescription) ?></p>
 

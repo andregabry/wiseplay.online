@@ -21,6 +21,71 @@ $assetOrFallback = static function (?string $value, string $fallback): string {
     return $value;
 };
 
+$splitCourseHeroTitle = static function (string $title): array {
+    $normalized = preg_replace('/\s+/u', ' ', trim($title));
+    if (!is_string($normalized) || $normalized === '') {
+        return ['WisePlay'];
+    }
+
+    $words = preg_split('/\s+/u', $normalized) ?: [];
+    if (count($words) <= 1) {
+        return [$normalized];
+    }
+
+    $wordCount = count($words);
+    $lineCount = ($wordCount > 4 || mb_strlen($normalized) > 26) ? 3 : 2;
+
+    if ($lineCount === 2) {
+        $bestIndex = 1;
+        $bestScore = PHP_INT_MAX;
+        for ($index = 1; $index < $wordCount; $index++) {
+            $left = implode(' ', array_slice($words, 0, $index));
+            $right = implode(' ', array_slice($words, $index));
+            $score = abs(mb_strlen($left) - mb_strlen($right));
+            if ($score < $bestScore) {
+                $bestScore = $score;
+                $bestIndex = $index;
+            }
+        }
+
+        return [
+            implode(' ', array_slice($words, 0, $bestIndex)),
+            implode(' ', array_slice($words, $bestIndex)),
+        ];
+    }
+
+    $totalLength = array_sum(array_map(static fn (string $word): int => mb_strlen($word), $words)) + max(0, $wordCount - 1);
+    $targetLength = max(1, (int) ceil($totalLength / $lineCount));
+    $lines = [];
+    $currentLine = [];
+    $currentLength = 0;
+    $remainingLines = $lineCount;
+
+    foreach ($words as $index => $word) {
+        $wordLength = mb_strlen($word);
+        $candidateLength = $currentLength === 0 ? $wordLength : $currentLength + 1 + $wordLength;
+        $remainingWords = $wordCount - $index;
+        $mustWrap = $currentLine !== [] && $remainingWords <= $remainingLines - 1;
+
+        if (($candidateLength > $targetLength && $currentLine !== []) || $mustWrap) {
+            $lines[] = implode(' ', $currentLine);
+            $currentLine = [$word];
+            $currentLength = $wordLength;
+            $remainingLines--;
+            continue;
+        }
+
+        $currentLine[] = $word;
+        $currentLength = $candidateLength;
+    }
+
+    if ($currentLine !== []) {
+        $lines[] = implode(' ', $currentLine);
+    }
+
+    return $lines;
+};
+
 $type = (string) ($titleItem['type'] ?? 'MOVIE');
 $seasonLabel = $type === 'COURSE' ? 'Modulo' : 'Temporada';
 $episodeLabel = $type === 'COURSE' ? 'Licao' : 'Episodio';
@@ -33,6 +98,9 @@ $isLocked = (int) ($marketplaceAccess['is_locked'] ?? 0) === 1;
 $payUrl = (string) ($marketplaceAccess['pay_url'] ?? ('/title/' . (int) ($titleItem['id'] ?? 0) . '/pay'));
 $heroActionUrl = $isLocked ? $payUrl : ($firstPlayable ? '/watch/' . (int) $firstPlayable['id'] : '/browse');
 $heroActionLabel = $isLocked ? 'Desbloquear acesso' : 'Assistir';
+$heroTitleLines = $type === 'COURSE'
+    ? $splitCourseHeroTitle((string) ($titleItem['title_name'] ?? 'WisePlay'))
+    : [(string) ($titleItem['title_name'] ?? 'WisePlay')];
 ?>
 
 <?php include BASE_PATH . '/app/views/partials/public_header.php'; ?>
@@ -61,7 +129,11 @@ $heroActionLabel = $isLocked ? 'Desbloquear acesso' : 'Assistir';
     <img class="wp-title-poster" src="<?= e($cover) ?>" alt="<?= e((string) $titleItem['title_name']) ?>" onerror="this.src='/assets/img/avatar-library/avatar-01.svg'">
 
     <div class="wp-title-hero-body">
-      <h1 class="wp-title-hero-heading"><?= e((string) $titleItem['title_name']) ?></h1>
+      <h1 class="wp-title-hero-heading<?= $type === 'COURSE' ? ' is-course' : '' ?>">
+        <?php foreach ($heroTitleLines as $heroTitleLine): ?>
+          <span class="wp-hero-title-line"><?= e((string) $heroTitleLine) ?></span>
+        <?php endforeach; ?>
+      </h1>
       <div class="wp-title-hero-meta">
         <span><?= e((string) ($titleItem['type'] ?? 'TITLE')) ?></span>
         <span><?= e((string) ($titleItem['genre'] ?? 'General')) ?></span>
