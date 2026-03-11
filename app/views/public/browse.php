@@ -47,6 +47,9 @@ $rowAnchor = static function (string $key, int $index): string {
 
 $featuredImage = $assetOrFallback((string) ($featured['backdrop_image'] ?? ''), '/assets/img/placeholders/bakground.jpg');
 $featuredPlayable = $featured ? ($firstPlayableByTitle[(int) $featured['id']] ?? null) : null;
+$featuredMeta = $featured ? ($browseMetaByTitle[(int) $featured['id']] ?? []) : [];
+$featuredIsLocked = (int) ($featuredMeta['is_locked'] ?? 0) === 1;
+$featuredPayUrl = (string) ($featuredMeta['pay_url'] ?? ($featured ? '/title/' . (int) $featured['id'] . '/pay' : '/browse'));
 $heroEyebrow = $featured ? strtoupper((string) ($featured['genre'] ?? 'WisePlay Original')) : 'WISEPLAY';
 $heroTypeLabel = $featured
     ? ((string) ($featured['type'] ?? 'MOVIE') === 'MOVIE'
@@ -100,10 +103,10 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
       </div>
 
       <div class="wp-hero-actions wp-hero-actions--cinema">
-        <?php if ($featuredPlayable): ?>
-          <a class="wp-btn light wp-btn-hero-play" href="/watch/<?= (int) $featuredPlayable['id'] ?>">
-            <span class="wp-btn-icon">&#9658;</span>
-            <span>Assistir</span>
+        <?php if ($featured): ?>
+          <a class="wp-btn light wp-btn-hero-play" href="<?= e($featuredIsLocked ? $featuredPayUrl : ($featuredPlayable ? '/watch/' . (int) $featuredPlayable['id'] : '/title/' . (int) $featured['id'])) ?>">
+            <span class="wp-btn-icon"><?= $featuredIsLocked ? '&#128274;' : '&#9658;' ?></span>
+            <span><?= $featuredIsLocked ? 'Desbloquear' : 'Assistir' ?></span>
           </a>
         <?php endif; ?>
         <?php if ($featured): ?>
@@ -157,6 +160,9 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
               $cardPreviewMime = trim((string) ($cardMeta['preview_mime'] ?? ''));
               $hoverBadges = (array) ($cardMeta['hover_badges'] ?? []);
               $hoverTags = (array) ($cardMeta['tags'] ?? []);
+              $isLocked = (int) ($cardMeta['is_locked'] ?? 0) === 1;
+              $payUrl = (string) ($cardMeta['pay_url'] ?? ('/title/' . $titleId . '/pay'));
+              $primaryUrl = $isLocked ? $payUrl : ($playable ? '/watch/' . (int) $playable['id'] : '/title/' . $titleId);
               $isFeaturedTitle = (int) ($titleItem['featured'] ?? 0) === 1;
               $showTop10Badge = $rowIndex <= 1 && $itemIndex < 2;
               $highlightRibbon = '';
@@ -169,8 +175,8 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
               <article class="wp-title-card wp-title-card--cinema<?= $cardPreviewUrl !== '' ? ' has-hover-preview' : '' ?>">
                 <div class="wp-title-card-surface">
                   <a
-                    href="#"
-                    class="wp-title-cover js-open-title-modal"
+                    href="<?= e($primaryUrl) ?>"
+                    class="wp-title-cover<?= $isLocked ? ' is-locked' : ' js-open-title-modal' ?>"
                     data-title-id="<?= $titleId ?>"
                     <?= $cardPreviewUrl !== '' ? 'data-preview-url="' . e($cardPreviewUrl) . '"' : '' ?>
                     <?= $cardPreviewMime !== '' ? 'data-preview-mime="' . e($cardPreviewMime) . '"' : '' ?>>
@@ -179,14 +185,13 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
                       <video class="wp-title-cover-preview js-card-hover-video" muted playsinline preload="none" poster="<?= e($cover) ?>" data-src="<?= e($cardPreviewUrl) ?>"<?= $cardPreviewMime !== '' ? ' data-mime="' . e($cardPreviewMime) . '"' : '' ?>></video>
                       <button type="button" class="wp-card-sound-toggle js-card-sound-toggle" aria-label="Ativar/desativar audio">&#128266;</button>
                     <?php endif; ?>
+                    <?php if ($isLocked): ?><span class="wp-title-lock-pill">&#128274; Pago</span><?php endif; ?>
                     <?php if ($showTop10Badge): ?><span class="wp-title-badge-top10">TOP 10</span><?php endif; ?>
                     <?php if ($highlightRibbon !== ''): ?><span class="wp-title-badge-ribbon"><?= e($highlightRibbon) ?></span><?php endif; ?>
                   </a>
                   <div class="wp-title-hover-panel">
                     <div class="wp-title-hover-actions">
-                      <?php if ($playable): ?>
-                        <a class="wp-hover-circle wp-hover-circle--play" href="/watch/<?= (int) $playable['id'] ?>" aria-label="Assistir">&#9658;</a>
-                      <?php endif; ?>
+                      <a class="wp-hover-circle wp-hover-circle--play" href="<?= e($primaryUrl) ?>" aria-label="<?= $isLocked ? 'Desbloquear' : 'Assistir' ?>"><?= $isLocked ? '&#128274;' : '&#9658;' ?></a>
                       <button type="button" class="wp-hover-circle js-public-soon" data-label="Minha lista" aria-label="Adicionar a minha lista">+</button>
                       <button type="button" class="wp-hover-circle js-public-soon" data-label="Gostei" aria-label="Gostei deste titulo">&#128077;</button>
                       <button
@@ -213,9 +218,7 @@ $featuredHeroPreviewMime = is_array($featuredHeroTrailer) ? trim((string) ($feat
                     <h3><?= e((string) $titleItem['title_name']) ?></h3>
                     <p><?= e((string) ($titleItem['type'] ?? 'TITLE')) ?> • <?= e((string) ($titleItem['maturity_rating'] ?? '16')) ?></p>
                     <div class="wp-title-actions">
-                      <?php if ($playable): ?>
-                        <a class="wp-btn tiny light" href="/watch/<?= (int) $playable['id'] ?>">Assistir</a>
-                      <?php endif; ?>
+                      <a class="wp-btn tiny light" href="<?= e($primaryUrl) ?>"><?= $isLocked ? 'Desbloquear' : 'Assistir' ?></a>
                       <button
                         type="button"
                         class="wp-btn tiny ghost js-open-title-modal"

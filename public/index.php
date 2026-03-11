@@ -8,6 +8,8 @@ use App\controllers\AdminBillingController;
 use App\controllers\AdminDashboardController;
 use App\controllers\AdminMediaController;
 use App\controllers\AdminMeController;
+use App\controllers\AdminProducerOffersController;
+use App\controllers\AdminProducerTitlesController;
 use App\controllers\AdminProfilesController;
 use App\controllers\AdminSettingsController;
 use App\controllers\AdminTitlesController;
@@ -51,6 +53,7 @@ $router->post('/account/password/update', [PublicController::class, 'updatePassw
 $router->post('/account/delete', [PublicController::class, 'deleteAccount']);
 $router->post('/notifications/read-all', [PublicController::class, 'markNotificationsRead']);
 $router->get('/title/{id}', [PublicController::class, 'title']);
+$router->get('/title/{id}/pay', [PublicController::class, 'pay']);
 $router->get('/title/{id}/preview', [PublicController::class, 'titlePreview']);
 $router->get('/watch/{id}', [PublicController::class, 'watch']);
 $router->post('/watch/progress', [PublicController::class, 'updateWatchProgress']);
@@ -60,6 +63,11 @@ $router->post('/admin/login', [AuthController::class, 'adminLogin']);
 $router->post('/admin/logout', [AuthController::class, 'logout']);
 
 $router->get('/admin', [AdminDashboardController::class, 'index']);
+$router->get('/admin/producer/titles', [AdminProducerTitlesController::class, 'index']);
+$router->get('/admin/producer/offers', [AdminProducerOffersController::class, 'index']);
+$router->post('/admin/producer/offers/create', [AdminProducerOffersController::class, 'create']);
+$router->post('/admin/producer/offers/update', [AdminProducerOffersController::class, 'update']);
+$router->post('/admin/producer/offers/delete', [AdminProducerOffersController::class, 'delete']);
 $router->get('/admin/users', [AdminUsersController::class, 'index']);
 $router->post('/admin/users/create', [AdminUsersController::class, 'create']);
 $router->post('/admin/users/update', [AdminUsersController::class, 'update']);

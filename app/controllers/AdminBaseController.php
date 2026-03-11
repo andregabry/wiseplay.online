@@ -19,6 +19,18 @@ abstract class AdminBaseController extends BaseController
             'icon' => 'ri-dashboard-line',
             'eyebrow' => 'Overview',
         ],
+        'producer_titles' => [
+            'title' => 'Producer Titles',
+            'description' => 'Marketplace tenant dashboard with title isolation by producer_id.',
+            'icon' => 'ri-store-3-line',
+            'eyebrow' => 'Marketplace',
+        ],
+        'producer_offers' => [
+            'title' => 'Producer Offers',
+            'description' => 'Manage paid offers per title with producer-scoped visibility and availability.',
+            'icon' => 'ri-price-tag-3-line',
+            'eyebrow' => 'Marketplace',
+        ],
         'users' => [
             'title' => 'Users',
             'description' => 'Manage accounts, roles, statuses, plans, and administrative actions in one place.',
@@ -79,6 +91,23 @@ abstract class AdminBaseController extends BaseController
             flash('error', 'Sem permissao para esta acao.');
             Response::redirect('/admin');
         }
+    }
+
+    protected function requireProducerContext(): array
+    {
+        $this->authorize(['PRODUCER']);
+
+        $producerId = Auth::producerId();
+        if ($producerId === null || $producerId <= 0) {
+            flash('error', 'Nenhum tenant de produtor ativo foi encontrado para este usuario.');
+            Response::redirect('/admin/login');
+        }
+
+        return [
+            'id' => $producerId,
+            'brand_name' => (string) (Auth::user()['producer_brand_name'] ?? 'Producer'),
+            'slug' => (string) (Auth::user()['producer_slug'] ?? 'producer'),
+        ];
     }
 
     protected function audit(string $action, string $entityType, ?string $entityId = null, ?array $metadata = null): void

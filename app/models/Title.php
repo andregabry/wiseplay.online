@@ -27,6 +27,17 @@ final class Title extends BaseModel
         return $row ?: null;
     }
 
+    public function findByIdForProducer(int $id, int $producerId): ?array
+    {
+        $stmt = $this->db()->prepare('SELECT * FROM titles WHERE id = :id AND producer_id = :producer_id LIMIT 1');
+        $stmt->execute([
+            ':id' => $id,
+            ':producer_id' => $producerId,
+        ]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
     public function findPublishedById(int $id): ?array
     {
         $stmt = $this->db()->prepare("SELECT * FROM titles WHERE id = :id AND status = 'PUBLISHED' LIMIT 1");
@@ -54,70 +65,24 @@ final class Title extends BaseModel
 
     public function paginate(array $filters, int $page, int $perPage): array
     {
-        $where = ['1 = 1'];
-        $params = [];
+        return $this->paginateInternal($filters, $page, $perPage, null);
+    }
 
-        $search = trim((string) ($filters['q'] ?? ''));
-        $type = trim((string) ($filters['type'] ?? ''));
-        $status = trim((string) ($filters['status'] ?? ''));
-        $genre = trim((string) ($filters['genre'] ?? ''));
-
-        if ($search !== '') {
-            $where[] = '(t.title_name LIKE :search OR t.slug LIKE :search OR t.description LIKE :search)';
-            $params[':search'] = '%' . $search . '%';
-        }
-
-        if ($type !== '') {
-            $where[] = 't.type = :type';
-            $params[':type'] = $type;
-        }
-
-        if ($status !== '') {
-            $where[] = 't.status = :status';
-            $params[':status'] = $status;
-        }
-
-        if ($genre !== '') {
-            $where[] = 't.genre = :genre';
-            $params[':genre'] = $genre;
-        }
-
-        $whereSql = implode(' AND ', $where);
-
-        $countStmt = $this->db()->prepare("SELECT COUNT(*) FROM titles t WHERE {$whereSql}");
-        $countStmt->execute($params);
-        $total = (int) $countStmt->fetchColumn();
-
-        $offset = ($page - 1) * $perPage;
-
-        $sql = "SELECT
-                    t.*,
-                    (SELECT COUNT(*) FROM media_items m WHERE m.title_id = t.id) AS media_count
-                FROM titles t
-                WHERE {$whereSql}
-                ORDER BY t.featured DESC, t.updated_at DESC, t.id DESC
-                LIMIT :limit OFFSET :offset";
-
-        $stmt = $this->db()->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
-        $stmt->execute();
-
-        return ['items' => $stmt->fetchAll(), 'total' => $total];
+    public function paginateForProducer(int $producerId, array $filters, int $page, int $perPage): array
+    {
+        return $this->paginateInternal($filters, $page, $perPage, $producerId);
     }
 
     public function create(array $data): int
     {
         $sql = 'INSERT INTO titles
-                    (title_name, slug, type, description, genre, year, maturity_rating, featured, status, cover_image, backdrop_image, created_by_user_id, created_at, updated_at)
+                    (producer_id, title_name, slug, type, description, genre, year, maturity_rating, featured, status, cover_image, backdrop_image, created_by_user_id, created_at, updated_at)
                 VALUES
-                    (:title_name, :slug, :type, :description, :genre, :year, :maturity_rating, :featured, :status, :cover_image, :backdrop_image, :created_by_user_id, NOW(), NOW())';
+                    (:producer_id, :title_name, :slug, :type, :description, :genre, :year, :maturity_rating, :featured, :status, :cover_image, :backdrop_image, :created_by_user_id, NOW(), NOW())';
 
         $stmt = $this->db()->prepare($sql);
         $stmt->execute([
+            ':producer_id' => !empty($data['producer_id']) ? (int) $data['producer_id'] : null,
             ':title_name' => $data['title_name'],
             ':slug' => $data['slug'],
             ':type' => $data['type'],
@@ -178,6 +143,13 @@ final class Title extends BaseModel
     public function listGenres(): array
     {
         $stmt = $this->db()->query("SELECT DISTINCT genre FROM titles WHERE genre <> '' ORDER BY genre ASC");
+        return array_map(static fn (array $row): string => (string) $row['genre'], $stmt->fetchAll());
+    }
+
+    public function listGenresForProducer(int $producerId): array
+    {
+        $stmt = $this->db()->prepare("SELECT DISTINCT genre FROM titles WHERE producer_id = :producer_id AND genre <> '' ORDER BY genre ASC");
+        $stmt->execute([':producer_id' => $producerId]);
         return array_map(static fn (array $row): string => (string) $row['genre'], $stmt->fetchAll());
     }
 
@@ -249,5 +221,66 @@ final class Title extends BaseModel
         $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
+    }
+
+    private function paginateInternal(array $filters, int $page, int $perPage, ?int $producerId): array
+    {
+        $where = ['1 = 1'];
+        $params = [];
+
+        $search = trim((string) ($filters['q'] ?? ''));
+        $type = trim((string) ($filters['type'] ?? ''));
+        $status = trim((string) ($filters['status'] ?? ''));
+        $genre = trim((string) ($filters['genre'] ?? ''));
+
+        if ($producerId !== null) {
+            $where[] = 't.producer_id = :producer_id';
+            $params[':producer_id'] = $producerId;
+        }
+
+        if ($search !== '') {
+            $where[] = '(t.title_name LIKE :search OR t.slug LIKE :search OR t.description LIKE :search)';
+            $params[':search'] = '%' . $search . '%';
+        }
+
+        if ($type !== '') {
+            $where[] = 't.type = :type';
+            $params[':type'] = $type;
+        }
+
+        if ($status !== '') {
+            $where[] = 't.status = :status';
+            $params[':status'] = $status;
+        }
+
+        if ($genre !== '') {
+            $where[] = 't.genre = :genre';
+            $params[':genre'] = $genre;
+        }
+
+        $whereSql = implode(' AND ', $where);
+
+        $countStmt = $this->db()->prepare("SELECT COUNT(*) FROM titles t WHERE {$whereSql}");
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        $offset = ($page - 1) * $perPage;
+        $sql = "SELECT
+                    t.*,
+                    (SELECT COUNT(*) FROM media_items m WHERE m.title_id = t.id) AS media_count
+                FROM titles t
+                WHERE {$whereSql}
+                ORDER BY t.featured DESC, t.updated_at DESC, t.id DESC
+                LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->db()->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return ['items' => $stmt->fetchAll(), 'total' => $total];
     }
 }

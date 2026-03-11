@@ -2,6 +2,9 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS public_notification_reads;
+DROP TABLE IF EXISTS entitlements;
+DROP TABLE IF EXISTS purchases;
+DROP TABLE IF EXISTS offers;
 DROP TABLE IF EXISTS public_notifications;
 DROP TABLE IF EXISTS watch_history;
 DROP TABLE IF EXISTS media_materials;
@@ -18,6 +21,8 @@ DROP TABLE IF EXISTS subscriptions;
 DROP TABLE IF EXISTS billing_plans;
 DROP TABLE IF EXISTS media_items;
 DROP TABLE IF EXISTS titles;
+DROP TABLE IF EXISTS producer_members;
+DROP TABLE IF EXISTS producers;
 DROP TABLE IF EXISTS profiles;
 DROP TABLE IF EXISTS users;
 
@@ -27,7 +32,7 @@ CREATE TABLE users (
   email VARCHAR(190) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   account_avatar VARCHAR(500) NULL,
-  role ENUM('SUPER_ADMIN','ADMIN','EDITOR','SUPPORT','BILLING_MANAGER','VIEWER') NOT NULL DEFAULT 'VIEWER',
+  role ENUM('SUPER_ADMIN','ADMIN','EDITOR','SUPPORT','BILLING_MANAGER','PRODUCER','CUSTOMER') NOT NULL DEFAULT 'CUSTOMER',
   status ENUM('ACTIVE','DISABLED') NOT NULL DEFAULT 'ACTIVE',
   email_verified_at DATETIME NULL,
   password_set_at DATETIME NULL,
@@ -57,6 +62,35 @@ CREATE TABLE email_verification_codes (
   INDEX idx_verification_email (email),
   INDEX idx_verification_active (email, consumed_at, expires_at),
   INDEX idx_verification_created (created_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE producers (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  owner_user_id BIGINT UNSIGNED NOT NULL,
+  brand_name VARCHAR(160) NOT NULL,
+  slug VARCHAR(180) NOT NULL UNIQUE,
+  status ENUM('PENDING','ACTIVE','DISABLED') NOT NULL DEFAULT 'PENDING',
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  CONSTRAINT fk_producers_owner FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_producers_owner (owner_user_id),
+  INDEX idx_producers_status (status),
+  INDEX idx_producers_brand (brand_name)
+) ENGINE=InnoDB;
+
+CREATE TABLE producer_members (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  producer_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  member_role ENUM('OWNER','ADMIN','EDITOR','ANALYST') NOT NULL DEFAULT 'EDITOR',
+  status ENUM('ACTIVE','DISABLED') NOT NULL DEFAULT 'ACTIVE',
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  CONSTRAINT fk_producer_members_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_producer_members_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_producer_member (producer_id, user_id),
+  INDEX idx_producer_members_user (user_id),
+  INDEX idx_producer_members_status (status)
 ) ENGINE=InnoDB;
 
 CREATE TABLE profiles (
@@ -92,6 +126,7 @@ CREATE TABLE profile_preferences (
 
 CREATE TABLE titles (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  producer_id BIGINT UNSIGNED NULL,
   title_name VARCHAR(255) NOT NULL,
   slug VARCHAR(255) NOT NULL UNIQUE,
   type ENUM('MOVIE','SERIES','COURSE') NOT NULL,
@@ -106,7 +141,9 @@ CREATE TABLE titles (
   created_by_user_id BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
+  CONSTRAINT fk_titles_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE SET NULL,
   CONSTRAINT fk_titles_creator FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_titles_producer (producer_id),
   INDEX idx_titles_type (type),
   INDEX idx_titles_status (status),
   INDEX idx_titles_featured (featured),
@@ -115,6 +152,7 @@ CREATE TABLE titles (
 
 CREATE TABLE media_items (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  producer_id BIGINT UNSIGNED NULL,
   title_id BIGINT UNSIGNED NOT NULL,
   season_number INT UNSIGNED NULL,
   episode_number INT UNSIGNED NULL,
@@ -142,8 +180,10 @@ CREATE TABLE media_items (
   is_published TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
+  CONSTRAINT fk_media_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE SET NULL,
   CONSTRAINT fk_media_title FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE,
   UNIQUE KEY uk_media_sequence (title_id, season_number, episode_number, item_label),
+  INDEX idx_media_producer (producer_id),
   INDEX idx_media_title (title_id),
   INDEX idx_media_published (is_published),
   INDEX idx_media_sequence_lookup (season_number, episode_number),
@@ -154,6 +194,7 @@ CREATE TABLE media_items (
 
 CREATE TABLE media_materials (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  producer_id BIGINT UNSIGNED NULL,
   media_item_id BIGINT UNSIGNED NOT NULL,
   title VARCHAR(190) NOT NULL,
   file_name VARCHAR(255) NOT NULL,
@@ -167,10 +208,74 @@ CREATE TABLE media_materials (
   is_downloadable TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
+  CONSTRAINT fk_media_materials_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE SET NULL,
   CONSTRAINT fk_media_materials_media FOREIGN KEY (media_item_id) REFERENCES media_items(id) ON DELETE CASCADE,
+  INDEX idx_media_materials_producer (producer_id),
   INDEX idx_media_materials_media (media_item_id),
   INDEX idx_media_materials_sort (media_item_id, sort_order),
   INDEX idx_media_materials_downloadable (is_downloadable)
+) ENGINE=InnoDB;
+
+CREATE TABLE offers (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  producer_id BIGINT UNSIGNED NOT NULL,
+  title_id BIGINT UNSIGNED NOT NULL,
+  offer_type ENUM('ONE_TIME','SUBSCRIPTION') NOT NULL DEFAULT 'ONE_TIME',
+  billing_interval ENUM('MONTH','YEAR') NULL,
+  currency VARCHAR(10) NOT NULL DEFAULT 'BRL',
+  price DECIMAL(10,2) NOT NULL,
+  status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+  is_selectable TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  CONSTRAINT fk_offers_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_offers_title FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE,
+  INDEX idx_offers_producer (producer_id),
+  INDEX idx_offers_title (title_id),
+  INDEX idx_offers_status (status),
+  INDEX idx_offers_type (offer_type),
+  INDEX idx_offers_selectable (is_selectable)
+) ENGINE=InnoDB;
+
+CREATE TABLE purchases (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  producer_id BIGINT UNSIGNED NOT NULL,
+  title_id BIGINT UNSIGNED NOT NULL,
+  offer_id BIGINT UNSIGNED NOT NULL,
+  status ENUM('PENDING','PAID','FAILED','REFUNDED','CANCELED') NOT NULL DEFAULT 'PENDING',
+  provider VARCHAR(80) NOT NULL DEFAULT 'infinitepay',
+  provider_reference VARCHAR(190) NULL,
+  created_at DATETIME NOT NULL,
+  paid_at DATETIME NULL,
+  CONSTRAINT fk_purchases_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_purchases_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_purchases_title FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE,
+  CONSTRAINT fk_purchases_offer FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_purchases_provider_ref (provider, provider_reference),
+  INDEX idx_purchases_user (user_id),
+  INDEX idx_purchases_producer (producer_id),
+  INDEX idx_purchases_title (title_id),
+  INDEX idx_purchases_status (status)
+) ENGINE=InnoDB;
+
+CREATE TABLE entitlements (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  producer_id BIGINT UNSIGNED NOT NULL,
+  title_id BIGINT UNSIGNED NOT NULL,
+  source ENUM('ONE_TIME','SUBSCRIPTION') NOT NULL DEFAULT 'ONE_TIME',
+  start_at DATETIME NOT NULL,
+  end_at DATETIME NULL,
+  status ENUM('ACTIVE','EXPIRED') NOT NULL DEFAULT 'ACTIVE',
+  created_at DATETIME NOT NULL,
+  CONSTRAINT fk_entitlements_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_entitlements_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_entitlements_title FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE,
+  INDEX idx_entitlements_user (user_id),
+  INDEX idx_entitlements_title (title_id),
+  INDEX idx_entitlements_status (status),
+  INDEX idx_entitlements_window (end_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE billing_plans (

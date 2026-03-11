@@ -4302,3 +4302,65 @@ body.wp-modal-open {
     align-items: flex-start;
   }
 }
+
+
+.wp-title-lock-pill {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 15, 17, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wp-title-cover.is-locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.42) 100%);
+  pointer-events: none;
+}
+
+.wp-title-lock-note {
+  display: grid;
+  gap: 6px;
+  max-width: 620px;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(15, 15, 18, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.wp-episode-item.is-locked {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.wp-marketplace-pay-grid {
+  align-items: start;
+}
+
+.wp-marketplace-pay-cover {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 18px;
+  display: block;
+  margin-bottom: 20px;
+}
+
+.wp-marketplace-offers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}

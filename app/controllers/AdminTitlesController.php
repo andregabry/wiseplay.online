@@ -113,6 +113,7 @@ final class AdminTitlesController extends AdminBaseController
                 'status' => $payload['status'],
                 'cover_image' => $coverImage,
                 'backdrop_image' => $backdropImage,
+                'producer_id' => Auth::producerId(),
                 'created_by_user_id' => (int) (Auth::user()['id'] ?? 0),
             ]);
         } catch (\Throwable) {

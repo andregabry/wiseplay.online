@@ -5,6 +5,8 @@ $mediaHierarchy = $mediaHierarchy ?? [];
 $firstPlayable = $firstPlayable ?? null;
 $seasonTrailers = $seasonTrailers ?? [];
 $heroTrailer = $heroTrailer ?? null;
+$marketplaceAccess = $marketplaceAccess ?? ['is_locked' => 0, 'pay_url' => '/browse'];
+$marketplaceOffers = $marketplaceOffers ?? [];
 
 if (!$titleItem) {
     echo '<main class="wp-generic"><p>Titulo nao encontrado.</p></main>';
@@ -27,6 +29,10 @@ $episodesHeading = $type === 'MOVIE'
     : ($seasonLabel . 's e ' . strtolower($episodeLabel) . 's');
 $backdrop = $assetOrFallback((string) ($titleItem['backdrop_image'] ?? ''), '/assets/img/avatar-library/avatar-01.svg');
 $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), '/assets/img/avatar-library/avatar-01.svg');
+$isLocked = (int) ($marketplaceAccess['is_locked'] ?? 0) === 1;
+$payUrl = (string) ($marketplaceAccess['pay_url'] ?? ('/title/' . (int) ($titleItem['id'] ?? 0) . '/pay'));
+$heroActionUrl = $isLocked ? $payUrl : ($firstPlayable ? '/watch/' . (int) $firstPlayable['id'] : '/browse');
+$heroActionLabel = $isLocked ? 'Desbloquear acesso' : 'Assistir';
 ?>
 
 <?php include BASE_PATH . '/app/views/partials/public_header.php'; ?>
@@ -64,10 +70,15 @@ $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), '/assets/i
       </div>
       <p class="wp-title-hero-description"><?= e((string) (($titleItem['description'] ?? '') !== '' ? $titleItem['description'] : 'Sem descricao cadastrada.')) ?></p>
 
+      <?php if ($isLocked): ?>
+        <div class="wp-title-lock-note">
+          <strong>Titulo bloqueado.</strong>
+          <span>Escolha uma oferta para desbloquear este conteudo. <?= count($marketplaceOffers) ?> oferta(s) ativa(s) disponivel(is).</span>
+        </div>
+      <?php endif; ?>
+
       <div class="wp-title-hero-actions">
-        <?php if ($firstPlayable): ?>
-          <a class="wp-btn light" href="/watch/<?= (int) $firstPlayable['id'] ?>">Assistir</a>
-        <?php endif; ?>
+        <a class="wp-btn light" href="<?= e($heroActionUrl) ?>"><?= e($heroActionLabel) ?></a>
         <a class="wp-btn ghost" href="/browse">Voltar ao catalogo</a>
       </div>
     </div>
@@ -90,8 +101,10 @@ $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), '/assets/i
               <?php
                 $duration = (int) ($episode['duration_minutes'] ?? 0);
                 $epNo = (int) ($episode['episode_number'] ?? 1);
+                $episodeHref = $isLocked ? $payUrl : ('/watch/' . (int) $episode['id']);
+                $episodeCta = $isLocked ? 'Desbloquear' : 'Assistir';
               ?>
-              <a class="wp-episode-item" href="/watch/<?= (int) $episode['id'] ?>">
+              <a class="wp-episode-item<?= $isLocked ? ' is-locked' : '' ?>" href="<?= e($episodeHref) ?>">
                 <div class="wp-episode-order"><?= $type === 'MOVIE' ? 'FILME' : e($episodeLabel . ' ' . $epNo) ?></div>
                 <div class="wp-episode-main">
                   <strong><?= e((string) $episode['item_label']) ?></strong>
@@ -100,7 +113,7 @@ $cover = $assetOrFallback((string) ($titleItem['cover_image'] ?? ''), '/assets/i
                     <?php if ($duration > 0): ?> • <?= $duration ?> min<?php endif; ?>
                   </small>
                 </div>
-                <span class="wp-episode-cta">Assistir</span>
+                <span class="wp-episode-cta"><?= e($episodeCta) ?></span>
               </a>
             <?php endforeach; ?>
           </div>

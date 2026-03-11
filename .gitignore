@@ -13,3 +13,4 @@ src/materialize-admin/design-files/figma/materialize-figma-admin-dashboard-uikit
 src/materialize-admin/
 
 database/wiseplay_php.sql
+database/users.sql

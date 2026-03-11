@@ -10,7 +10,9 @@ use App\core\Validator;
 use App\core\View;
 use App\models\AuditLog;
 use App\models\BillingPlan;
+use App\models\Entitlement;
 use App\models\Media;
+use App\models\Offer;
 use App\models\PaymentMethod;
 use App\models\PublicNotification;
 use App\models\PaymentEvent;
@@ -655,9 +657,25 @@ final class PublicController extends BaseController
                 $titleIds[] = (int) ($rowItem['id'] ?? 0);
             }
         }
+        foreach ($continueWatching as $historyItem) {
+            $titleIds[] = (int) ($historyItem['title_id'] ?? 0);
+        }
+        $titleIds = array_values(array_unique(array_filter(array_map('intval', $titleIds), static fn (int $value): bool => $value > 0)));
         $firstPlayableByTitle = $mediaModel->firstPlayableByTitleIds($titleIds);
         $mediaHierarchyByTitle = $mediaModel->hierarchyForTitleIds($titleIds, true);
         $browseMetaByTitle = $this->buildBrowseMetaByTitle($featured, $rows, $firstPlayableByTitle, $mediaHierarchyByTitle);
+        $marketplaceAccessByTitle = $this->buildMarketplaceAccessMap((int) (Auth::user()['id'] ?? 0), $titleIds);
+        foreach ($marketplaceAccessByTitle as $titleId => $access) {
+            $browseMetaByTitle[$titleId] = array_merge($browseMetaByTitle[$titleId] ?? [], $access);
+            if ((int) ($access['is_locked'] ?? 0) === 1) {
+                $browseMetaByTitle[$titleId]['watch_media_id'] = 0;
+                foreach (($browseMetaByTitle[$titleId]['seasons'] ?? []) as $seasonIndex => $season) {
+                    foreach (($season['items'] ?? []) as $itemIndex => $item) {
+                        $browseMetaByTitle[$titleId]['seasons'][$seasonIndex]['items'][$itemIndex]['watch_url'] = (string) ($access['pay_url'] ?? '/title/' . $titleId . '/pay');
+                    }
+                }
+            }
+        }
         $featuredHeroTrailer = null;
         if ($featured) {
             $featuredPlayable = $firstPlayableByTitle[(int) $featured['id']] ?? null;
@@ -676,6 +694,7 @@ final class PublicController extends BaseController
             'subscription' => $subscription,
             'firstPlayableByTitle' => $firstPlayableByTitle,
             'browseMetaByTitle' => $browseMetaByTitle,
+            'marketplaceAccessByTitle' => $marketplaceAccessByTitle,
             'featuredHeroTrailer' => $featuredHeroTrailer,
             'appTagline' => $appTagline,
         ], 'public');
@@ -707,6 +726,8 @@ final class PublicController extends BaseController
         $firstPlayable = (new Media())->firstPlayableByTitle((int) $title['id']);
         $seasonTrailers = $this->buildSeasonTrailers($mediaHierarchy, (string) ($title['type'] ?? 'MOVIE'));
         $heroTrailer = $this->resolveHeroPreview($firstPlayable);
+        $marketplaceAccess = $this->marketplaceAccessState((int) (Auth::user()['id'] ?? 0), (int) $title['id']);
+        $marketplaceOffers = (new Offer())->publicActiveForTitle((int) $title['id']);
 
         View::render('public/title', [
             'title' => (string) $title['title_name'] . ' | WisePlay',
@@ -719,6 +740,57 @@ final class PublicController extends BaseController
             'firstPlayable' => $firstPlayable,
             'seasonTrailers' => $seasonTrailers,
             'heroTrailer' => $heroTrailer,
+            'marketplaceAccess' => $marketplaceAccess,
+            'marketplaceOffers' => $marketplaceOffers,
+        ], 'public');
+    }
+
+    public function pay(array $params): void
+    {
+        Auth::requireLogin(false);
+        $this->ensureOnboardingAllowed([OnboardingService::STEP_COMPLETE]);
+
+        $profile = $this->requireSelectedProfile();
+        $id = (int) ($params['id'] ?? 0);
+        if ($id <= 0) {
+            Response::redirect('/browse');
+        }
+
+        $title = (new Title())->findPublishedById($id);
+        if (!$title) {
+            flash('error', 'Titulo nao encontrado.');
+            Response::redirect('/browse');
+        }
+
+        if ((int) ($profile['is_kids'] ?? 0) === 1 && !$this->isKidsAllowed((string) ($title['maturity_rating'] ?? '18'))) {
+            flash('error', 'Este titulo nao esta disponivel no perfil infantil.');
+            Response::redirect('/browse');
+        }
+
+        $access = $this->marketplaceAccessState((int) (Auth::user()['id'] ?? 0), (int) $title['id']);
+        if ((int) ($access['has_public_offers'] ?? 0) !== 1) {
+            flash('error', 'Este titulo nao possui ofertas publicas disponiveis.');
+            Response::redirect('/title/' . (int) $title['id']);
+        }
+
+        if ((int) ($access['has_entitlement'] ?? 0) === 1) {
+            Response::redirect('/title/' . (int) $title['id']);
+        }
+
+        $settingModel = new Setting();
+        $paymentGatewayEnabled = $settingModel->value('payment.gateway_enabled', '0') === '1';
+        $checkoutReady = false;
+
+        View::render('public/title_pay', [
+            'title' => 'Unlock | ' . (string) ($title['title_name'] ?? 'WisePlay'),
+            'currentPath' => current_path(),
+            'profile' => $profile,
+            'availableProfiles' => (new Profile())->findByUser((int) (Auth::user()['id'] ?? 0)),
+            'selectedProfileId' => (int) ($_SESSION['profile_id'] ?? 0),
+            'titleItem' => $title,
+            'offers' => (new Offer())->publicActiveForTitle((int) $title['id']),
+            'paymentGatewayEnabled' => $paymentGatewayEnabled,
+            'checkoutReady' => $checkoutReady,
         ], 'public');
     }
 
@@ -742,6 +814,12 @@ final class PublicController extends BaseController
         if ((int) $profile['is_kids'] === 1 && !$this->isKidsAllowed((string) $media['maturity_rating'])) {
             flash('error', 'Este conteudo nao esta disponivel no perfil infantil.');
             Response::redirect('/browse');
+        }
+
+        $marketplaceAccess = $this->marketplaceAccessState((int) (Auth::user()['id'] ?? 0), (int) ($media['title_id'] ?? 0));
+        if ((int) ($marketplaceAccess['is_locked'] ?? 0) === 1) {
+            flash('error', 'Voce precisa desbloquear este titulo antes de assistir.');
+            Response::redirect('/title/' . (int) ($media['title_id'] ?? 0) . '/pay');
         }
 
         $resolved = (new MediaSourceResolver())->resolve($media);
@@ -1054,7 +1132,7 @@ final class PublicController extends BaseController
                 'name' => (string) ($user['name'] ?? ''),
                 'email' => (string) ($user['email'] ?? ''),
                 'account_avatar' => (string) ($user['account_avatar'] ?? ''),
-                'role' => (string) ($user['role'] ?? 'VIEWER'),
+                'role' => (string) ($user['role'] ?? 'CUSTOMER'),
                 'status' => (string) ($user['status'] ?? 'ACTIVE'),
                 'password_hash' => $hashed,
                 'password_set_at' => date('Y-m-d H:i:s'),
@@ -1205,6 +1283,11 @@ final class PublicController extends BaseController
         $media = (new Media())->findPlayableById($mediaId);
         if (!$media) {
             Response::json(['ok' => false, 'message' => 'Midia nao encontrada.'], 404);
+        }
+
+        $marketplaceAccess = $this->marketplaceAccessState((int) (Auth::user()['id'] ?? 0), (int) ($media['title_id'] ?? 0));
+        if ((int) ($marketplaceAccess['is_locked'] ?? 0) === 1) {
+            Response::json(['ok' => false, 'message' => 'Este titulo exige compra antes de salvar progresso.', 'redirect' => '/title/' . (int) ($media['title_id'] ?? 0) . '/pay'], 403);
         }
 
         try {
@@ -1405,6 +1488,59 @@ final class PublicController extends BaseController
         }
 
         return $meta;
+    }
+
+    private function buildMarketplaceAccessMap(int $userId, array $titleIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $titleIds), static fn (int $id): bool => $id > 0)));
+        if ($userId <= 0 || $ids === []) {
+            return [];
+        }
+
+        $offersByTitle = (new Offer())->publicActiveGroupedByTitleIds($ids);
+        $entitledIds = (new Entitlement())->activeTitleIdsForUser($userId, $ids);
+        $entitledLookup = array_fill_keys($entitledIds, true);
+
+        $map = [];
+        foreach ($ids as $titleId) {
+            $offers = $offersByTitle[$titleId] ?? [];
+            $hasOffers = $offers !== [];
+            $hasEntitlement = isset($entitledLookup[$titleId]);
+            $map[$titleId] = [
+                'has_public_offers' => $hasOffers ? 1 : 0,
+                'has_entitlement' => $hasEntitlement ? 1 : 0,
+                'is_locked' => ($hasOffers && !$hasEntitlement) ? 1 : 0,
+                'offer_count' => count($offers),
+                'pay_url' => '/title/' . $titleId . '/pay',
+                'watch_url' => '/title/' . $titleId,
+            ];
+        }
+
+        return $map;
+    }
+
+    private function marketplaceAccessState(int $userId, int $titleId): array
+    {
+        if ($titleId <= 0) {
+            return [
+                'has_public_offers' => 0,
+                'has_entitlement' => 0,
+                'is_locked' => 0,
+                'offer_count' => 0,
+                'pay_url' => '/browse',
+                'watch_url' => '/browse',
+            ];
+        }
+
+        $map = $this->buildMarketplaceAccessMap($userId, [$titleId]);
+        return $map[$titleId] ?? [
+            'has_public_offers' => 0,
+            'has_entitlement' => 0,
+            'is_locked' => 0,
+            'offer_count' => 0,
+            'pay_url' => '/title/' . $titleId . '/pay',
+            'watch_url' => '/title/' . $titleId,
+        ];
     }
 
     private function browseTypeLabel(string $type): string

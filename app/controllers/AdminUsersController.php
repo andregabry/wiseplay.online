@@ -384,7 +384,7 @@ final class AdminUsersController extends AdminBaseController
             'email' => trim((string) ($_POST['email'] ?? '')),
             'password' => (string) ($_POST['password'] ?? ''),
             'account_avatar' => trim((string) ($_POST['account_avatar'] ?? '')),
-            'role' => trim((string) ($_POST['role'] ?? 'VIEWER')),
+            'role' => trim((string) ($_POST['role'] ?? 'CUSTOMER')),
             'status' => trim((string) ($_POST['status'] ?? 'ACTIVE')),
             'plan_id' => (int) ($_POST['plan_id'] ?? 0),
         ];

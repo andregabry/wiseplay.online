@@ -7,6 +7,7 @@ namespace App\core;
 final class Auth
 {
     private const KEY = 'auth_user';
+    private const PLATFORM_ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'SUPPORT', 'BILLING_MANAGER'];
 
     public static function login(array $user): void
     {
@@ -22,6 +23,9 @@ final class Auth
             'password_set_at' => (string) ($user['password_set_at'] ?? ''),
             'created_at' => (string) ($user['created_at'] ?? ''),
             'last_login_at' => (string) ($user['last_login_at'] ?? ''),
+            'producer_id' => isset($user['producer_id']) ? (int) $user['producer_id'] : null,
+            'producer_brand_name' => (string) ($user['producer_brand_name'] ?? ''),
+            'producer_slug' => (string) ($user['producer_slug'] ?? ''),
         ];
     }
 
@@ -41,10 +45,30 @@ final class Auth
         return self::user() !== null;
     }
 
-    public static function isAdmin(): bool
+    public static function isPlatformAdmin(): bool
     {
         $role = self::user()['role'] ?? null;
-        return in_array($role, ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'SUPPORT', 'BILLING_MANAGER'], true);
+        return in_array($role, self::PLATFORM_ADMIN_ROLES, true);
+    }
+
+    public static function isProducer(): bool
+    {
+        return (self::user()['role'] ?? null) === 'PRODUCER';
+    }
+
+    public static function isAdmin(): bool
+    {
+        return self::isPlatformAdmin() || self::isProducer();
+    }
+
+    public static function producerId(): ?int
+    {
+        $producerId = self::user()['producer_id'] ?? null;
+        if ($producerId === null || $producerId === '') {
+            return null;
+        }
+
+        return (int) $producerId;
     }
 
     public static function requireLogin(bool $admin = false): void

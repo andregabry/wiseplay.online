@@ -6,8 +6,8 @@ namespace App\models;
 
 final class User extends BaseModel
 {
-    public const ROLES = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'SUPPORT', 'BILLING_MANAGER', 'VIEWER'];
-    public const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'SUPPORT', 'BILLING_MANAGER'];
+    public const ROLES = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'SUPPORT', 'BILLING_MANAGER', 'PRODUCER', 'CUSTOMER'];
+    public const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'SUPPORT', 'BILLING_MANAGER', 'PRODUCER'];
     public const STATUSES = ['ACTIVE', 'DISABLED'];
 
     public function findByEmail(string $email): ?array
@@ -15,7 +15,8 @@ final class User extends BaseModel
         $stmt = $this->db()->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
         $stmt->execute([':email' => $email]);
         $row = $stmt->fetch();
-        return $row ?: null;
+
+        return $this->hydrateProducerContext($row ?: null);
     }
 
     public function findById(int $id): ?array
@@ -23,7 +24,8 @@ final class User extends BaseModel
         $stmt = $this->db()->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
         $stmt->execute([':id' => $id]);
         $row = $stmt->fetch();
-        return $row ?: null;
+
+        return $this->hydrateProducerContext($row ?: null);
     }
 
     public function roles(): array
@@ -90,7 +92,7 @@ final class User extends BaseModel
 
         $offset = ($page - 1) * $perPage;
 
-                $sql = "SELECT
+        $sql = "SELECT
                     u.id,
                     u.name,
                     u.email,
@@ -114,7 +116,8 @@ final class User extends BaseModel
                         INNER JOIN billing_plans bp ON bp.id = s2.plan_id
                        WHERE s2.user_id = u.id
                        ORDER BY s2.updated_at DESC, s2.id DESC
-                       LIMIT 1) AS subscription_plan
+                       LIMIT 1) AS subscription_plan,
+                    (SELECT p.brand_name FROM producers p WHERE p.owner_user_id = u.id ORDER BY p.id ASC LIMIT 1) AS producer_brand_name
                 FROM users u
                 WHERE {$whereSql}
                 ORDER BY u.created_at DESC, u.id DESC
@@ -240,5 +243,19 @@ final class User extends BaseModel
     {
         $stmt = $this->db()->prepare('UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = :id');
         $stmt->execute([':id' => $id]);
+    }
+
+    private function hydrateProducerContext(?array $row): ?array
+    {
+        if ($row === null) {
+            return null;
+        }
+
+        $producer = (new Producer())->findPrimaryForUser((int) $row['id']);
+        $row['producer_id'] = isset($producer['id']) ? (int) $producer['id'] : null;
+        $row['producer_brand_name'] = (string) ($producer['brand_name'] ?? '');
+        $row['producer_slug'] = (string) ($producer['slug'] ?? '');
+
+        return $row;
     }
 }

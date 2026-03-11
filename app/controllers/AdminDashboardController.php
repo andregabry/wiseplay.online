@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\controllers;
 
+use App\core\Auth;
+use App\core\Response;
 use App\models\DashboardStats;
 use App\services\OneDriveService;
 
@@ -14,6 +16,10 @@ final class AdminDashboardController extends AdminBaseController
     public function index(): void
     {
         $this->guard();
+
+        if (Auth::isProducer()) {
+            Response::redirect('/admin/producer/titles');
+        }
 
         try {
             $stats = (new DashboardStats())->summary();

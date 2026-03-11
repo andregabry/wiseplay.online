@@ -1,14 +1,25 @@
 <?php
-$menu = [
-    '/admin' => ['label' => 'Dashboard', 'icon' => 'ri-home-smile-line'],
-    '/admin/users' => ['label' => 'Users', 'icon' => 'ri-user-line'],
-    '/admin/profiles' => ['label' => 'Profiles', 'icon' => 'ri-team-line'],
-    '/admin/titles' => ['label' => 'Titles', 'icon' => 'ri-movie-2-line'],
-    '/admin/media' => ['label' => 'Media', 'icon' => 'ri-film-line'],
-    '/admin/billing' => ['label' => 'Billing', 'icon' => 'ri-bank-card-line'],
-    '/admin/settings' => ['label' => 'Settings', 'icon' => 'ri-settings-4-line'],
-    '/admin/me' => ['label' => 'My Profile', 'icon' => 'ri-user-settings-line'],
-];
+$role = (string) ($adminUser['role'] ?? '');
+
+if ($role === 'PRODUCER') {
+    $menu = [
+        '/admin' => ['label' => 'Dashboard', 'icon' => 'ri-home-smile-line'],
+        '/admin/producer/titles' => ['label' => 'My Titles', 'icon' => 'ri-store-3-line'],
+        '/admin/producer/offers' => ['label' => 'My Offers', 'icon' => 'ri-price-tag-3-line'],
+        '/admin/me' => ['label' => 'My Profile', 'icon' => 'ri-user-settings-line'],
+    ];
+} else {
+    $menu = [
+        '/admin' => ['label' => 'Dashboard', 'icon' => 'ri-home-smile-line'],
+        '/admin/users' => ['label' => 'Users', 'icon' => 'ri-user-line'],
+        '/admin/profiles' => ['label' => 'Profiles', 'icon' => 'ri-team-line'],
+        '/admin/titles' => ['label' => 'Titles', 'icon' => 'ri-movie-2-line'],
+        '/admin/media' => ['label' => 'Media', 'icon' => 'ri-film-line'],
+        '/admin/billing' => ['label' => 'Billing', 'icon' => 'ri-bank-card-line'],
+        '/admin/settings' => ['label' => 'Settings', 'icon' => 'ri-settings-4-line'],
+        '/admin/me' => ['label' => 'My Profile', 'icon' => 'ri-user-settings-line'],
+    ];
+}
 ?>
 <aside id="layout-menu" class="layout-menu menu-vertical menu">
   <div class="app-brand demo">

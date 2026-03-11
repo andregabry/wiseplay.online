@@ -1060,7 +1060,7 @@
       $('#u-e-name').val(user.name || '');
       $('#u-e-email').val(user.email || '');
       $('#u-e-account-avatar').val(user.account_avatar || '');
-      $('#u-e-role').val(user.role || 'VIEWER');
+      $('#u-e-role').val(user.role || 'CUSTOMER');
       $('#u-e-status').val(user.status || 'ACTIVE');
       $('#u-e-plan-id').val(user.plan_id || '');
 
@@ -2515,6 +2515,67 @@
     });
   }
 
+  function syncProducerOfferInterval($scope) {
+    var $context = $scope && $scope.length ? $scope : $(document);
+    $context.find('.js-producer-offer-type').each(function () {
+      var $type = $(this);
+      var $interval = $type.closest('form').find('.js-producer-offer-interval').first();
+      if (!$interval.length) {
+        return;
+      }
+
+      var value = String($type.val() || 'ONE_TIME').toUpperCase();
+      if (value === 'SUBSCRIPTION') {
+        $interval.prop('disabled', false);
+        if (!String($interval.val() || '').trim()) {
+          $interval.val('MONTH');
+        }
+      } else {
+        $interval.val('').prop('disabled', true);
+      }
+    });
+  }
+
+  function bindProducerOffersModule() {
+    $(document).on('change', '.js-producer-offer-type', function () {
+      syncProducerOfferInterval($(this).closest('form'));
+    });
+
+    $(document).on('click', '.js-edit-producer-offer', function (event) {
+      event.preventDefault();
+      var item = parsePayload($(this).attr('data-offer'));
+      if (!item) {
+        return;
+      }
+
+      $('#offer-e-id').val(item.id || '');
+      $('#offer-e-title-id').val(item.title_id || '');
+      $('#offer-e-type').val(item.offer_type || 'ONE_TIME');
+      $('#offer-e-interval').val(item.billing_interval || '');
+      $('#offer-e-currency').val(item.currency || 'BRL');
+      $('#offer-e-price').val(item.price || '');
+      $('#offer-e-status').val(item.status || 'ACTIVE');
+      $('#offer-e-selectable').val(typeof item.is_selectable !== 'undefined' ? item.is_selectable : 1);
+
+      clearErrors('producer-offer-edit');
+      syncProducerOfferInterval($('#producer-offer-edit-form'));
+      openModal('#producer-offer-edit-modal');
+    });
+
+    $(document).on('click', '.js-delete-producer-offer', function (event) {
+      event.preventDefault();
+      var id = parseInt($(this).data('id'), 10) || 0;
+      var name = String($(this).data('name') || 'oferta');
+      if (id <= 0) {
+        return;
+      }
+      deleteByEndpoint('/admin/producer/offers/delete', id, name, 'a oferta');
+    });
+
+    syncProducerOfferInterval($('#producer-offer-create-form'));
+    syncProducerOfferInterval($('#producer-offer-edit-form'));
+  }
+
   function bindBillingModule() {
     $(document).on('click', '.js-edit-plan', function (event) {
       event.preventDefault();
@@ -2948,6 +3009,7 @@
     bindUsersModule();
     bindProfilesModule();
     bindTitlesModule();
+    bindProducerOffersModule();
     bindMediaModule();
     bindBillingModule();
     bindSettingsModule();

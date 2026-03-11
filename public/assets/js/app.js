@@ -1523,12 +1523,19 @@
       renderMedia(meta, previewOverride);
       $heading.text(String(meta.title_name || 'Titulo'));
       $description.text(String(meta.description || 'Sem descricao disponivel.'));
-      $details.attr('href', '/browse');
+
+      var isLocked = parseInt(meta.is_locked, 10) === 1;
+      var payUrl = String(meta.pay_url || '/browse');
+      var detailsUrl = isLocked ? payUrl : ('/title/' + normalized);
+      $details.attr('href', detailsUrl);
+      $details.text(isLocked ? 'Ver ofertas' : 'Mais detalhes');
 
       var watchMediaId = parseInt(meta.watch_media_id, 10) || 0;
-      $watch.attr('href', watchMediaId > 0 ? '/watch/' + watchMediaId : '/browse');
-      $watch.toggleClass('disabled', watchMediaId <= 0);
-      $watch.attr('aria-disabled', watchMediaId <= 0 ? 'true' : 'false');
+      var watchHref = isLocked ? payUrl : (watchMediaId > 0 ? '/watch/' + watchMediaId : '/browse');
+      $watch.attr('href', watchHref);
+      $watch.text(isLocked ? 'Desbloquear' : 'Assistir');
+      $watch.toggleClass('disabled', !isLocked && watchMediaId <= 0);
+      $watch.attr('aria-disabled', !isLocked && watchMediaId <= 0 ? 'true' : 'false');
 
       var badgeHtml = [
         buildBadge(String(meta.type_label || meta.type || 'TITLE')),
