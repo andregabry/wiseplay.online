@@ -71,7 +71,7 @@ final class AdminBillingController extends AdminBaseController
             ],
             'cycleOptions' => $planModel->cycles(),
             'statusOptions' => $subscriptionModel->statuses(),
-            'planOptions' => $planModel->listActive(),
+            'planOptions' => $planModel->listActiveSubscriptionPlans(),
             'userOptions' => $userModel->listForSelect(true),
             'canManageBilling' => in_array((string) (Auth::user()['role'] ?? ''), self::MANAGE_ROLES, true),
             'paymentGatewayEnabled' => in_array(strtolower((string) (new Setting())->value('payment.gateway_enabled', '0')), ['1', 'true', 'yes', 'on'], true),
@@ -190,6 +190,8 @@ final class AdminBillingController extends AdminBaseController
             $errors['plan_id'] = 'Plano invalido.';
         } elseif ((int) ($selectedPlan['active'] ?? 0) !== 1) {
             $errors['plan_id'] = 'Plano inativo. Selecione um plano ativo.';
+        } elseif (!in_array((string) ($selectedPlan['billing_cycle'] ?? ''), ['MONTHLY', 'YEARLY'], true)) {
+            $errors['plan_id'] = 'Apenas planos recorrentes podem ser usados em assinaturas.';
         } elseif ($userId > 0) {
             $profileCount = (new Profile())->countByUser($userId);
             $profileLimit = (int) ($selectedPlan['profile_limit'] ?? 0);

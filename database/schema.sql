@@ -127,6 +127,7 @@ CREATE TABLE profile_preferences (
 CREATE TABLE titles (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   producer_id BIGINT UNSIGNED NULL,
+  billing_plan_id BIGINT UNSIGNED NOT NULL,
   title_name VARCHAR(255) NOT NULL,
   slug VARCHAR(255) NOT NULL UNIQUE,
   type ENUM('MOVIE','SERIES','COURSE') NOT NULL,
@@ -144,6 +145,7 @@ CREATE TABLE titles (
   CONSTRAINT fk_titles_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE SET NULL,
   CONSTRAINT fk_titles_creator FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_titles_producer (producer_id),
+  INDEX idx_titles_billing_plan (billing_plan_id),
   INDEX idx_titles_type (type),
   INDEX idx_titles_status (status),
   INDEX idx_titles_featured (featured),
@@ -284,7 +286,7 @@ CREATE TABLE billing_plans (
   slug VARCHAR(180) NOT NULL UNIQUE,
   price DECIMAL(10,2) NOT NULL,
   currency VARCHAR(10) NOT NULL DEFAULT 'BRL',
-  billing_cycle ENUM('MONTHLY','YEARLY') NOT NULL DEFAULT 'MONTHLY',
+  billing_cycle ENUM('MONTHLY','YEARLY','ONE_TIME') NOT NULL DEFAULT 'MONTHLY',
   profile_limit INT UNSIGNED NOT NULL DEFAULT 1,
   max_streams INT UNSIGNED NOT NULL DEFAULT 1,
   quality_level VARCHAR(40) NOT NULL DEFAULT '1080p',
@@ -298,6 +300,9 @@ CREATE TABLE billing_plans (
   INDEX idx_plans_selectable (is_selectable),
   INDEX idx_plans_sort (sort_order)
 ) ENGINE=InnoDB;
+
+ALTER TABLE titles
+  ADD CONSTRAINT fk_titles_billing_plan FOREIGN KEY (billing_plan_id) REFERENCES billing_plans(id) ON DELETE RESTRICT;
 
 CREATE TABLE subscriptions (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

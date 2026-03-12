@@ -47,10 +47,22 @@ ALTER TABLE media_items
   ADD INDEX idx_media_producer (producer_id),
   ADD CONSTRAINT fk_media_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE SET NULL;
 
-ALTER TABLE media_materials
-  ADD COLUMN producer_id BIGINT UNSIGNED NULL AFTER id,
-  ADD INDEX idx_media_materials_producer (producer_id),
-  ADD CONSTRAINT fk_media_materials_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE SET NULL;
+SET @media_materials_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.tables
+  WHERE table_schema = DATABASE()
+    AND table_name = 'media_materials'
+);
+
+SET @media_materials_alter_sql := IF(
+  @media_materials_exists = 1,
+  'ALTER TABLE media_materials ADD COLUMN producer_id BIGINT UNSIGNED NULL AFTER id, ADD INDEX idx_media_materials_producer (producer_id), ADD CONSTRAINT fk_media_materials_producer FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE SET NULL',
+  'SELECT 1'
+);
+
+PREPARE stmt_media_materials_alter FROM @media_materials_alter_sql;
+EXECUTE stmt_media_materials_alter;
+DEALLOCATE PREPARE stmt_media_materials_alter;
 
 INSERT INTO producers (owner_user_id, brand_name, slug, status, created_at, updated_at)
 SELECT src.owner_user_id,
@@ -80,9 +92,14 @@ INNER JOIN titles t ON t.id = m.title_id
    SET m.producer_id = t.producer_id
  WHERE m.producer_id IS NULL;
 
-UPDATE media_materials mm
-INNER JOIN media_items m ON m.id = mm.media_item_id
-   SET mm.producer_id = m.producer_id
- WHERE mm.producer_id IS NULL;
+SET @media_materials_update_sql := IF(
+  @media_materials_exists = 1,
+  'UPDATE media_materials mm INNER JOIN media_items m ON m.id = mm.media_item_id SET mm.producer_id = m.producer_id WHERE mm.producer_id IS NULL',
+  'SELECT 1'
+);
+
+PREPARE stmt_media_materials_update FROM @media_materials_update_sql;
+EXECUTE stmt_media_materials_update;
+DEALLOCATE PREPARE stmt_media_materials_update;
 
 SET FOREIGN_KEY_CHECKS = 1;

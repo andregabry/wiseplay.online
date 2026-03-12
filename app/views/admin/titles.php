@@ -5,6 +5,8 @@ $pagination = $pagination ?? ['page' => 1, 'lastPage' => 1];
 $types = $types ?? ['MOVIE', 'SERIES', 'COURSE'];
 $statuses = $statuses ?? ['DRAFT', 'PUBLISHED', 'ARCHIVED'];
 $genres = $genres ?? [];
+$planOptions = $planOptions ?? [];
+$defaultPlanId = $defaultPlanId ?? 0;
 $canManageTitles = $canManageTitles ?? false;
 $assetOrFallback = static function (?string $value): string {
     $value = trim((string) $value);
@@ -60,6 +62,7 @@ $queryForPage = static function (int $pageNum, array $filters): string {
           <th>Titulo</th>
           <th>Tipo</th>
           <th>Genero</th>
+          <th>Plano</th>
           <th>Ano</th>
           <th>Status</th>
           <th>Featured</th>
@@ -69,7 +72,7 @@ $queryForPage = static function (int $pageNum, array $filters): string {
       </thead>
       <tbody>
       <?php if ($items === []): ?>
-        <tr><td colspan="<?= $canManageTitles ? '8' : '7' ?>" class="text-center text-body-secondary">Nenhum titulo encontrado.</td></tr>
+        <tr><td colspan="<?= $canManageTitles ? '9' : '8' ?>" class="text-center text-body-secondary">Nenhum titulo encontrado.</td></tr>
       <?php endif; ?>
       <?php foreach ($items as $item): ?>
         <?php
@@ -78,6 +81,9 @@ $queryForPage = static function (int $pageNum, array $filters): string {
               'title_name' => (string) $item['title_name'],
               'slug' => (string) $item['slug'],
               'type' => (string) $item['type'],
+              'billing_plan_id' => (int) ($item['billing_plan_id'] ?? 0),
+              'billing_plan_name' => (string) ($item['billing_plan_name'] ?? ''),
+              'billing_plan_cycle' => (string) ($item['billing_plan_cycle'] ?? ''),
               'description' => (string) ($item['description'] ?? ''),
               'genre' => (string) ($item['genre'] ?? ''),
               'year' => (int) ($item['year'] ?? 0),
@@ -100,6 +106,10 @@ $queryForPage = static function (int $pageNum, array $filters): string {
           </td>
           <td><span class="badge bg-label-info"><?= e((string) $item['type']) ?></span></td>
           <td><?= e((string) $item['genre']) ?></td>
+          <td>
+            <div class="fw-medium"><?= e((string) ($item['billing_plan_name'] ?? 'Free')) ?></div>
+            <small class="text-body-secondary"><?= e((string) ($item['billing_plan_cycle'] ?? 'MONTHLY')) ?></small>
+          </td>
           <td><?= e((string) ($item['year'] ?: '-')) ?></td>
           <td><span class="badge <?= ((string) $item['status'] === 'PUBLISHED') ? 'bg-label-success' : (((string) $item['status'] === 'ARCHIVED') ? 'bg-label-secondary' : 'bg-label-warning') ?>"><?= e((string) $item['status']) ?></span></td>
           <td><?= ((int) $item['featured'] === 1) ? 'Sim' : 'Nao' ?></td>
@@ -145,10 +155,11 @@ $queryForPage = static function (int $pageNum, array $filters): string {
           <div class="col-md-4"><label class="form-label">Tipo</label><select class="form-select" name="type"><?php foreach ($types as $type): ?><option value="<?= e($type) ?>"><?= e($type) ?></option><?php endforeach; ?></select></div>
           <div class="col-md-12"><label class="form-label">Descricao</label><textarea class="form-control" name="description" rows="3"></textarea></div>
           <div class="col-md-3"><label class="form-label">Genero</label><input class="form-control" name="genre" list="title-genre-list" value="General"></div>
+          <div class="col-md-3"><label class="form-label">Plano</label><select class="form-select" name="billing_plan_id"><?php foreach ($planOptions as $plan): ?><option value="<?= (int) $plan['id'] ?>" <?= (int) $plan['id'] === (int) $defaultPlanId ? 'selected' : '' ?>><?= e((string) $plan['plan_name']) ?> (<?= e((string) $plan['billing_cycle']) ?>)</option><?php endforeach; ?></select></div>
           <div class="col-md-2"><label class="form-label">Ano</label><input class="form-control" name="year" type="number" min="1900" max="2100"></div>
           <div class="col-md-2"><label class="form-label">Maturidade</label><input class="form-control" name="maturity_rating" value="16"></div>
           <div class="col-md-2"><label class="form-label">Featured</label><select class="form-select" name="featured"><option value="0">Nao</option><option value="1">Sim</option></select></div>
-          <div class="col-md-3"><label class="form-label">Status</label><select class="form-select" name="status"><?php foreach ($statuses as $status): ?><option value="<?= e($status) ?>" <?= $status === 'DRAFT' ? 'selected' : '' ?>><?= e($status) ?></option><?php endforeach; ?></select></div>
+          <div class="col-md-2"><label class="form-label">Status</label><select class="form-select" name="status"><?php foreach ($statuses as $status): ?><option value="<?= e($status) ?>" <?= $status === 'DRAFT' ? 'selected' : '' ?>><?= e($status) ?></option><?php endforeach; ?></select></div>
           <div class="col-md-6"><label class="form-label">Cover URL (opcional)</label><input class="form-control" name="cover_image"></div>
           <div class="col-md-6"><label class="form-label">Backdrop URL (opcional)</label><input class="form-control" name="backdrop_image"></div>
           <div class="col-md-6"><label class="form-label">Upload cover</label><input class="form-control" type="file" name="cover_file" accept="image/png,image/jpeg,image/webp"></div>
@@ -174,10 +185,11 @@ $queryForPage = static function (int $pageNum, array $filters): string {
           <div class="col-md-4"><label class="form-label">Tipo</label><select class="form-select" name="type" id="t-e-type"><?php foreach ($types as $type): ?><option value="<?= e($type) ?>"><?= e($type) ?></option><?php endforeach; ?></select></div>
           <div class="col-md-12"><label class="form-label">Descricao</label><textarea class="form-control" name="description" id="t-e-description" rows="3"></textarea></div>
           <div class="col-md-3"><label class="form-label">Genero</label><input class="form-control" name="genre" id="t-e-genre" list="title-genre-list"></div>
+          <div class="col-md-3"><label class="form-label">Plano</label><select class="form-select" name="billing_plan_id" id="t-e-billing-plan-id"><?php foreach ($planOptions as $plan): ?><option value="<?= (int) $plan['id'] ?>"><?= e((string) $plan['plan_name']) ?> (<?= e((string) $plan['billing_cycle']) ?>)</option><?php endforeach; ?></select></div>
           <div class="col-md-2"><label class="form-label">Ano</label><input class="form-control" name="year" id="t-e-year" type="number" min="1900" max="2100"></div>
           <div class="col-md-2"><label class="form-label">Maturidade</label><input class="form-control" name="maturity_rating" id="t-e-maturity-rating"></div>
           <div class="col-md-2"><label class="form-label">Featured</label><select class="form-select" name="featured" id="t-e-featured"><option value="0">Nao</option><option value="1">Sim</option></select></div>
-          <div class="col-md-3"><label class="form-label">Status</label><select class="form-select" name="status" id="t-e-status"><?php foreach ($statuses as $status): ?><option value="<?= e($status) ?>"><?= e($status) ?></option><?php endforeach; ?></select></div>
+          <div class="col-md-2"><label class="form-label">Status</label><select class="form-select" name="status" id="t-e-status"><?php foreach ($statuses as $status): ?><option value="<?= e($status) ?>"><?= e($status) ?></option><?php endforeach; ?></select></div>
           <div class="col-md-6"><label class="form-label">Cover URL</label><input class="form-control" name="cover_image" id="t-e-cover-image"></div>
           <div class="col-md-6"><label class="form-label">Backdrop URL</label><input class="form-control" name="backdrop_image" id="t-e-backdrop-image"></div>
           <div class="col-md-6"><label class="form-label">Upload cover</label><input class="form-control" type="file" name="cover_file" accept="image/png,image/jpeg,image/webp"></div>

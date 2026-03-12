@@ -904,7 +904,12 @@ final class PublicController extends BaseController
 
         $planModel = new BillingPlan();
         $plan = $planModel->findById($planId);
-        if (!$plan || (int) ($plan['active'] ?? 0) !== 1 || (int) ($plan['is_selectable'] ?? 0) !== 1) {
+        if (
+            !$plan
+            || (int) ($plan['active'] ?? 0) !== 1
+            || (int) ($plan['is_selectable'] ?? 0) !== 1
+            || !in_array((string) ($plan['billing_cycle'] ?? ''), ['MONTHLY', 'YEARLY'], true)
+        ) {
             flash('error', 'Plano indisponivel no momento.');
             Response::redirect('/account#subscription');
         }

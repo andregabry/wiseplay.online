@@ -1180,6 +1180,7 @@
       $('#t-e-type').val(item.type || 'MOVIE');
       $('#t-e-description').val(item.description || '');
       $('#t-e-genre').val(item.genre || 'General');
+      $('#t-e-billing-plan-id').val(item.billing_plan_id || '');
       $('#t-e-year').val(item.year || '');
       $('#t-e-maturity-rating').val(item.maturity_rating || '16');
       $('#t-e-featured').val(item.featured || 0);

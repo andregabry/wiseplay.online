@@ -71,29 +71,67 @@ final class Media extends BaseModel
 
         $whereSql = implode(' AND ', $where);
 
-        $countStmt = $this->db()->prepare("SELECT COUNT(*) FROM media_items m INNER JOIN titles t ON t.id = m.title_id WHERE {$whereSql}");
+        $countStmt = $this->db()->prepare("SELECT COUNT(DISTINCT m.title_id) FROM media_items m INNER JOIN titles t ON t.id = m.title_id WHERE {$whereSql}");
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
 
         $offset = ($page - 1) * $perPage;
 
-        $sql = "SELECT
-                    m.*,
-                    t.title_name,
-                    t.type AS title_type,
-                    t.status AS title_status
-                FROM media_items m
-                INNER JOIN titles t ON t.id = m.title_id
-                WHERE {$whereSql}
-                ORDER BY m.updated_at DESC, m.id DESC
-                LIMIT :limit OFFSET :offset";
+        $titleIdsSql = "SELECT
+                            m.title_id,
+                            MAX(m.updated_at) AS latest_updated_at,
+                            MAX(m.id) AS latest_media_id
+                        FROM media_items m
+                        INNER JOIN titles t ON t.id = m.title_id
+                        WHERE {$whereSql}
+                        GROUP BY m.title_id
+                        ORDER BY latest_updated_at DESC, latest_media_id DESC
+                        LIMIT :limit OFFSET :offset";
 
-        $stmt = $this->db()->prepare($sql);
+        $titleIdsStmt = $this->db()->prepare($titleIdsSql);
         foreach ($params as $key => $value) {
+            $titleIdsStmt->bindValue($key, $value);
+        }
+        $titleIdsStmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $titleIdsStmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $titleIdsStmt->execute();
+
+        $titleIds = array_map(
+            static fn (array $row): int => (int) ($row['title_id'] ?? 0),
+            $titleIdsStmt->fetchAll()
+        );
+
+        if ($titleIds === []) {
+            return ['items' => [], 'total' => $total];
+        }
+
+        $titleIdPlaceholders = [];
+        $fieldOrderPlaceholders = [];
+        $mediaParams = $params;
+        foreach ($titleIds as $index => $titleIdValue) {
+            $inPlaceholder = ':page_title_id_' . $index;
+            $orderPlaceholder = ':page_title_order_' . $index;
+            $titleIdPlaceholders[] = $inPlaceholder;
+            $fieldOrderPlaceholders[] = $orderPlaceholder;
+            $mediaParams[$inPlaceholder] = $titleIdValue;
+            $mediaParams[$orderPlaceholder] = $titleIdValue;
+        }
+
+        $mediaSql = "SELECT
+                        m.*,
+                        t.title_name,
+                        t.type AS title_type,
+                        t.status AS title_status
+                    FROM media_items m
+                    INNER JOIN titles t ON t.id = m.title_id
+                    WHERE {$whereSql}
+                      AND m.title_id IN (" . implode(', ', $titleIdPlaceholders) . ")
+                    ORDER BY FIELD(m.title_id, " . implode(', ', $fieldOrderPlaceholders) . "), m.season_number ASC, m.episode_number ASC, m.id ASC";
+
+        $stmt = $this->db()->prepare($mediaSql);
+        foreach ($mediaParams as $key => $value) {
             $stmt->bindValue($key, $value);
         }
-        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $stmt->execute();
 
         return ['items' => $stmt->fetchAll(), 'total' => $total];

@@ -76,13 +76,14 @@ final class Title extends BaseModel
     public function create(array $data): int
     {
         $sql = 'INSERT INTO titles
-                    (producer_id, title_name, slug, type, description, genre, year, maturity_rating, featured, status, cover_image, backdrop_image, created_by_user_id, created_at, updated_at)
+                    (producer_id, billing_plan_id, title_name, slug, type, description, genre, year, maturity_rating, featured, status, cover_image, backdrop_image, created_by_user_id, created_at, updated_at)
                 VALUES
-                    (:producer_id, :title_name, :slug, :type, :description, :genre, :year, :maturity_rating, :featured, :status, :cover_image, :backdrop_image, :created_by_user_id, NOW(), NOW())';
+                    (:producer_id, :billing_plan_id, :title_name, :slug, :type, :description, :genre, :year, :maturity_rating, :featured, :status, :cover_image, :backdrop_image, :created_by_user_id, NOW(), NOW())';
 
         $stmt = $this->db()->prepare($sql);
         $stmt->execute([
             ':producer_id' => !empty($data['producer_id']) ? (int) $data['producer_id'] : null,
+            ':billing_plan_id' => (int) ($data['billing_plan_id'] ?? 0) > 0 ? (int) $data['billing_plan_id'] : null,
             ':title_name' => $data['title_name'],
             ':slug' => $data['slug'],
             ':type' => $data['type'],
@@ -106,6 +107,7 @@ final class Title extends BaseModel
                    SET title_name = :title_name,
                        slug = :slug,
                        type = :type,
+                       billing_plan_id = :billing_plan_id,
                        description = :description,
                        genre = :genre,
                        year = :year,
@@ -123,6 +125,7 @@ final class Title extends BaseModel
             ':title_name' => $data['title_name'],
             ':slug' => $data['slug'],
             ':type' => $data['type'],
+            ':billing_plan_id' => (int) ($data['billing_plan_id'] ?? 0) > 0 ? (int) $data['billing_plan_id'] : null,
             ':description' => $data['description'] ?: null,
             ':genre' => $data['genre'],
             ':year' => $data['year'] > 0 ? $data['year'] : null,
@@ -267,8 +270,11 @@ final class Title extends BaseModel
         $offset = ($page - 1) * $perPage;
         $sql = "SELECT
                     t.*,
+                    bp.plan_name AS billing_plan_name,
+                    bp.billing_cycle AS billing_plan_cycle,
                     (SELECT COUNT(*) FROM media_items m WHERE m.title_id = t.id) AS media_count
                 FROM titles t
+                LEFT JOIN billing_plans bp ON bp.id = t.billing_plan_id
                 WHERE {$whereSql}
                 ORDER BY t.featured DESC, t.updated_at DESC, t.id DESC
                 LIMIT :limit OFFSET :offset";

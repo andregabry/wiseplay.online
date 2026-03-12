@@ -64,7 +64,7 @@ final class AdminUsersController extends AdminBaseController
             ],
             'roleOptions' => $model->roles(),
             'statusOptions' => $model->statuses(),
-            'planOptions' => (new BillingPlan())->listActive(),
+            'planOptions' => (new BillingPlan())->listActiveSubscriptionPlans(),
             'canManageUsers' => in_array((string) (Auth::user()['role'] ?? ''), self::MANAGE_ROLES, true),
         ]);
     }
@@ -428,6 +428,8 @@ final class AdminUsersController extends AdminBaseController
         $plan = $planId > 0 ? $planModel->findById($planId) : null;
         if (!$plan || (int) ($plan['active'] ?? 0) !== 1) {
             $errors['plan_id'] = 'Plano ativo obrigatorio.';
+        } elseif (!in_array((string) ($plan['billing_cycle'] ?? ''), ['MONTHLY', 'YEARLY'], true)) {
+            $errors['plan_id'] = 'Apenas planos recorrentes podem ser vinculados a usuarios.';
         } elseif (!$isCreate) {
             $profileCount = (new Profile())->countByUser((int) ($data['id'] ?? 0));
             if ($profileCount > (int) ($plan['profile_limit'] ?? 0)) {

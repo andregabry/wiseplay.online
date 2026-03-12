@@ -62,6 +62,7 @@ final class User extends BaseModel
 
     public function paginate(array $filters, int $page, int $perPage): array
     {
+        $hasProducersTable = $this->tableExists('producers');
         $where = ['1 = 1'];
         $params = [];
 
@@ -92,6 +93,10 @@ final class User extends BaseModel
 
         $offset = ($page - 1) * $perPage;
 
+        $producerBrandSelect = $hasProducersTable
+            ? '(SELECT p.brand_name FROM producers p WHERE p.owner_user_id = u.id ORDER BY p.id ASC LIMIT 1) AS producer_brand_name'
+            : 'NULL AS producer_brand_name';
+
         $sql = "SELECT
                     u.id,
                     u.name,
@@ -117,7 +122,7 @@ final class User extends BaseModel
                        WHERE s2.user_id = u.id
                        ORDER BY s2.updated_at DESC, s2.id DESC
                        LIMIT 1) AS subscription_plan,
-                    (SELECT p.brand_name FROM producers p WHERE p.owner_user_id = u.id ORDER BY p.id ASC LIMIT 1) AS producer_brand_name
+                    {$producerBrandSelect}
                 FROM users u
                 WHERE {$whereSql}
                 ORDER BY u.created_at DESC, u.id DESC

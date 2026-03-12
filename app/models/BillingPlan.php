@@ -6,7 +6,7 @@ namespace App\models;
 
 final class BillingPlan extends BaseModel
 {
-    public const CYCLES = ['MONTHLY', 'YEARLY'];
+    public const CYCLES = ['MONTHLY', 'YEARLY', 'ONE_TIME'];
 
     public function cycles(): array
     {
@@ -17,6 +17,14 @@ final class BillingPlan extends BaseModel
     {
         $stmt = $this->db()->prepare('SELECT * FROM billing_plans WHERE id = :id LIMIT 1');
         $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    public function findBySlug(string $slug): ?array
+    {
+        $stmt = $this->db()->prepare('SELECT * FROM billing_plans WHERE slug = :slug LIMIT 1');
+        $stmt->execute([':slug' => $slug]);
         $row = $stmt->fetch();
         return $row ?: null;
     }
@@ -92,22 +100,46 @@ final class BillingPlan extends BaseModel
         return $stmt->fetchAll();
     }
 
-    public function listPublicPlans(): array
+    public function listActiveSubscriptionPlans(): array
+    {
+        $stmt = $this->db()->query("SELECT * FROM billing_plans WHERE active = 1 AND billing_cycle IN ('MONTHLY', 'YEARLY') ORDER BY sort_order ASC, price ASC, plan_name ASC");
+        return $stmt->fetchAll();
+    }
+
+    public function listActiveTitlePlans(): array
     {
         $stmt = $this->db()->query("SELECT * FROM billing_plans WHERE active = 1 ORDER BY sort_order ASC, price ASC, plan_name ASC");
         return $stmt->fetchAll();
     }
 
+    public function listPublicPlans(): array
+    {
+        $stmt = $this->db()->query("SELECT * FROM billing_plans WHERE active = 1 AND billing_cycle IN ('MONTHLY', 'YEARLY') ORDER BY sort_order ASC, price ASC, plan_name ASC");
+        return $stmt->fetchAll();
+    }
+
+    public function findDefaultFreePlan(): ?array
+    {
+        $stmt = $this->db()->prepare("SELECT * FROM billing_plans WHERE slug = 'free' AND active = 1 LIMIT 1");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        if ($row) {
+            return $row;
+        }
+
+        $stmt = $this->db()->query("SELECT * FROM billing_plans WHERE active = 1 ORDER BY CASE WHEN billing_cycle = 'ONE_TIME' THEN 1 ELSE 0 END ASC, price ASC, id ASC LIMIT 1");
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
     public function findDefaultForRegistration(): ?array
     {
-        $freeStmt = $this->db()->prepare("SELECT * FROM billing_plans WHERE slug = 'free' AND active = 1 LIMIT 1");
-        $freeStmt->execute();
-        $free = $freeStmt->fetch();
+        $free = $this->findDefaultFreePlan();
         if ($free) {
             return $free;
         }
 
-        $stmt = $this->db()->query('SELECT * FROM billing_plans WHERE active = 1 ORDER BY price ASC, id ASC LIMIT 1');
+        $stmt = $this->db()->query("SELECT * FROM billing_plans WHERE active = 1 AND billing_cycle IN ('MONTHLY', 'YEARLY') ORDER BY price ASC, id ASC LIMIT 1");
         $row = $stmt->fetch();
         return $row ?: null;
     }

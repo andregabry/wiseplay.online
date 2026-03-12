@@ -7,6 +7,7 @@ namespace App\controllers;
 use App\core\Auth;
 use App\core\Response;
 use App\core\Validator;
+use App\models\BillingPlan;
 use App\models\Title;
 use App\services\PublicNotificationService;
 use App\services\UploadService;
@@ -20,6 +21,7 @@ final class AdminTitlesController extends AdminBaseController
         $this->guard();
 
         $model = new Title();
+        $planModel = new BillingPlan();
 
         $filters = [
             'q' => trim((string) ($_GET['q'] ?? '')),
@@ -64,6 +66,8 @@ final class AdminTitlesController extends AdminBaseController
             'types' => $model->types(),
             'statuses' => $model->statuses(),
             'genres' => $model->listGenres(),
+            'planOptions' => $planModel->listActiveTitlePlans(),
+            'defaultPlanId' => (int) (($planModel->findDefaultFreePlan()['id'] ?? 0)),
             'canManageTitles' => in_array((string) (Auth::user()['role'] ?? ''), self::MANAGE_ROLES, true),
         ]);
     }
@@ -74,8 +78,10 @@ final class AdminTitlesController extends AdminBaseController
         $this->requireCsrf();
 
         $model = new Title();
+        $planModel = new BillingPlan();
         $payload = $this->readPayload();
-        $errors = $this->validatePayload($payload, $model, true);
+        $payload['billing_plan_id'] = $this->resolveBillingPlanId((int) ($payload['billing_plan_id'] ?? 0), $planModel);
+        $errors = $this->validatePayload($payload, $model, $planModel, true);
 
         if ($errors !== []) {
             Response::json(['ok' => false, 'message' => 'Verifique os campos obrigatorios.', 'errors' => $errors], 422);
@@ -105,6 +111,7 @@ final class AdminTitlesController extends AdminBaseController
                 'title_name' => $payload['title_name'],
                 'slug' => $payload['slug'],
                 'type' => $payload['type'],
+                'billing_plan_id' => $payload['billing_plan_id'],
                 'description' => $payload['description'],
                 'genre' => $payload['genre'],
                 'year' => $payload['year'],
@@ -133,6 +140,7 @@ final class AdminTitlesController extends AdminBaseController
             'title_name' => $payload['title_name'],
             'slug' => $payload['slug'],
             'type' => $payload['type'],
+            'billing_plan_id' => $payload['billing_plan_id'],
             'status' => $payload['status'],
         ]);
 
@@ -150,6 +158,7 @@ final class AdminTitlesController extends AdminBaseController
         }
 
         $model = new Title();
+        $planModel = new BillingPlan();
         $existing = $model->findById($id);
         if (!$existing) {
             Response::json(['ok' => false, 'message' => 'Titulo nao encontrado.'], 404);
@@ -157,8 +166,9 @@ final class AdminTitlesController extends AdminBaseController
 
         $payload = $this->readPayload();
         $payload['id'] = $id;
+        $payload['billing_plan_id'] = $this->resolveBillingPlanId((int) ($payload['billing_plan_id'] ?? 0), $planModel);
 
-        $errors = $this->validatePayload($payload, $model, false);
+        $errors = $this->validatePayload($payload, $model, $planModel, false);
         if ($errors !== []) {
             Response::json(['ok' => false, 'message' => 'Verifique os campos obrigatorios.', 'errors' => $errors], 422);
         }
@@ -187,6 +197,7 @@ final class AdminTitlesController extends AdminBaseController
                 'title_name' => $payload['title_name'],
                 'slug' => $payload['slug'],
                 'type' => $payload['type'],
+                'billing_plan_id' => $payload['billing_plan_id'],
                 'description' => $payload['description'],
                 'genre' => $payload['genre'],
                 'year' => $payload['year'],
@@ -204,6 +215,7 @@ final class AdminTitlesController extends AdminBaseController
             'title_name' => $payload['title_name'],
             'slug' => $payload['slug'],
             'type' => $payload['type'],
+            'billing_plan_id' => $payload['billing_plan_id'],
             'status' => $payload['status'],
         ]);
 
@@ -248,6 +260,7 @@ final class AdminTitlesController extends AdminBaseController
             'type' => strtoupper(trim((string) ($_POST['type'] ?? 'MOVIE'))),
             'description' => trim((string) ($_POST['description'] ?? '')),
             'genre' => trim((string) ($_POST['genre'] ?? 'General')),
+            'billing_plan_id' => (int) ($_POST['billing_plan_id'] ?? 0),
             'year' => (int) ($_POST['year'] ?? 0),
             'maturity_rating' => trim((string) ($_POST['maturity_rating'] ?? '16')),
             'featured' => (int) ($_POST['featured'] ?? 0) === 1 ? 1 : 0,
@@ -257,7 +270,7 @@ final class AdminTitlesController extends AdminBaseController
         ];
     }
 
-    private function validatePayload(array $payload, Title $model, bool $isCreate): array
+    private function validatePayload(array $payload, Title $model, BillingPlan $planModel, bool $isCreate): array
     {
         $errors = [];
 
@@ -291,6 +304,20 @@ final class AdminTitlesController extends AdminBaseController
             $errors['maturity_rating'] = 'Classificacao indicativa e obrigatoria.';
         }
 
+        if ((int) ($payload['billing_plan_id'] ?? 0) <= 0 || !$planModel->findById((int) $payload['billing_plan_id'])) {
+            $errors['billing_plan_id'] = 'Plano invalido.';
+        }
+
         return $errors;
+    }
+
+    private function resolveBillingPlanId(int $billingPlanId, BillingPlan $planModel): int
+    {
+        if ($billingPlanId > 0 && $planModel->findById($billingPlanId)) {
+            return $billingPlanId;
+        }
+
+        $defaultPlan = $planModel->findDefaultFreePlan();
+        return (int) ($defaultPlan['id'] ?? 0);
     }
 }
