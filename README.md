@@ -1,5 +1,9 @@
 # WisePlay
 
+## Visão geral para o portefólio
+
+Protótipo de streaming com PHP, MySQL, jQuery e Docker. Demonstra autenticação, gestão de catálogo, perfis e persistência de progresso. O pagamento usa uma integração simulada.
+
 WisePlay is a Docker-first streaming platform skeleton built with plain PHP, MySQL, jQuery, and a split UI strategy:
 - public app at `/` with a Netflix-like onboarding and browsing experience
 - admin panel at `/admin` using Materialize Admin assets integrated into the PHP app
